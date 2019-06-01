@@ -1,5 +1,5 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/e3prom/rVRRPd/blob/master/LICENSE)
-[![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)]()
+[![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/e3prom/rVRRPd/releases)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/e3prom/rVRRPd/graphs/contributors)
 
 # Introduction
@@ -13,6 +13,7 @@ This project is still in early development stage and only support the Linux oper
  * Multithreaded operation (1 thread per VRRP group/interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml)
  * Interoperable with VRRPv2 ([RFC3768](https://tools.ietf.org/html/rfc3768)) devices
+ * Sniffer mode (-m0)
  
  # Support
 If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
