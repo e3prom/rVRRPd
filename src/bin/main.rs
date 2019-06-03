@@ -104,7 +104,7 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
     let debug = matches.opt_str("debug");
     let debug = match debug {
         Some(x) => Option::Some(x.parse::<u8>().unwrap()),
-        None => Some(0),
+        None => None,
     };
 
     Ok(Config::new(iface, mode, conf, debug))

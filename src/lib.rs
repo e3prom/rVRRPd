@@ -113,11 +113,8 @@ impl Config {
         }
     }
     // debug() getter
-    pub fn debug(&self) -> u8 {
-        match &self.debug {
-            Some(l) => l.clone(),
-            None => DEBUG_LEVEL_NONE,
-        }
+    pub fn debug(&self) -> Option<u8> {
+        self.debug
     }
 }
 
@@ -309,10 +306,11 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
             // read configuration file
             let config = decode_config(cfg.conf());
 
-            // (re)set debugging level
-            let debug_level = match cfg.debug {
+            // read debugging level from Config first
+            let debug_level = match cfg.debug() {
                 Some(v) => v,
-                None => cfg.debug(),
+                // if None, then read debug level from configuration file
+                None => config.debug(),
             };
 
             // initialize internal protocols structure

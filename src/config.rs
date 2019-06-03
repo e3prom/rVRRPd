@@ -14,6 +14,20 @@ pub struct CConfig {
     pub protocols: Option<Protocols>,
 }
 
+impl CConfig {
+    // verbose() getter
+    pub fn _verbose(&self) -> Option<u8> {
+        self.verbose
+    }
+    // debug() getter
+    pub fn debug(&self) -> u8 {
+        match self.debug {
+            Some(v) => v,
+            None => DEBUG_LEVEL_NONE,
+        }
+    }
+}
+
 /// Virtual-Routers Configuration Structure
 #[derive(Debug, Deserialize)]
 pub struct VRConfig {
