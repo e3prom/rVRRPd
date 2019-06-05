@@ -177,6 +177,17 @@ impl VirtualRouter {
                 }
             }
         }
+        // make sure there is a least one ip/mask pair, otherwise return an error
+        if v4addrs.is_empty() || v4masks.is_empty() {
+            println!(
+                "error(vr): at least one IPv4 address must be available on interface {}",
+                ifname
+            );
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "no ip address configured on vr's interface",
+            ));
+        }
 
         // print debugging information
         print_debug(

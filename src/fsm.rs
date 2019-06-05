@@ -436,8 +436,6 @@ pub fn fsm_run(
                             vr.parameters.vrid,
                             vr.parameters.interface
                         );
-                        // send ADVERTISEMENT
-                        packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
                         // get and store vr's interface mac
                         vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug_level);
                         // set VRRP virtual mac address
@@ -453,6 +451,8 @@ pub fn fsm_run(
                         arp::broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint;
+                        // send ADVERTISEMENT
+                        packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
                         // print information
                         println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Master",
                             vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],

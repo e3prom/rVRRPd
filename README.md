@@ -29,7 +29,9 @@ This project is still in early development stage and only support the Linux oper
  * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and use of ioctls)
 
 # Build and run
-To quickly build and run the development version of rVRRPd, first make sure you have [Cargo](https://doc.rust-lang.org/cargo/) installed. Then build the project by using the `cargo build --release` command:
+To quickly build and run the development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The recommended way is to [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) the latest version of Cargo along with GNU Compiler Collection (GCC) toolchain.
+
+Then build the project by using the `cargo build --release` command:
 ```
 $ cargo build --release
    Compiling libc v0.2.57

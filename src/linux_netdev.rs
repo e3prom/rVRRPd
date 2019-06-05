@@ -491,7 +491,7 @@ pub fn set_ip_route(
 }
 
 // libc-like getifaddrs() function implementation
-/// Credit to sfackler: https://gist.github.com/sfackler/d614e6c130f3462f443e6c0c6255383a
+// Credit to sfackler: https://gist.github.com/sfackler/d614e6c130f3462f443e6c0c6255383a
 foreign_type! {
     #[derive(Debug)]
     pub type IfAddrs: Sync + Send {
