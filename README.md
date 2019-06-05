@@ -1,6 +1,7 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/e3prom/rVRRPd/blob/master/LICENSE)
+![GitHub top language](https://img.shields.io/github/languages/top/e3prom/rvrrpd.svg)
 [![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/e3prom/rVRRPd/releases)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/e3prom/rVRRPd/graphs/contributors)
+![GitHub issues](https://img.shields.io/github/issues-raw/e3prom/rvrrpd.svg)
 
 # Introduction
 [rVRRPd](https://github.com/e3prom/rVRRPd) is an open and secure VRRPv2 implementation written in Rust, a rather new programming language known for its inherent memory-safety and speed.
@@ -23,13 +24,13 @@ This project is still in early development stage and only support the Linux oper
  * Interoperability Testing
 
 # Requirements
- * Linux 64-bits kernel (only Linux is supported at this time)
+ * A Linux 64-bits kernel (only Linux is supported at this time)
  * [Rust Cargo](https://doc.rust-lang.org/cargo/) (required to compile the development version)
  * One or more Ethernet interface (see [conf/rvrrpd.conf](conf/rvrrpd.conf) for a configuration example)
- * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and use of ioctls)
+ * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and for use of ioctls)
 
 # Build and run
-To quickly build and run the development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The recommended way is to [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) the latest version of Cargo along with GNU Compiler Collection (GCC) toolchain.
+To quickly build a development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The recommended way is to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) the latest version of Cargo along with the GNU Compiler Collection (GCC) toolchain.
 
 Then build the project by using the `cargo build --release` command:
 ```
@@ -40,7 +41,7 @@ $ cargo build --release
    Compiling rand_core v0.4.0
    Compiling arrayvec v0.4.10
    Compiling byteorder v1.3.1
-   [...]
+[...]
    Compiling rVRRPd v0.0.8 (/home/e3prom/rVRRPd)
     Finished release [optimized] target(s) in 31.61s
 
@@ -58,10 +59,45 @@ Options:
                         0(none), 1(low), 2(medium), 3(high), 5(extensive)
 
 ```
-Edit the configuration file in `conf/rvrrpd.conf` to reflect your environment, then run the built binary executable `main` using the command-line parameter `-m1` (virtual-router mode):
+
+To run a VRRP virtual router, edit the configuration file in `conf/rvrrpd.conf` to reflect your environment:
+```text {.line-numbers}
+verbose = 0
+debug = 5
+
+[[vrouter]]
+group = 1
+interface = "ens192.900"
+vip = "10.100.100.1"
+priority = 254
+preemption = true
+auth_type = 0
+#auth_secret = ""
+#timers = { advert = 1 }
+
+[protocols]
+    [[protocols.static]]
+    route = "0.0.0.0"
+    mask = "0.0.0.0"
+    nh = "10.240.0.254"
 ```
-$ target/release/main -m1
+The above configuration example do the following:
+ * Starts the daemon in foreground with a debug level of 5 (extensive).
+ * Runs one virtual-router with group id `1` on interface `ens192.900`, with the below parameters:
+   * Uses the virtual IP address `10.100.100.1`.
+   * Is configured with the highest priority of `254`.
+   * Has preeemption enabled.
+   * Is configured without authentication (auth type 0).
+* Has a static defaut route configured with a next-hop of `10.240.0.254`.
+
+Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `virtual router` operating mode:
+```
+$ sudo target/release/main -m1
+Starting rVRRPd
+[...]
 ```
 
+Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role when necessary. If the router own the virtual ip address, it will automatically take the Master role with a priority of 255.
+
 # Support
-If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
+If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new). Please provide a full backtrace in case the daemon panics or crashes.
