@@ -6,7 +6,6 @@ edition = "2018"
 repository = "httsp://github.com/e3prom/rvrrpd"
 description = "An open and secure VRRPv2 implementation written in Rust"
 license = "GPL-3.0"
-license-file = "LICENSE"
 publish = false
 
 [dependencies]
@@ -22,3 +21,4 @@ tokio = "0.1"
 serde = "1.0.91"
 serde_derive = "1.0.91"
 toml = "0.5"
+daemonize = "0.4.1"

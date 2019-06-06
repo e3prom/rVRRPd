@@ -10,6 +10,10 @@ use std::net::IpAddr;
 pub struct CConfig {
     pub verbose: Option<u8>,
     pub debug: Option<u8>,
+    pub pid: Option<String>,
+    pub working_dir: Option<String>,
+    pub main_log: Option<String>,
+    pub error_log: Option<String>,
     pub vrouter: Option<Vec<VRConfig>>,
     pub protocols: Option<Protocols>,
 }
@@ -24,6 +28,34 @@ impl CConfig {
         match self.debug {
             Some(v) => v,
             None => DEBUG_LEVEL_NONE,
+        }
+    }
+    // pid() getter
+    pub fn pid(&self) -> String {
+        match &self.pid {
+            Some(v) => v.clone(),
+            None => RVRRPD_DFLT_PIDFILE.to_string(),
+        }
+    }
+    // working_dir() getter
+    pub fn working_dir(&self) -> String {
+        match &self.working_dir {
+            Some(v) => v.clone(),
+            None => RVRRPD_DFLT_WORKDIR.to_string(),
+        }
+    }
+    // main_log() getter
+    pub fn main_log(&self) -> String {
+        match &self.main_log {
+            Some(v) => v.clone(),
+            None => RVRRPD_DFLT_LOGFILE.to_string(),
+        }
+    }
+    // error_log() getter
+    pub fn error_log(&self) -> String {
+        match &self.error_log {
+            Some(v) => v.clone(),
+            None => RVRRPD_DFLT_ELOGFILE.to_string(),
         }
     }
 }
@@ -176,7 +208,7 @@ impl Static {
 // decode_config() function
 /// read and decode configuration file
 pub fn decode_config(filename: String) -> CConfig {
-    let file = std::fs::read_to_string(filename).expect("Failed to read configuration file");
+    let file = std::fs::read_to_string(filename).expect("Cannot read rVRRPd configuration file");
     let config: CConfig = match toml::from_str(&file) {
         Ok(c) => c,
         Err(e) => panic!("error(config): Cannot parse configuration file:\n {}", e),

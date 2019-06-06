@@ -22,15 +22,23 @@ struct MyError(String);
 
 impl std::fmt::Display for MyError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Error: {}", self.0)
+        write!(f, "{}", self.0)
     }
 }
 impl Error for MyError {}
 
 // print_usage() function
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} -m0|1 [options]>", program);
-    print!("{}", opts.usage(&brief));
+    let modes = format!(
+        "\
+    Modes:
+    0 = VRRPv2 Sniffer
+    1 = VRRPv2 Virtual Router (foreground)
+    2 = VRRPv2 Virtual Router (daemon)\
+    "
+    );
+    let usage = format!("Usage: {} -m0|1|2 [options]\n\n{}", program, modes);
+    print!("{}", opts.usage(&usage));
 }
 
 // parse_cl_opts() function
@@ -39,14 +47,24 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "display help information");
-    opts.optopt("i", "iface", "ethernet interface to listen on", "INTERFACE");
+    opts.optopt(
+        "i",
+        "iface",
+        "ethernet interface to listen on (sniffer mode)",
+        "INTERFACE",
+    );
     opts.optopt(
         "m",
         "mode",
-        "operation mode:\n 0(sniff), 1(foreground)",
+        "operation modes (see Modes):\n 0(sniffer), 1(foreground), 2(daemon)",
         "MODE",
     );
-    opts.optopt("c", "conf", "path to configuration file", "FILE");
+    opts.optopt(
+        "c",
+        "conf",
+        "path to configuration file:\n (default to /etc/rvrrpd/rvrrpd.conf)",
+        "FILE",
+    );
     opts.optopt(
         "d",
         "debug",
@@ -131,7 +149,7 @@ fn run(cfg: Config) -> Result<(), Box<dyn Error>> {
         Ok(_) => Ok(()),
         Err(e) => {
             return Result::Err(Box::new(MyError(
-                format!("An error occured while starting VRRP: {}", e).into(),
+                format!("A runtime error occured: {}", e).into(),
             )));
         }
     }
@@ -142,10 +160,12 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     match parse_cli_opts(&args) {
+        // error while parsing cli options
         Err(e) => {
             eprintln!("{}", e);
             std::process::exit(1);
         }
+        // if a configuration is returned from the parser
         Ok(c) => match run(c) {
             Err(e) => {
                 eprintln!("{}", e);

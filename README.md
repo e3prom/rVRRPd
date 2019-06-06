@@ -15,13 +15,15 @@ This project is still in early development stage and only support the Linux oper
  * Easily configurable using [TOML](https://github.com/toml-lang/toml)
  * Interoperable with [RFC3768](https://tools.ietf.org/html/rfc3768) compliant devices
  * Sniffer mode (-m0)
- * Virtual Router mode (-m1)
+ * Virtual Router in foreground mode (-m1)
+ * Virtual Router in daemon mode (-m2)
 
 # Roadmap
  * Linux Netlink Support
  * OpenBSD Support
  * Objects Tracking
  * Interoperability Testing
+ * Privileges Separation
 
 # Requirements
  * A Linux 64-bits kernel (only Linux is supported at this time)
@@ -46,24 +48,34 @@ $ cargo build --release
     Finished release [optimized] target(s) in 31.61s
 
 $ target/release/main
-Usage: target/release/main -m0|1 [options]>
+Usage: target/release/main -m0|1|2 [options]
+
+Modes:
+    0 = VRRPv2 Sniffer
+    1 = VRRPv2 Virtual Router (foreground)
+    2 = VRRPv2 Virtual Router (daemon)
 
 Options:
     -h, --help          display help information
     -i, --iface INTERFACE
-                        ethernet interface to listen on
-    -m, --mode MODE     operation mode:
-                        0(sniff), 1(foreground)
-    -c, --conf FILE     path to configuration file
+                        ethernet interface to listen on (sniffer mode)
+    -m, --mode MODE     operation modes (see Modes):
+                        0(sniffer), 1(foreground), 2(daemon)
+    -c, --conf FILE     path to configuration file:
+                        (default to /etc/rvrrpd/rvrrpd.conf)
     -d, --debug LEVEL   debugging level:
                         0(none), 1(low), 2(medium), 3(high), 5(extensive)
 
 ```
 
 To run a VRRP virtual router, edit the configuration file in `conf/rvrrpd.conf` to reflect your environment:
-```text {.line-numbers}
+```Text
 verbose = 0
 debug = 5
+pid = "/var/tmp/rvrrpd.pid"
+working_dir = "/var/tmp"
+main_log = "/var/tmp/rvrrpd.log"
+error_log = "/var/tmp/rvrrpd-error.log"
 
 [[vrouter]]
 group = 1
@@ -90,14 +102,14 @@ The above configuration example do the following:
    * Is configured without authentication (auth type 0).
 * Has a static defaut route configured with a next-hop of `10.240.0.254`.
 
-Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `virtual router` operating mode:
+Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `Virtual Router (foreground)` operating mode:
 ```
 $ sudo target/release/main -m1
 Starting rVRRPd
 [...]
 ```
 
-Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role when necessary. If the router own the virtual ip address, it will automatically take the Master role with a priority of 255.
+Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role when necessary. If the router own the virtual IP address, it will automatically take the Master role with a priority of 255.
 
 # Support
 If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new). Please provide a full backtrace in case the daemon panics or crashes.

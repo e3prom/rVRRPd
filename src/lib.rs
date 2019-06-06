@@ -18,6 +18,10 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+// deamonize
+extern crate daemonize;
+use daemonize::Daemonize;
+
 // generic constants
 mod constants;
 use constants::*;
@@ -65,6 +69,7 @@ use debug::print_debug;
 
 // std
 use std::ffi::CString;
+use std::fs::File;
 use std::io;
 use std::mem;
 use std::net::IpAddr::V4;
@@ -109,7 +114,7 @@ impl Config {
         match &self.conf {
             Some(s) => s.clone(),
             // default configuration file path
-            None => RVRRP_DFLT_CFG_FILE.to_string(),
+            None => RVRRPD_DFLT_CFG_FILE.to_string(),
         }
     }
     // debug() getter
@@ -309,11 +314,8 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 }
             }
         }
-        // virtual router mode
-        1 => {
-            // initialize the virtual router vector
-            let mut vrouters: Vec<Arc<RwLock<VirtualRouter>>> = Vec::new();
-
+        // virtual router modes
+        1 | 2 => {
             // read configuration file
             let config = decode_config(cfg.conf());
 
@@ -323,6 +325,31 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 // if None, then read debug level from configuration file
                 None => config.debug(),
             };
+
+            // if the mode is 2, then daemonize:
+            if cfg.mode == 2 {
+                // create log files
+                let stdout = File::create(config.main_log()).unwrap();
+                let stderr = File::create(config.error_log()).unwrap();
+                // initialize the daemon
+                let deamon = Daemonize::new()
+                    .pid_file(config.pid())
+                    .chown_pid_file(true)
+                    .working_directory(config.working_dir())
+                    .user("root")
+                    .group("root")
+                    .umask(0o027)
+                    .stdout(stdout)
+                    .stderr(stderr);
+                // daemonize the process
+                match deamon.start() {
+                    Ok(_) => println!("rVRRPd daemon started"),
+                    Err(e) => eprintln!("Error while starting rVRRPd daemon: {}", e),
+                }
+            }
+
+            // initialize the virtual router vector
+            let mut vrouters: Vec<Arc<RwLock<VirtualRouter>>> = Vec::new();
 
             // initialize internal protocols structure
             let mut protocols = Protocols { r#static: None };
