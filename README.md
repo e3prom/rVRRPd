@@ -104,7 +104,7 @@ The above configuration example do the following:
 
 Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `Virtual Router (foreground)` operating mode:
 ```
-$ sudo target/release/main -m1
+$ sudo target/release/main -m1 -c conf/rvrrpd.conf
 Starting rVRRPd
 [...]
 ```
