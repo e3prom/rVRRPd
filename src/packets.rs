@@ -199,18 +199,28 @@ pub fn send_advertisement(
         frame.push(*b);
     }
 
-    // extend frame with the variable-length list of ip addresses
-    for addr in vr.parameters.ipaddrs() {
-        for i in 0..4 {
-            frame.push(addr[i]);
-        }
-        // print debugging information
-        print_debug(
-            debug_level,
-            DEBUG_LEVEL_EXTENSIVE,
-            format!("debug(packet): advertisement frame -> {:?}", frame),
-        );
+    // set and push the VIP to the ipaddrs
+    let vip = vr.parameters.vip();
+    for i in 0..4 {
+        frame.push(vip[i]);
     }
+
+    // check if rfc3768 compatibility flag is false
+    if !vr.parameters.rfc3768()  {
+        // extend the frame with the variable-length list of local IP addresses
+        for addr in vr.parameters.ipaddrs() {
+            for i in 0..4 {
+                frame.push(addr[i]);
+            }
+        }
+    }
+
+    // print debugging information
+    print_debug(
+        debug_level,
+        DEBUG_LEVEL_EXTENSIVE,
+        format!("debug(packet): sending advertisement frame -> {:?}", frame),
+    );
 
     // add authentication data
     for b in gen_auth_data(vr.parameters.authsecret()) {

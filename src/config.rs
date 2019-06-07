@@ -71,6 +71,7 @@ pub struct VRConfig {
     auth_type: Option<u8>,
     auth_secret: Option<String>,
     timers: Option<Timers>,
+    rfc3768: Option<bool>,
 }
 impl VRConfig {
     // group() getter
@@ -135,6 +136,13 @@ impl VRConfig {
     // auth_secret() getter
     pub fn auth_secret(&self) -> &Option<String> {
         &self.auth_secret
+    }
+    // rfc3768() getter
+    pub fn rfc3768(&self) -> bool {
+        match self.rfc3768 {
+            Some(b) => b,
+            None => true,
+        }
     }
 }
 

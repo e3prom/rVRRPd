@@ -16,18 +16,19 @@ pub struct Parameters {
     ifindex: i32,                // Interface ifindex
     prio: u8,                    // Priority (0-255)
     vip: [u8; 4],                // Virtual IP (not in RFC parameters list)
-    ipaddrs: Vec<[u8; 4]>, // One or more IPv4 Addresse(s) associated with local virtual router
+    ipaddrs: Vec<[u8; 4]>, // One or more local IPv4 Addresse(s) associated with the virtual router
     ipmasks: Vec<[u8; 4]>, // IPv4 Netmask(s) of above IP addresses
     adverint: u8,          // Advertisement interval
     skew_time: f32,        // Time to skew Master_Down interval (second)
     master_down: f32,      // Time interval for Backup to declare Master Down
     preempt_mode: bool, // Control whether a higher-priority Backup router can preempt a lower-priority Master
+    rfc3768: bool,      // RFC2338 compatibility flag
     auth_type: u8,      // Authentication type being used
     auth_data: [u8; 8], // Autentication data (type specific)
-    auth_secret: Option<String>, // Authentication secret for type-1 RFC2338 authentication
+    auth_secret: Option<String>, // Authentication secret for type-1 RFC3768 authentication
     notification: Option<Arc<Mutex<mpsc::Sender<Event>>>>, // Notification channel
     protocols: Arc<Mutex<Protocols>>, // Internal protocols information
-    ifmac: [u8; 6],     // Interface Ethernet MAC Address
+    ifmac: [u8; 6],     // Interface Ethernet MAC address
 }
 
 /// Parameters Type Implementation
@@ -45,6 +46,7 @@ impl Parameters {
         skew_time: f32,
         master_down: f32,
         preempt_mode: bool,
+        rfc3768: bool,
         auth_type: u8,
         auth_data: [u8; 8],
         auth_secret: Option<String>,
@@ -62,6 +64,7 @@ impl Parameters {
             skew_time,
             master_down,
             preempt_mode,
+            rfc3768,
             auth_type,
             auth_data,
             auth_secret,
@@ -98,6 +101,10 @@ impl Parameters {
     pub fn adverint(&self) -> u8 {
         self.adverint
     }
+    // rfc3768() getter
+    pub fn rfc3768(&self) -> bool {
+        self.rfc3768
+    }
     // authtype() getter
     pub fn authtype(&self) -> u8 {
         self.auth_type
@@ -108,8 +115,14 @@ impl Parameters {
     }
     // addrcount() method
     pub fn addrcount(&self) -> u8 {
-        // return the number of addresses (or arrays) in ipaddrs vector
-        *&self.ipaddrs.len() as u8
+        // calculate the number of addresses (or arrays) in ipaddrs vector
+        let num = *&self.ipaddrs.len() as u8;
+        // if rfc3768 compatibility flag is false, add one to account for the VIP
+        if !self.rfc3768 {
+            num + 1
+        } else {
+            num
+        }
     }
     // primary_ip() method
     pub fn primary_ip(&self) -> [u8; 4] {
