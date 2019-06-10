@@ -2,6 +2,7 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/e3prom/rvrrpd.svg)
 ![GitHub issues](https://img.shields.io/github/issues/e3prom/rvrrpd.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/e3prom/rvrrpd.svg)
+[![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=master)](https://travis-ci.org/e3prom/rVRRPd)
 ![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)
 
 # Introduction
@@ -67,7 +68,6 @@ Options:
 
 To run a VRRP virtual router, edit the configuration file in `conf/rvrrpd.conf` to reflect your environment:
 ```Text
-verbose = 0
 debug = 5
 pid = "/var/tmp/rvrrpd.pid"
 working_dir = "/var/tmp"
@@ -81,9 +81,6 @@ vip = "10.100.100.1"
 priority = 254
 preemption = true
 rfc3768 = true
-auth_type = 0
-#auth_secret = ""
-#timers = { advert = 1 }
 
 [protocols]
     [[protocols.static]]
