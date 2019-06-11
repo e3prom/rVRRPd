@@ -31,6 +31,7 @@ impl CConfig {
     pub fn time_zone(&self) -> u8 {
         match &self.time_zone {
             Some(s) => match &s[..] {
+                "local" => 0,
                 "utc" => 1,
                 _ => 0,
             },
@@ -41,7 +42,9 @@ impl CConfig {
     pub fn time_format(&self) -> u8 {
         match &self.time_format {
             Some(s) => match &s[..] {
-                "rfc2822" => 1,
+                "disabled" => 0,
+                "short" => 1,
+                "rfc2822" => 2,
                 _ => 0,
             },
             None => 0,

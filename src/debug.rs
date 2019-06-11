@@ -35,15 +35,17 @@ pub fn print_debug(debug: &Verbose, msg_level: u8, msg: String) {
                 // UTC
                 let now: DateTime<Utc> = Utc::now();
                 match debug.time_format {
-                    1 => println!("[{}] {}", now.to_rfc2822(), msg),
-                    _ => println!("[{}] {}", now.format(RVRRPD_DFLT_DATE_FORMAT), msg),
+                    1 => println!("[{}] {}", now.format(RVRRPD_DFLT_DATE_FORMAT), msg),
+                    2 => println!("[{}] {}", now.to_rfc2822(), msg),
+                    _ => println!("{}", msg),
                 }
-            } // local
+            } // local time
             _ => {
                 let now: DateTime<Local> = Local::now();
                 match debug.time_format {
-                    1 => println!("[{}] {}", now.to_rfc2822(), msg),
-                    _ => println!("[{}] {}", now.format(RVRRPD_DFLT_DATE_FORMAT), msg),
+                    1 => println!("[{}] {}", now.format(RVRRPD_DFLT_DATE_FORMAT), msg),
+                    2 => println!("[{}] {}", now.to_rfc2822(), msg),
+                    _ => println!("{}", msg),
                 }
             }
         }
