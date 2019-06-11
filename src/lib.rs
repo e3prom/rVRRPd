@@ -22,6 +22,9 @@ extern crate serde_derive;
 extern crate daemonize;
 use daemonize::Daemonize;
 
+// chrono
+extern crate chrono;
+
 // generic constants
 mod constants;
 use constants::*;
