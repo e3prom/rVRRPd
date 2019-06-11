@@ -8,8 +8,9 @@ use std::net::IpAddr;
 /// Main Configuration Structure
 #[derive(Debug, Deserialize)]
 pub struct CConfig {
-    pub verbose: Option<u8>,
     pub debug: Option<u8>,
+    pub time_zone: Option<String>,
+    pub time_format: Option<String>,
     pub pid: Option<String>,
     pub working_dir: Option<String>,
     pub main_log: Option<String>,
@@ -19,15 +20,31 @@ pub struct CConfig {
 }
 
 impl CConfig {
-    // verbose() getter
-    pub fn _verbose(&self) -> Option<u8> {
-        self.verbose
-    }
     // debug() getter
     pub fn debug(&self) -> u8 {
         match self.debug {
             Some(v) => v,
             None => DEBUG_LEVEL_NONE,
+        }
+    }
+    // time_zone() getter
+    pub fn time_zone(&self) -> u8 {
+        match &self.time_zone {
+            Some(s) => match &s[..] {
+                "utc" => 1,
+                _ => 0,
+            },
+            None => 0,
+        }
+    }
+    // time_format() getter
+    pub fn time_format(&self) -> u8 {
+        match &self.time_format {
+            Some(s) => match &s[..] {
+                "rfc2822" => 1,
+                _ => 0,
+            },
+            None => 0,
         }
     }
     // pid() getter

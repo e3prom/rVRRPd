@@ -12,6 +12,9 @@ use futures::Future;
 // channels
 use std::sync::mpsc;
 
+// debugging
+use crate::debug::{Verbose, print_debug};
+
 // fsm
 use crate::fsm::Event;
 
@@ -24,12 +27,15 @@ use std::time::{Duration, Instant};
 pub fn start_timers(
     tx: Arc<Mutex<mpsc::Sender<Event>>>,
     vr: Arc<RwLock<VirtualRouter>>,
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // clone vr's Arc
     let vr0 = Arc::clone(&vr);
     // acquire read lock on virtual router
     let vr0 = vr0.read().unwrap();
+
+    // clone debug
+    let debug = debug.clone();
 
     // set duration from vr's timer
     let master_down = Duration::from_secs(vr0.timers.master_down() as u64);
@@ -50,10 +56,10 @@ pub fn start_timers(
     // 0x1, no ADVERTISEMENT has been received (since) and the master is signaled
     // down to the approriate vr's thread, this timer share the 'tx' channel with.
     let master_down_int = Interval::new_interval(master_down)
-        .take_while(move |_| future::ok(is_master_down_disabled(&vr1, debug_level)))
+        .take_while(move |_| future::ok(is_master_down_disabled(&vr1, &debug)))
         .for_each(move |_| {
             print_debug(
-                debug_level,
+                &debug,
                 DEBUG_LEVEL_HIGH,
                 format!("debug(timer): master_down interval has expired"),
             );
@@ -64,7 +70,7 @@ pub fn start_timers(
             // if flag is already set, then signal master down
             if vr2.flags.get_down_flag() == 0x1 {
                 print_debug(
-                    debug_level,
+                    &debug,
                     DEBUG_LEVEL_EXTENSIVE,
                     format!("debug(timer): signaling Master down"),
                 );
@@ -78,7 +84,7 @@ pub fn start_timers(
             // check if down flag is set
             else if vr2.flags.get_down_flag() == 0x0 {
                 print_debug(
-                    debug_level,
+                    &debug,
                     DEBUG_LEVEL_EXTENSIVE,
                     format!("debug(timer): signaling master_down timer expiry"),
                 );
@@ -104,11 +110,11 @@ pub fn start_timers(
     // which then trigger an ADVERTISEMENT message in some finite state machine states.
     let advert_int = Interval::new(Instant::now() + advert, advert)
         // must return true to activate the interval timer
-        .take_while(move |_| future::ok(is_advert_disabled(&vr3, debug_level)))
+        .take_while(move |_| future::ok(is_advert_disabled(&vr3, &debug)))
         .for_each(move |_| {
             // print debugging information
             print_debug(
-                debug_level,
+                &debug,
                 DEBUG_LEVEL_HIGH,
                 format!("debug(timer): advertisement interval has expired"),
             );
@@ -116,7 +122,7 @@ pub fn start_timers(
             let tx2 = tx2.lock().unwrap();
             // print debugging information
             print_debug(
-                debug_level,
+                &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 format!("debug(timer): signaling advertisement interval expiry"),
             );
@@ -127,6 +133,7 @@ pub fn start_timers(
         })
         .map_err(|_| ());
 
+    // start the tokio runtime
     tokio::run(future::lazy(|| {
         tokio::spawn(master_down_int);
         tokio::spawn(advert_int);
@@ -136,14 +143,14 @@ pub fn start_timers(
 
 // is_master_down_disabled() function
 /// return boolean false is the master_down interval is zero or lower
-fn is_master_down_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug_level: u8) -> bool {
+fn is_master_down_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> bool {
     let vr = vr.read().unwrap();
     if vr.timers.master_down() > 0.0 {
         true
     } else {
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_MEDIUM,
             format!("debug(timer): master_down timer is disabled"),
         );
@@ -154,14 +161,14 @@ fn is_master_down_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug_level: u8) -> 
 // is_advert_disabled() function
 /// return boolean true is the advertisement interval vr's timer
 /// is higher than zero
-fn is_advert_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug_level: u8) -> bool {
+fn is_advert_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> bool {
     let vr = vr.read().unwrap();
     if vr.timers.advert() > 0 {
         true
     } else {
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_MEDIUM,
             format!("debug(timer): the advertisement timer is disabled"),
         );

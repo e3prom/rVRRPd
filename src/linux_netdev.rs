@@ -240,7 +240,7 @@ pub fn set_ip_address(
 // get_mac_addr() function
 /// Get the MAC address of an interface
 /// this function return the interface's MAC address if read sucessfully
-pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug_level: u8) -> io::Result<[u8; 6]> {
+pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug: &Verbose) -> io::Result<[u8; 6]> {
     // convert interface name to CString type
     let ifname = CString::new(ifname.as_bytes() as &[u8]).unwrap();
 
@@ -277,7 +277,7 @@ pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug_level: u8) -> io::Resul
 
     // ioctl - set/reset MAC address
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_HIGH,
         format!("debug(mac): getting mac address on interface {:?}", ifname),
     );
@@ -286,7 +286,7 @@ pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug_level: u8) -> io::Resul
         return Err(io::Error::last_os_error());
     }
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_HIGH,
         format!(
             "debug(mac): got interface {:?} mac address: {:?}",
@@ -304,7 +304,7 @@ pub fn set_mac_addr(
     sockfd: i32,
     ifname: &CString,
     mac: [u8; 6],
-    debug_level: u8,
+    debug: &Verbose,
 ) -> io::Result<()> {
     // convert interface name to CString type
     let ifname = CString::new(ifname.as_bytes() as &[u8]).unwrap();
@@ -349,7 +349,7 @@ pub fn set_mac_addr(
 
     // ioctl - set/reset MAC address
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_HIGH,
         format!("debug(mac): setting mac address {:?}: {:?}", ifname, ifmac),
     );
@@ -372,7 +372,7 @@ pub fn set_ip_route(
     metric: i16,
     mtu: u64,
     set_flag: bool,
-    debug_level: u8,
+    debug: &Verbose,
 ) -> io::Result<()> {
     // convert interface name to CString type
     let ifname = CString::new(ifname.as_bytes() as &[u8]).unwrap();
@@ -470,14 +470,14 @@ pub fn set_ip_route(
     let result: i32;
     if set_flag == true {
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_HIGH,
             format!("debug(route): adding route {:?}", ifroute),
         );
         result = unsafe { ioctl(sockfd, libc::SIOCADDRT, &mut ifroute) };
     } else {
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_HIGH,
             format!("debug(route): removing route {:?}", ifroute),
         );

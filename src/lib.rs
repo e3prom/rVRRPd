@@ -68,7 +68,7 @@ use protocols::{Protocols, Static};
 
 // debug
 mod debug;
-use debug::print_debug;
+use debug::{print_debug, Verbose};
 
 // std
 use std::ffi::CString;
@@ -150,7 +150,7 @@ impl VirtualRouter {
         auth_type: u8,
         mut auth_secret: Option<String>,
         protocols: Arc<Mutex<Protocols>>,
-        debug_level: u8,
+        debug: &Verbose,
     ) -> io::Result<VirtualRouter> {
         // get ifindex from interface name
         let ifindex = match c_ifnametoindex(&ifname) {
@@ -200,7 +200,7 @@ impl VirtualRouter {
 
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!(
                 "debug(vr): creating new virtal-router, vrid {} \
@@ -331,6 +331,11 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 None => config.debug(),
             };
 
+            // initialize 'debug' variable of type Verbose
+            // and pass time format string from configuration file
+            let debug: Verbose =
+                Verbose::new(debug_level, config.time_zone(), config.time_format());
+
             // if the mode is 2, then daemonize:
             if cfg.mode == 2 {
                 // create log files
@@ -387,7 +392,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
             }
             // print debugging information
             print_debug(
-                debug_level,
+                &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 format!(
                     "debug(protocols): reading protocols structure: {:?}",
@@ -416,7 +421,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                     vr.auth_type(),
                     vr.auth_secret().clone(),
                     protocols,
-                    debug_level,
+                    &debug,
                 ) {
                     Ok(vr) => {
                         let vr = RwLock::new(vr);
@@ -441,17 +446,17 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
 
             // print debugging information
             print_debug(
-                debug_level,
+                &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 format!("debug(vr): created virtual-router vector: {:?}", vrouters),
             );
 
             // create a pool of threads
-            let mut threads = ThreadPool::new(&vrouters, sockfd, debug_level);
+            let mut threads = ThreadPool::new(&vrouters, sockfd, &debug);
 
             // send Startup event to worker threads
             std::thread::sleep(std::time::Duration::from_secs(1));
-            threads.startup(&vrouters, debug_level);
+            threads.startup(&vrouters, &debug);
 
             loop {
                 // check if global shutdown variable is set
@@ -468,7 +473,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                     }
                     println!("Exiting...");
                     // Manually calling the threads pool desctructor
-                    threads.drop(&vrouters, debug_level);
+                    threads.drop(&vrouters, &debug);
                     std::process::exit(0);
                 }
 
@@ -483,7 +488,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                                     vrid,
                                     ipsrc,
                                     advert_prio,
-                                    debug_level,
+                                    &debug,
                                 );
                             }
                             _ => (),
@@ -664,11 +669,11 @@ fn handle_vrrp_advert(
     vrid: u8,
     ipsrc: [u8; 4],
     advert_prio: u8,
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_MEDIUM,
         format!(
             "debug(main): got a valid VRRPv2 packet for VRID {} on if {}",
@@ -692,7 +697,7 @@ fn handle_vrrp_advert(
                 Some(tx) => {
                     // print debugging information
                     print_debug(
-                        debug_level,
+                        debug,
                         DEBUG_LEVEL_EXTENSIVE,
                         format!("debug(main): sending Advert event notification"),
                     );
@@ -703,13 +708,13 @@ fn handle_vrrp_advert(
                         .unwrap();
                     // print debugging information
                     print_debug(
-                        debug_level,
+                        debug,
                         DEBUG_LEVEL_EXTENSIVE,
                         format!("debug(main): Advert event notification sent"),
                     );
                 }
                 None => print_debug(
-                    debug_level,
+                    debug,
                     DEBUG_LEVEL_LOW,
                     format!(
                     "debug(main): got ADVERTISEMENT message while notification channel not ready"

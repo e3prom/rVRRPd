@@ -14,7 +14,7 @@ use crate::VirtualRouter;
 use crate::checksums;
 
 // debugging
-use crate::debug::print_debug;
+use crate::debug::{Verbose, print_debug};
 
 // libc
 use libc::{c_void, sendto, sockaddr, sockaddr_ll, AF_PACKET};
@@ -185,7 +185,7 @@ impl VRRPpkt {
 pub fn send_advertisement(
     sockfd: i32,
     vr: &RwLockWriteGuard<'_, VirtualRouter>,
-    debug_level: u8,
+    debug: &Verbose,
 ) -> io::Result<()> {
     // generate initial VRRP ADVERTISEMENT frame/packet
     let advert = VRRPpkt::gen_advert(vr);
@@ -217,7 +217,7 @@ pub fn send_advertisement(
 
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!("debug(packet): sending advertisement frame -> {:?}", frame),
     );
@@ -232,7 +232,7 @@ pub fn send_advertisement(
         checksums::one_complement_sum(&frame[VRRP_V2_FRAME_OFFSET..], Option::Some(6));
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!("debug(packet): VRRP checksum is {:#X}", vrrp_checksum),
     );
@@ -244,7 +244,7 @@ pub fn send_advertisement(
     let ip_checksum = checksums::one_complement_sum(&frame[IP_FRAME_OFFSET..], Option::Some(10));
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!("debug(packet): IP checksum is {:#X}", ip_checksum),
     );
@@ -255,7 +255,7 @@ pub fn send_advertisement(
 
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!(
             "debug(packet): frame is {} bytes long",

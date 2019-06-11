@@ -10,6 +10,9 @@ use std::thread;
 // channels
 use std::sync::mpsc;
 
+// debugging
+use crate::debug::{Verbose};
+
 // finite state machine
 use fsm::{fsm_run, Event};
 
@@ -25,7 +28,7 @@ impl ThreadPool {
     pub fn new(
         vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
         sockfd: i32,
-        debug_level: u8,
+        debug: &Verbose,
     ) -> ThreadPool {
         // verify the vector is not empty and doesn't exceed 1024 virtual routers
         assert!(vrouters.len() > 0 && vrouters.len() < 1024);
@@ -36,20 +39,20 @@ impl ThreadPool {
         // creating individual workers for every virtual routers
         for (id, vr) in vrouters.iter().enumerate() {
             // create new worker
-            workers.push(Worker::new(id, Arc::clone(&vr), sockfd, debug_level));
+            workers.push(Worker::new(id, Arc::clone(&vr), sockfd, debug));
         }
 
         ThreadPool { workers }
     }
     // startup() method
     // Send startup event to every worker threads
-    pub fn startup(&self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug_level: u8) {
+    pub fn startup(&self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) {
         for (id, vr) in vrouters.iter().enumerate() {
             // acquire read lock on vr
             let vr = vr.read().unwrap();
             // print debugging information
             print_debug(
-                debug_level,
+                debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 format!("debug(thread): sending Startup event to worker threads"),
             );
@@ -61,7 +64,7 @@ impl ThreadPool {
     }
     // drop() method
     // Custom destructor function for the Thread pool
-    pub fn drop(&mut self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug_level: u8) {
+    pub fn drop(&mut self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) {
         println!("Signaling workers to shut down");
         // send Shutdown/Terminate events to all workers
         for (id, vr) in vrouters.iter().enumerate() {
@@ -85,7 +88,7 @@ impl ThreadPool {
         for worker in &mut self.workers {
             // print debugging information
             print_debug(
-                debug_level,
+                debug,
                 DEBUG_LEVEL_HIGH,
                 format!("debug(thread): waiting for thread {} to exit...", worker.id),
             );
@@ -122,7 +125,7 @@ pub struct Worker {
 // Worker Implementation
 impl Worker {
     // new() method
-    fn new(id: usize, vr: Arc<RwLock<VirtualRouter>>, sockfd: i32, debug_level: u8) -> Worker {
+    fn new(id: usize, vr: Arc<RwLock<VirtualRouter>>, sockfd: i32, debug: &Verbose) -> Worker {
         // creating a pair of sender and receiver channels
         let (sender, receiver) = mpsc::channel();
         let receiver = Arc::new(Mutex::new(receiver));
@@ -135,15 +138,18 @@ impl Worker {
         let worker_tx = Arc::clone(&sender);
         let worker_rx = Arc::clone(&receiver);
 
+        // clone debug
+        let debug = debug.clone();
+
         // create worker thread
         let worker_thread = thread::spawn(move || {
             // print debugging information
             print_debug(
-                debug_level,
+                &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 format!("debug(thread-pool) spawning worker thread {}", id),
             );
-            fsm_run(id, &worker_tx, &worker_rx, &worker_vr, sockfd, debug_level);
+            fsm_run(id, &worker_tx, &worker_rx, &worker_vr, sockfd, &debug);
         });
 
         Worker {

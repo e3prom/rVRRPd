@@ -8,6 +8,9 @@ use std::sync::{Arc, Mutex};
 // threads
 use std::thread;
 
+// debugging
+use crate::debug::{Verbose};
+
 /// Virtual Router Parameters Structure
 #[derive(Debug)]
 pub struct Parameters {
@@ -218,11 +221,11 @@ pub fn fsm_run(
     rx: &Arc<Mutex<mpsc::Receiver<Event>>>,
     vr: &Arc<RwLock<VirtualRouter>>,
     sockfd: i32,
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_HIGH,
         format!(
             "debug(fsm): registering notification sender channel for thread {}",
@@ -231,13 +234,13 @@ pub fn fsm_run(
     );
 
     // register notification sender channel
-    register_tx(&vr, &tx, id, debug_level);
+    register_tx(&vr, &tx, id, &debug);
 
     // start thread loop
     loop {
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!(
                 "debug(worker): worker thread {} acquiring lock on rx channel",
@@ -249,7 +252,7 @@ pub fn fsm_run(
 
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!("debug(worker): worker thread {} waiting for events", id),
         );
@@ -257,7 +260,7 @@ pub fn fsm_run(
         let event = event.recv().unwrap();
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!(
                 "debug(worker): worker thread {} got new {:?} event",
@@ -271,7 +274,7 @@ pub fn fsm_run(
             Event::Terminate => {
                 // print debugging information
                 print_debug(
-                    debug_level,
+                    debug,
                     DEBUG_LEVEL_HIGH,
                     format!("Worker thread {} exited", id),
                 );
@@ -287,7 +290,7 @@ pub fn fsm_run(
 
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!("debug(worker): worker thread {} acquiring write lock", id),
         );
@@ -295,7 +298,7 @@ pub fn fsm_run(
         let mut vr = vr.write().unwrap();
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!("debug(worker): worker thread {} write lock acquired", id),
         );
@@ -311,7 +314,7 @@ pub fn fsm_run(
                     Event::Startup => {
                         // print debugging information
                         print_debug(
-                            debug_level,
+                            debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             format!("debug(fsm): got Startup event on thread {}", id),
                         );
@@ -326,7 +329,7 @@ pub fn fsm_run(
 
                         // print debugging information
                         print_debug(
-                            debug_level,
+                            debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             format!(
                                 "debug(fsm): starting timer thread from worker thread {}",
@@ -334,8 +337,10 @@ pub fn fsm_run(
                             ),
                         );
                         // starting timer thread(s)
+                        // and clone debug structure of type Verbose
+                        let d = debug.clone();
                         let _timer_thread = thread::spawn(move || {
-                            timers::start_timers(timer_tx, timer_vr, debug_level);
+                            timers::start_timers(timer_tx, timer_vr, &d);
                         });
 
                         // if the virtual router is the owner of the virtual ip address
@@ -345,7 +350,7 @@ pub fn fsm_run(
                             vr.parameters.prio = 255;
                             // send an ADVERTISEMENT message
                             // and panic on error
-                            packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
+                            packets::send_advertisement(sockfd, &vr, &debug).unwrap();
                             // broadcast a gratuitious ARP request
                             let arp_sockfd = arp::open_raw_socket_arp().unwrap();
                             arp::broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
@@ -353,7 +358,7 @@ pub fn fsm_run(
                             vr.timers.advert = vr.parameters.adverint;
                             // print debugging information
                             print_debug(
-                                debug_level,
+                                &debug,
                                 DEBUG_LEVEL_EXTENSIVE,
                                 format!(
                                     "debug(fsm): the advertisement interval is now {}s",
@@ -392,7 +397,7 @@ pub fn fsm_run(
                     _ => {
                         // print debugging information
                         print_debug(
-                            debug_level,
+                            debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             format!("debug(fsm): unexpected event catched in Init state"),
                         );
@@ -417,7 +422,7 @@ pub fn fsm_run(
                                 vr.flags.clear_down_flag();
                                 // print debugging information
                                 print_debug(
-                                    debug_level,
+                                    debug,
                                     DEBUG_LEVEL_HIGH,
                                     format!("debug(fsm): down flag cleared in Backup state"),
                                 );
@@ -431,7 +436,7 @@ pub fn fsm_run(
                         vr.flags.set_down_flag();
                         // print debugging information
                         print_debug(
-                            debug_level,
+                            debug,
                             DEBUG_LEVEL_HIGH,
                             format!("debug(timer): down flag set for worker thread {}", id),
                         );
@@ -450,22 +455,22 @@ pub fn fsm_run(
                             vr.parameters.interface
                         );
                         // get and store vr's interface mac
-                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug_level);
+                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                         // set VRRP virtual mac address
                         let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                         vmac[5] = vr.parameters.vrid();
-                        set_mac_addresses(sockfd, &vr, vmac, debug_level);
+                        set_mac_addresses(sockfd, &vr, vmac, debug);
                         // set IP addresses (including VIP) on the vr's interface
-                        set_ip_addresses(sockfd, &vr, true, debug_level);
+                        set_ip_addresses(sockfd, &vr, true, debug);
                         // (re)set IP routes
-                        set_ip_routes(sockfd, &vr, true, debug_level);
+                        set_ip_routes(sockfd, &vr, true, debug);
                         // send gratuitious ARP requests
                         let arp_sockfd = arp::open_raw_socket_arp().unwrap();
                         arp::broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint;
                         // send ADVERTISEMENT
-                        packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
+                        packets::send_advertisement(sockfd, &vr, debug).unwrap();
                         // print information
                         println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Master",
                             vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
@@ -496,7 +501,7 @@ pub fn fsm_run(
                     // event: Advertisement timer expired in timer thread
                     Event::GenAdvert => {
                         // send ADVERTISEMENT message
-                        packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
+                        packets::send_advertisement(sockfd, &vr, debug).unwrap();
                         // reset the advertisement timer to advertisement interval
                         vr.timers.advert = vr.parameters.adverint;
                         continue;
@@ -506,7 +511,7 @@ pub fn fsm_run(
                         // if priority is zero
                         if prio == 0 {
                             // send an ADVERTISEMENT message
-                            packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
+                            packets::send_advertisement(sockfd, &vr, debug).unwrap();
                             // reset the advertisement timer to advertisement interval
                             vr.timers.advert = vr.parameters.adverint;
                             // state doesn't change
@@ -527,16 +532,16 @@ pub fn fsm_run(
                                 vr.flags.clear_down_flag();
                                 // print debugging information
                                 print_debug(
-                                    debug_level,
+                                    debug,
                                     DEBUG_LEVEL_HIGH,
                                     format!("debug(fsm): down flag cleared in Master state"),
                                 );
                                 // restore interface's MAC address
-                                set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug_level);
+                                set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
                                 // remove VIP on the vr's interface
-                                set_ip_addresses(sockfd, &vr, false, debug_level);
+                                set_ip_addresses(sockfd, &vr, false, debug);
                                 // re-set IP routes
-                                set_ip_routes(sockfd, &vr, true, debug_level);
+                                set_ip_routes(sockfd, &vr, true, debug);
                                 // print information
                                 println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Backup",
                                     vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
@@ -553,7 +558,7 @@ pub fn fsm_run(
                     Event::MasterDown => {
                         // print debugging information
                         print_debug(
-                            debug_level,
+                            debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             format!("debug(fsm): received MasterDown event in Master State"),
                         );
@@ -570,13 +575,13 @@ pub fn fsm_run(
                         vr.timers.advert = 0;
                         // send ADVERTISEMENT with priority equal 0
                         vr.parameters.prio = 0;
-                        packets::send_advertisement(sockfd, &vr, debug_level).unwrap();
+                        packets::send_advertisement(sockfd, &vr, debug).unwrap();
                         // restore interface's MAC address
-                        set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug_level);
+                        set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
                         // remove VIP on the vr's interface
-                        set_ip_addresses(sockfd, &vr, false, debug_level);
+                        set_ip_addresses(sockfd, &vr, false, debug);
                         // re-set IP routes
-                        set_ip_routes(sockfd, &vr, true, debug_level);
+                        set_ip_routes(sockfd, &vr, true, debug);
                         // transition to Down state
                         States::Down
                     }
@@ -588,7 +593,7 @@ pub fn fsm_run(
         };
         // print debugging information
         print_debug(
-            debug_level,
+            debug,
             DEBUG_LEVEL_EXTENSIVE,
             format!("debug(worker): worker thread {} released locks", id),
         );
@@ -601,11 +606,11 @@ fn register_tx(
     vr: &Arc<RwLock<VirtualRouter>>,
     tx: &Arc<Mutex<mpsc::Sender<Event>>>,
     id: usize,
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!("debug(worker-reg): acquiring write lock for thread {}", id),
     );
@@ -613,7 +618,7 @@ fn register_tx(
     let mut vr = vr.write().unwrap();
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!("debug(worker-reg): acquired write lock for thread {}", id),
     );
@@ -622,7 +627,7 @@ fn register_tx(
     vr.parameters.notification = Option::Some(Arc::clone(tx));
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_EXTENSIVE,
         format!("debug(worker-reg): registered tx channel for thread {}", id),
     );
@@ -647,7 +652,7 @@ fn set_ip_addresses(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     vip: bool,
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // create addr and netmask vector
     let mut addrs: Vec<[u8; 4]> = Vec::new();
@@ -675,35 +680,12 @@ fn set_ip_addresses(
     // construct interface name
     let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
 
-    // DEPRECATED
-    // // set every ip address from vectors (overwrite/only last remains)
-    // for (i, addr) in addrs.iter().enumerate() {
-    //     println!(
-    //         "debug(ip): setting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
-    //         addr[0],
-    //         addr[1],
-    //         addr[2],
-    //         addr[3],
-    //         netmasks[i][0],
-    //         netmasks[i][1],
-    //         netmasks[i][2],
-    //         netmasks[i][3],
-    //         ifname
-    //     );
-    //     if let Err(e) = linux_netdev::set_ip_address(sockfd, &ifname, *addr, netmasks[i]) {
-    //         eprintln!(
-    //             "error(ip): error while assigning IP address on interface {:?}: {}",
-    //             &ifname, e
-    //         );
-    //     }
-    // }
-
     // set the last ip address from vector
     let idx = addrs.len() - 1;
 
     // print debugging information
     print_debug(
-        debug_level,
+        debug,
         DEBUG_LEVEL_HIGH,
         format!(
             "debug(ip): setting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
@@ -731,13 +713,13 @@ fn set_ip_addresses(
 fn get_mac_addresses(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    debug_level: u8,
+    debug: &Verbose,
 ) -> [u8; 6] {
     // construct interface name
     let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
 
     // get mac address of interface
-    match linux_netdev::get_mac_addr(sockfd, &ifname, debug_level) {
+    match linux_netdev::get_mac_addr(sockfd, &ifname, debug) {
         Ok(mac) => mac,
         Err(e) => {
             eprintln!(
@@ -755,13 +737,13 @@ fn set_mac_addresses(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     mac: [u8; 6],
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // construct interface name
     let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
 
     // set mac address
-    if let Err(e) = linux_netdev::set_mac_addr(sockfd, &ifname, mac, debug_level) {
+    if let Err(e) = linux_netdev::set_mac_addr(sockfd, &ifname, mac, debug) {
         eprintln!("error(mac): error while setting mac address: {}", e);
     }
 }
@@ -772,7 +754,7 @@ fn set_ip_routes(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     set_flag: bool,
-    debug_level: u8,
+    debug: &Verbose,
 ) {
     // acquire mutex lock on protocols
     let protocols = &vr.parameters.protocols;
@@ -789,7 +771,7 @@ fn set_ip_routes(
             st.metric(),
             st.mtu(),
             set_flag,
-            debug_level,
+            debug,
         ) {
             eprintln!(
                 "error(route): cannot set or delete route {:?}: {}",
