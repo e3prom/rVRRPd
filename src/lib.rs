@@ -202,9 +202,10 @@ impl VirtualRouter {
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
+            DEBUG_SRC_INFO,
             format!(
-                "debug(vr): creating new virtal-router, vrid {} \
-                 on interface {}:\n IP address list: {:?}",
+                "creating new virtal-router, vrid {} on interface {}: \
+                 IP address list: {:?}",
                 vrid, ifname, v4addrs
             ),
         );
@@ -394,10 +395,8 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
             print_debug(
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
-                format!(
-                    "debug(protocols): reading protocols structure: {:?}",
-                    protocols
-                ),
+                DEBUG_SRC_PROTO,
+                format!("reading protocols structure: {:?}", protocols),
             );
             // create a RwLock mutex for protocols
             let protocols = Mutex::new(protocols);
@@ -448,7 +447,8 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
             print_debug(
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
-                format!("debug(vr): created virtual-router vector: {:?}", vrouters),
+                DEBUG_SRC_VR,
+                format!("created virtual-router vector: {:?}", vrouters),
             );
 
             // create a pool of threads
@@ -675,8 +675,9 @@ fn handle_vrrp_advert(
     print_debug(
         debug,
         DEBUG_LEVEL_MEDIUM,
+        DEBUG_SRC_MAIN,
         format!(
-            "debug(main): got a valid VRRPv2 packet for VRID {} on if {}",
+            "got a valid VRRPv2 packet for VRID {} on if {}",
             vrid, ifindex
         ),
     );
@@ -699,7 +700,8 @@ fn handle_vrrp_advert(
                     print_debug(
                         debug,
                         DEBUG_LEVEL_EXTENSIVE,
-                        format!("debug(main): sending Advert event notification"),
+                        DEBUG_SRC_MAIN,
+                        format!("sending Advert event notification"),
                     );
                     // acquiring lock on sender channel
                     tx.lock()
@@ -710,15 +712,15 @@ fn handle_vrrp_advert(
                     print_debug(
                         debug,
                         DEBUG_LEVEL_EXTENSIVE,
-                        format!("debug(main): Advert event notification sent"),
+                        DEBUG_SRC_MAIN,
+                        format!("Advert event notification sent"),
                     );
                 }
                 None => print_debug(
                     debug,
                     DEBUG_LEVEL_LOW,
-                    format!(
-                    "debug(main): got ADVERTISEMENT message while notification channel not ready"
-                ),
+                    DEBUG_SRC_MAIN,
+                    format!("got ADVERTISEMENT message while notification channel not ready"),
                 ),
             }
         }

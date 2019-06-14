@@ -8,11 +8,26 @@ pub const RVRRPD_DFLT_WORKDIR: &str = "/tmp";
 pub const RVRRPD_DFLT_LOGFILE: &str = "/var/log/rvrrpd.log";
 pub const RVRRPD_DFLT_ELOGFILE: &str = "/var/log/rvrrpd-error.log";
 pub const RVRRPD_DFLT_DATE_FORMAT: &str = "%b %e %Y %T";
-pub const DEBUG_LEVEL_NONE: u8 = 0;
+pub const DEBUG_LEVEL_INFO: u8 = 0;
 pub const DEBUG_LEVEL_LOW: u8 = 1;
 pub const DEBUG_LEVEL_MEDIUM: u8 = 2;
 pub const DEBUG_LEVEL_HIGH: u8 = 3;
 pub const DEBUG_LEVEL_EXTENSIVE: u8 = 5;
+pub const DEBUG_SRC_INFO: &str = "info";
+pub const DEBUG_SRC_PROTO: &str = "protocols";
+pub const DEBUG_SRC_VR: &str = "vr";
+pub const DEBUG_SRC_MAIN: &str = "main";
+pub const DEBUG_SRC_MAC: &str = "mac";
+pub const DEBUG_SRC_ROUTE: &str = "route";
+pub const DEBUG_SRC_PACKET: &str = "packet";
+pub const DEBUG_SRC_THREAD: &str = "thread";
+pub const DEBUG_SRC_THREADP: &str = "thread-pool";
+pub const DEBUG_SRC_FSM: &str = "fsm";
+pub const DEBUG_SRC_WORKER: &str = "worker";
+pub const DEBUG_SRC_WORKERG: &str = "worker-reg";
+pub const DEBUG_SRC_TIMER: &str = "timer";
+pub const DEBUG_SRC_IP: &str = "ip";
+
 // Ethernet Constants
 pub const ETHER_P_IP: u16 = 0x0800; // IPv4 (/usr/include/linux/if_ether.h)
 pub const ETHER_P_ARP: u16 = 0x0806;

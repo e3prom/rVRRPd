@@ -11,7 +11,7 @@ use std::thread;
 use std::sync::mpsc;
 
 // debugging
-use crate::debug::{Verbose};
+use crate::debug::Verbose;
 
 // finite state machine
 use fsm::{fsm_run, Event};
@@ -54,7 +54,8 @@ impl ThreadPool {
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
-                format!("debug(thread): sending Startup event to worker threads"),
+                DEBUG_SRC_THREAD,
+                format!("sending Startup event to worker threads"),
             );
             match vr.parameters.notification() {
                 Some(tx) => tx.lock().unwrap().send(Event::Startup).unwrap(),
@@ -65,7 +66,12 @@ impl ThreadPool {
     // drop() method
     // Custom destructor function for the Thread pool
     pub fn drop(&mut self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) {
-        println!("Signaling workers to shut down");
+        print_debug(
+            debug,
+            DEBUG_LEVEL_INFO,
+            DEBUG_SRC_THREAD,
+            format!("signaling workers to shut down"),
+        );
         // send Shutdown/Terminate events to all workers
         for (id, vr) in vrouters.iter().enumerate() {
             // acquire read lock on vr
@@ -77,8 +83,8 @@ impl ThreadPool {
                     // send Terminate event
                     tx.lock().unwrap().send(Event::Terminate).unwrap();
                 }
-                None => println!(
-                    "error: cannot send Terminate event for {}, channel does not exist",
+                None => eprintln!(
+                    "error(thread): cannot send Terminate event for {}, channel does not exist",
                     id
                 ),
             }
@@ -90,7 +96,8 @@ impl ThreadPool {
             print_debug(
                 debug,
                 DEBUG_LEVEL_HIGH,
-                format!("debug(thread): waiting for thread {} to exit...", worker.id),
+                DEBUG_SRC_THREAD,
+                format!("waiting for thread {} to exit...", worker.id),
             );
             // take the thread out of the worker stucture and leave a None
             if let Some(thread) = worker.thread.take() {
@@ -147,7 +154,8 @@ impl Worker {
             print_debug(
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
-                format!("debug(thread-pool) spawning worker thread {}", id),
+                DEBUG_SRC_THREADP,
+                format!("spawning worker thread {}", id),
             );
             fsm_run(id, &worker_tx, &worker_rx, &worker_vr, sockfd, &debug);
         });

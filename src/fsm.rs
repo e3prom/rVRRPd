@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 // debugging
-use crate::debug::{Verbose};
+use crate::debug::Verbose;
 
 /// Virtual Router Parameters Structure
 #[derive(Debug)]
@@ -227,10 +227,8 @@ pub fn fsm_run(
     print_debug(
         debug,
         DEBUG_LEVEL_HIGH,
-        format!(
-            "debug(fsm): registering notification sender channel for thread {}",
-            id
-        ),
+        DEBUG_SRC_FSM,
+        format!("registering notification sender channel for thread {}", id),
     );
 
     // register notification sender channel
@@ -242,10 +240,8 @@ pub fn fsm_run(
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            format!(
-                "debug(worker): worker thread {} acquiring lock on rx channel",
-                id
-            ),
+            DEBUG_SRC_WORKER,
+            format!("worker thread {} acquiring lock on rx channel", id),
         );
         // acquire lock on receive channel
         let event = rx.lock().unwrap();
@@ -254,7 +250,8 @@ pub fn fsm_run(
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            format!("debug(worker): worker thread {} waiting for events", id),
+            DEBUG_SRC_WORKER,
+            format!("worker thread {} waiting for events", id),
         );
         // listen for events
         let event = event.recv().unwrap();
@@ -262,10 +259,8 @@ pub fn fsm_run(
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            format!(
-                "debug(worker): worker thread {} got new {:?} event",
-                id, event
-            ),
+            DEBUG_SRC_WORKER,
+            format!("worker thread {} got new {:?} event", id, event),
         );
 
         // handle terminate event first and foremost
@@ -276,7 +271,8 @@ pub fn fsm_run(
                 print_debug(
                     debug,
                     DEBUG_LEVEL_HIGH,
-                    format!("Worker thread {} exited", id),
+                    DEBUG_SRC_WORKER,
+                    format!("worker thread {} exited", id),
                 );
                 // break current loop
                 break;
@@ -292,7 +288,8 @@ pub fn fsm_run(
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            format!("debug(worker): worker thread {} acquiring write lock", id),
+            DEBUG_SRC_WORKER,
+            format!("worker thread {} acquiring write lock", id),
         );
         // acquire write lock on thread's virtual router
         let mut vr = vr.write().unwrap();
@@ -300,7 +297,8 @@ pub fn fsm_run(
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            format!("debug(worker): worker thread {} write lock acquired", id),
+            DEBUG_SRC_WORKER,
+            format!("worker thread {} write lock acquired", id),
         );
 
         // evaluate virtual router's current state
@@ -316,25 +314,24 @@ pub fn fsm_run(
                         print_debug(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
-                            format!("debug(fsm): got Startup event on thread {}", id),
+                            DEBUG_SRC_WORKER,
+                            format!("got Startup event on thread {}", id),
                         );
 
                         // print information
-                        println!(
+                        print_debug(debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "Starting VRRP Virtual Router ({}.{}.{}.{}) for group {}, on interface {} (thread: {})",
                             vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
                             vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface,
                             id
-                        );
+                        ));
 
                         // print debugging information
                         print_debug(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
-                            format!(
-                                "debug(fsm): starting timer thread from worker thread {}",
-                                id
-                            ),
+                            DEBUG_SRC_WORKER,
+                            format!("starting timer thread from worker thread {}", id),
                         );
                         // starting timer thread(s)
                         // and clone debug structure of type Verbose
@@ -360,26 +357,26 @@ pub fn fsm_run(
                             print_debug(
                                 &debug,
                                 DEBUG_LEVEL_EXTENSIVE,
-                                format!(
-                                    "debug(fsm): the advertisement interval is now {}s",
-                                    vr.timers.advert
-                                ),
+                                DEBUG_SRC_FSM,
+                                format!("the advertisement interval is now {}s", vr.timers.advert),
                             );
                             // print information
-                            println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Master",
+                            print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                                "VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Master",
                                 vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
                                 vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                            );
+                            ));
                             // transition to Master state
                             fsm::States::Master
                         } else {
                             // set master_down timer
                             vr.timers.master_down = vr.parameters.master_down;
                             // print information
-                            println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Backup",
+                            print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                                "VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Backup",
                                 vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
                                 vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                            );
+                            ));
                             // transition to Backup state
                             States::Backup
                         }
@@ -387,10 +384,11 @@ pub fn fsm_run(
                     // event: if Shutdown event is received
                     Event::Shutdown => {
                         // print information
-                        println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Down",
-                                vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                                vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                        );
+                        print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                            "VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Down",
+                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
+                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                        ));
                         // transition to Down state
                         States::Down
                     }
@@ -399,7 +397,8 @@ pub fn fsm_run(
                         print_debug(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
-                            format!("debug(fsm): unexpected event catched in Init state"),
+                            DEBUG_SRC_FSM,
+                            format!("unexpected event catched in Init state"),
                         );
                         continue;
                     }
@@ -424,7 +423,8 @@ pub fn fsm_run(
                                 print_debug(
                                     debug,
                                     DEBUG_LEVEL_HIGH,
-                                    format!("debug(fsm): down flag cleared in Backup state"),
+                                    DEBUG_SRC_FSM,
+                                    format!("down flag cleared in Backup state"),
                                 );
                             }
                         }
@@ -438,14 +438,15 @@ pub fn fsm_run(
                         print_debug(
                             debug,
                             DEBUG_LEVEL_HIGH,
-                            format!("debug(timer): down flag set for worker thread {}", id),
+                            DEBUG_SRC_FSM,
+                            format!("down flag set for worker thread {}", id),
                         );
                         continue;
                     }
                     // event: If the Timers::master_down reached zero
                     Event::MasterDown => {
                         // print information
-                        println!(
+                        print_debug(debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "VR {}.{}.{}.{} for group {} on interface {} - Master VR is declared Down",
                             vr.parameters.vip[0],
                             vr.parameters.vip[1],
@@ -453,7 +454,7 @@ pub fn fsm_run(
                             vr.parameters.vip[3],
                             vr.parameters.vrid,
                             vr.parameters.interface
-                        );
+                        ));
                         // get and store vr's interface mac
                         vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                         // set VRRP virtual mac address
@@ -472,20 +473,22 @@ pub fn fsm_run(
                         // send ADVERTISEMENT
                         packets::send_advertisement(sockfd, &vr, debug).unwrap();
                         // print information
-                        println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Master",
+                        print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                            "VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Master",
                             vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
                             vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                        );
+                        ));
                         // transition to Master state
                         States::Master
                     }
                     // event: if Shutdown event is received
                     Event::Shutdown => {
                         // print information
-                        println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Down",
-                                vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                                vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                        );
+                        print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                            "VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Down",
+                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
+                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                        ));
                         // cancel the 'active' master_down timer
                         vr.timers.master_down = std::f32::NAN;
                         // transition to Down state
@@ -534,7 +537,8 @@ pub fn fsm_run(
                                 print_debug(
                                     debug,
                                     DEBUG_LEVEL_HIGH,
-                                    format!("debug(fsm): down flag cleared in Master state"),
+                                    DEBUG_SRC_FSM,
+                                    format!("down flag cleared in Master state"),
                                 );
                                 // restore interface's MAC address
                                 set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
@@ -543,10 +547,11 @@ pub fn fsm_run(
                                 // re-set IP routes
                                 set_ip_routes(sockfd, &vr, true, debug);
                                 // print information
-                                println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Backup",
+                                print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                                    "VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Backup",
                                     vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
                                     vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                                );
+                                ));
                                 // transition to Backup state
                                 States::Backup
                             } else {
@@ -560,17 +565,19 @@ pub fn fsm_run(
                         print_debug(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
-                            format!("debug(fsm): received MasterDown event in Master State"),
+                            DEBUG_SRC_FSM,
+                            format!("received MasterDown event in Master State"),
                         );
                         continue;
                     }
                     // event: if Shutdown event is received
                     Event::Shutdown => {
                         // print information
-                        println!("VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Down",
-                                vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                                vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
-                        );
+                        print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
+                            "VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Down",
+                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
+                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                        ));
                         // cancel the 'advert' timer
                         vr.timers.advert = 0;
                         // send ADVERTISEMENT with priority equal 0
@@ -595,7 +602,8 @@ pub fn fsm_run(
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            format!("debug(worker): worker thread {} released locks", id),
+            DEBUG_SRC_WORKER,
+            format!("worker thread {} released locks", id),
         );
     }
 }
@@ -612,7 +620,8 @@ fn register_tx(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
-        format!("debug(worker-reg): acquiring write lock for thread {}", id),
+        DEBUG_SRC_WORKERG,
+        format!("acquiring write lock for thread {}", id),
     );
     // acquire write lock on virtual router
     let mut vr = vr.write().unwrap();
@@ -620,7 +629,8 @@ fn register_tx(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
-        format!("debug(worker-reg): acquired write lock for thread {}", id),
+        DEBUG_SRC_WORKERG,
+        format!("acquired write lock for thread {}", id),
     );
 
     // setting up the notification tx channel
@@ -629,7 +639,8 @@ fn register_tx(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
-        format!("debug(worker-reg): registered tx channel for thread {}", id),
+        DEBUG_SRC_WORKERG,
+        format!("registered tx channel for thread {}", id),
     );
 }
 
@@ -687,8 +698,9 @@ fn set_ip_addresses(
     print_debug(
         debug,
         DEBUG_LEVEL_HIGH,
+        DEBUG_SRC_IP,
         format!(
-            "debug(ip): setting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
+            "setting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
             addrs[idx][0],
             addrs[idx][1],
             addrs[idx][2],

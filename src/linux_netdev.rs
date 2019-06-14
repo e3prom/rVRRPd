@@ -279,7 +279,8 @@ pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug: &Verbose) -> io::Resul
     print_debug(
         debug,
         DEBUG_LEVEL_HIGH,
-        format!("debug(mac): getting mac address on interface {:?}", ifname),
+        DEBUG_SRC_MAC,
+        format!("getting mac address on interface {:?}", ifname),
     );
     let result = unsafe { ioctl(sockfd, libc::SIOCGIFHWADDR, &mut ifmac) };
     if result < 0 {
@@ -288,10 +289,8 @@ pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug: &Verbose) -> io::Resul
     print_debug(
         debug,
         DEBUG_LEVEL_HIGH,
-        format!(
-            "debug(mac): got interface {:?} mac address: {:?}",
-            ifname, ifmac
-        ),
+        DEBUG_SRC_MAC,
+        format!("got interface {:?} mac address: {:?}", ifname, ifmac),
     );
 
     // return the mac address
@@ -351,7 +350,8 @@ pub fn set_mac_addr(
     print_debug(
         debug,
         DEBUG_LEVEL_HIGH,
-        format!("debug(mac): setting mac address {:?}: {:?}", ifname, ifmac),
+        DEBUG_SRC_MAC,
+        format!("setting mac address {:?}: {:?}", ifname, ifmac),
     );
     let result = unsafe { ioctl(sockfd, libc::SIOCSIFHWADDR, &mut ifmac) };
     if result < 0 {
@@ -472,14 +472,16 @@ pub fn set_ip_route(
         print_debug(
             debug,
             DEBUG_LEVEL_HIGH,
-            format!("debug(route): adding route {:?}", ifroute),
+            DEBUG_SRC_ROUTE,
+            format!("adding route {:?}", ifroute),
         );
         result = unsafe { ioctl(sockfd, libc::SIOCADDRT, &mut ifroute) };
     } else {
         print_debug(
             debug,
             DEBUG_LEVEL_HIGH,
-            format!("debug(route): removing route {:?}", ifroute),
+            DEBUG_SRC_ROUTE,
+            format!("removing route {:?}", ifroute),
         );
         result = unsafe { ioctl(sockfd, libc::SIOCDELRT, &mut ifroute) };
     }

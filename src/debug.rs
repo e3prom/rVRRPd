@@ -27,7 +27,13 @@ impl Verbose {
 
 // print_debug() function
 /// This function simply print debugging information according to the specified level
-pub fn print_debug(debug: &Verbose, msg_level: u8, msg: String) {
+pub fn print_debug(debug: &Verbose, msg_level: u8, src: &str, msg: String) {
+    // set debug header
+    let mut hdr = format!("");
+    if src != DEBUG_SRC_INFO {
+        hdr = format!(" debug({}) -", src);
+    }
+
     // print debugging information with date and time
     if debug.level >= msg_level {
         match debug.time_zone {
@@ -35,17 +41,17 @@ pub fn print_debug(debug: &Verbose, msg_level: u8, msg: String) {
                 // UTC
                 let now: DateTime<Utc> = Utc::now();
                 match debug.time_format {
-                    1 => println!("[{}] {}", now.format(RVRRPD_DFLT_DATE_FORMAT), msg),
-                    2 => println!("[{}] {}", now.to_rfc2822(), msg),
-                    _ => println!("{}", msg),
+                    1 => println!("[{}]{} {}", now.format(RVRRPD_DFLT_DATE_FORMAT), hdr, msg),
+                    2 => println!("[{}]{} {}", now.to_rfc2822(), hdr, msg),
+                    _ => println!("{}{}", hdr, msg),
                 }
             } // local time
             _ => {
                 let now: DateTime<Local> = Local::now();
                 match debug.time_format {
-                    1 => println!("[{}] {}", now.format(RVRRPD_DFLT_DATE_FORMAT), msg),
-                    2 => println!("[{}] {}", now.to_rfc2822(), msg),
-                    _ => println!("{}", msg),
+                    1 => println!("[{}]{} {}", now.format(RVRRPD_DFLT_DATE_FORMAT), hdr, msg),
+                    2 => println!("[{}]{} {}", now.to_rfc2822(), hdr, msg),
+                    _ => println!("{}{}", hdr, msg),
                 }
             }
         }

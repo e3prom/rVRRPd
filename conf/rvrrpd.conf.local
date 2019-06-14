@@ -1,0 +1,39 @@
+debug = 5                                   # debugging level (0=none, 1=low, 2=medium, 4=high, 5=extensive)
+time_format = "short"                   # 'short' for M/D/Y HH:MM:SS timestamps
+			                                # 'rfc2822' for RFC2822 time and date format
+time_zone = "local"                        # 'local' for local time, 'utc' for UTC time
+#pid = "/var/run/rvrrpd.pid"                # path to PID file
+#working_dir = "/var/tmp"                   # daemon's working directory
+#main_log = "/var/log/rvrrpd.log"           # main log file
+#error_log = "/var/log/rvrrpd-error.log"    # error log file
+
+[[vrouter]]
+group = 2
+interface = "vmnet8"
+vip = "10.2.2.254"
+priority = 254
+preemption = false
+auth_type = 0
+auth_secret = "banana1"
+timers = { advert = 1 }
+rfc3768 = false
+
+[[vrouter]]
+group = 5
+interface = "docker0"
+vip = "10.0.5.254"
+priority = 200 
+preemption = false
+auth_type = 0
+
+[protocols]
+    [[protocols.static]]
+    route = "100.100.100.0"
+    mask = "255.255.255.0"
+    nh = "172.16.46.1"
+    metric = 100
+    mtu = 1500
+    [[protocols.static]]
+    route = "100.100.101.0"
+    mask = "255.255.255.0"
+    nh = "172.16.46.1"

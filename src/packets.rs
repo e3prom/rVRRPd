@@ -14,7 +14,7 @@ use crate::VirtualRouter;
 use crate::checksums;
 
 // debugging
-use crate::debug::{Verbose, print_debug};
+use crate::debug::{print_debug, Verbose};
 
 // libc
 use libc::{c_void, sendto, sockaddr, sockaddr_ll, AF_PACKET};
@@ -206,7 +206,7 @@ pub fn send_advertisement(
     }
 
     // check if rfc3768 compatibility flag is false
-    if !vr.parameters.rfc3768()  {
+    if !vr.parameters.rfc3768() {
         // extend the frame with the variable-length list of local IP addresses
         for addr in vr.parameters.ipaddrs() {
             for i in 0..4 {
@@ -219,7 +219,12 @@ pub fn send_advertisement(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
-        format!("debug(packet): sending advertisement frame -> {:?}", frame),
+        DEBUG_SRC_PACKET,
+        format!(
+            "sending advertisement frame out if {} -> {:?}",
+            vr.parameters.interface(),
+            frame
+        ),
     );
 
     // add authentication data
@@ -234,7 +239,8 @@ pub fn send_advertisement(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
-        format!("debug(packet): VRRP checksum is {:#X}", vrrp_checksum),
+        DEBUG_SRC_PACKET,
+        format!("VRRP checksum is {:#X}", vrrp_checksum),
     );
     // set vrrp's checksum field
     frame[VRRP_V2_FRAME_OFFSET + 6] = vrrp_checksum.to_be() as u8;
@@ -246,7 +252,8 @@ pub fn send_advertisement(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
-        format!("debug(packet): IP checksum is {:#X}", ip_checksum),
+        DEBUG_SRC_PACKET,
+        format!("IP checksum is {:#X}", ip_checksum),
     );
 
     // set ip checksum field (offset 34)
@@ -257,8 +264,9 @@ pub fn send_advertisement(
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
+        DEBUG_SRC_PACKET,
         format!(
-            "debug(packet): frame is {} bytes long",
+            "final ADVERTISEMENT frame is {} bytes long",
             frame.len() - ETHER_FRAME_SIZE
         ),
     );
@@ -291,14 +299,7 @@ pub fn send_advertisement(
             mem::size_of_val(&sa) as u32,
         ) {
             -1 => Err(io::Error::last_os_error()),
-            _ => {
-                // println!(
-                //     "debug: sucessfully sent {} bytes frame {:?}",
-                //     frame.len(),
-                //     frame
-                // );
-                Ok(())
-            }
+            _ => Ok(()),
         }
     }
 }

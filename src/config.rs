@@ -24,7 +24,7 @@ impl CConfig {
     pub fn debug(&self) -> u8 {
         match self.debug {
             Some(v) => v,
-            None => DEBUG_LEVEL_NONE,
+            None => DEBUG_LEVEL_INFO,
         }
     }
     // time_zone() getter

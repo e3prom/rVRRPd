@@ -13,7 +13,7 @@ use futures::Future;
 use std::sync::mpsc;
 
 // debugging
-use crate::debug::{Verbose, print_debug};
+use crate::debug::{print_debug, Verbose};
 
 // fsm
 use crate::fsm::Event;
@@ -61,7 +61,8 @@ pub fn start_timers(
             print_debug(
                 &debug,
                 DEBUG_LEVEL_HIGH,
-                format!("debug(timer): master_down interval has expired"),
+                DEBUG_SRC_TIMER,
+                format!("master_down interval has expired"),
             );
 
             // first acquire read lock on vr
@@ -72,7 +73,8 @@ pub fn start_timers(
                 print_debug(
                     &debug,
                     DEBUG_LEVEL_EXTENSIVE,
-                    format!("debug(timer): signaling Master down"),
+                    DEBUG_SRC_TIMER,
+                    format!("signaling Master down"),
                 );
                 // acquire transmit channel lock
                 let tx1 = tx1.lock().unwrap();
@@ -86,7 +88,8 @@ pub fn start_timers(
                 print_debug(
                     &debug,
                     DEBUG_LEVEL_EXTENSIVE,
-                    format!("debug(timer): signaling master_down timer expiry"),
+                    DEBUG_SRC_TIMER,
+                    format!("signaling master_down timer expiry"),
                 );
                 // acquire transmit channel lock
                 let tx1 = tx1.lock().unwrap();
@@ -116,7 +119,8 @@ pub fn start_timers(
             print_debug(
                 &debug,
                 DEBUG_LEVEL_HIGH,
-                format!("debug(timer): advertisement interval has expired"),
+                DEBUG_SRC_TIMER,
+                format!("advertisement interval has expired"),
             );
             // acquire lock on transmit channel
             let tx2 = tx2.lock().unwrap();
@@ -124,7 +128,8 @@ pub fn start_timers(
             print_debug(
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
-                format!("debug(timer): signaling advertisement interval expiry"),
+                DEBUG_SRC_TIMER,
+                format!("signaling advertisement interval expiry"),
             );
             // send GenAdvert event to worker thread
             tx2.send(Event::GenAdvert).unwrap();
@@ -152,7 +157,8 @@ fn is_master_down_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> 
         print_debug(
             debug,
             DEBUG_LEVEL_MEDIUM,
-            format!("debug(timer): master_down timer is disabled"),
+            DEBUG_SRC_TIMER,
+            format!("master_down timer is disabled"),
         );
         false
     }
@@ -170,7 +176,8 @@ fn is_advert_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> bool 
         print_debug(
             debug,
             DEBUG_LEVEL_MEDIUM,
-            format!("debug(timer): the advertisement timer is disabled"),
+            DEBUG_SRC_TIMER,
+            format!("the advertisement timer is disabled"),
         );
         false
     }

@@ -139,7 +139,7 @@ fn run(cfg: Config) -> Result<(), Box<dyn Error>> {
     // Set up SIGINT signal handler
     let shutdown_c1 = Arc::clone(&shutdown);
     ctrlc::set_handler(move || {
-        println!("\nReceived CTRL-C (SIGINT)");
+        println!("\nReceived SIGINT (Signal 2)");
         shutdown_c1.swap(true, Ordering::Relaxed);
     })
     .expect("Error while setting SIGINT signal handler.");
