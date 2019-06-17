@@ -33,9 +33,10 @@ use constants::*;
 mod packets;
 use packets::VRRPpkt;
 
-// linux network device support
-mod linux_netdev;
-use linux_netdev::*;
+// operating systems support
+mod os;
+use os::linux::libc::IfAddrs;
+use os::linux::netdev::PflagOp;
 
 // finite state machine
 mod fsm;
@@ -153,7 +154,7 @@ impl VirtualRouter {
         debug: &Verbose,
     ) -> io::Result<VirtualRouter> {
         // get ifindex from interface name
-        let ifindex = match c_ifnametoindex(&ifname) {
+        let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
             Ok(i) => i as i32,
             Err(e) => return Err(e),
         };
@@ -204,8 +205,7 @@ impl VirtualRouter {
             DEBUG_LEVEL_EXTENSIVE,
             DEBUG_SRC_INFO,
             format!(
-                "creating new virtal-router, vrid {} on interface {}: \
-                 IP address list: {:?}",
+                "creating new virtal-router, vrid {} on interface {}, ipaddrs {:?}",
                 vrid, ifname, v4addrs
             ),
         );
@@ -293,7 +293,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
 
             // set promiscuous flag on interface
             let iface = CString::new(iface.as_bytes() as &[u8]).unwrap();
-            if let Err(e) = set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+            if let Err(e) = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
                 return Err(e);
             }
 
@@ -305,7 +305,9 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 // check if global shutdown variable is set
                 // if set, then call set_if_promiscuous() to remove promisc mode on interface
                 if shutdown.load(Ordering::Relaxed) {
-                    if let Err(e) = set_if_promiscuous(sockfd, &iface, PflagOp::Unset) {
+                    if let Err(e) =
+                        os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset)
+                    {
                         return Err(e);
                     } else {
                         println!("Exiting...");
@@ -396,7 +398,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_PROTO,
-                format!("reading protocols structure: {:?}", protocols),
+                format!("reading protocols structure - {:?}", protocols),
             );
             // create a RwLock mutex for protocols
             let protocols = Mutex::new(protocols);
@@ -438,7 +440,8 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 // acquire read lock
                 let vr = vr.read().unwrap();
                 let iface = CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
-                if let Err(e) = set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                if let Err(e) = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set)
+                {
                     return Err(e);
                 }
             }
@@ -448,7 +451,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_VR,
-                format!("created virtual-router vector: {:?}", vrouters),
+                format!("created virtual-router vector - {:?}", vrouters),
             );
 
             // create a pool of threads
@@ -467,7 +470,9 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                         let vr = vr.read().unwrap();
                         let iface =
                             CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
-                        if let Err(e) = set_if_promiscuous(sockfd, &iface, PflagOp::Unset) {
+                        if let Err(e) =
+                            os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset)
+                        {
                             return Err(e);
                         }
                     }

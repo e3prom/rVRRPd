@@ -712,7 +712,7 @@ fn set_ip_addresses(
             ifname
         ),
     );
-    if let Err(e) = linux_netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx]) {
+    if let Err(e) = os::linux::netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx]) {
         eprintln!(
             "error(ip): error while assigning IP address on interface {:?}: {}",
             &ifname, e
@@ -731,7 +731,7 @@ fn get_mac_addresses(
     let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
 
     // get mac address of interface
-    match linux_netdev::get_mac_addr(sockfd, &ifname, debug) {
+    match os::linux::netdev::get_mac_addr(sockfd, &ifname, debug) {
         Ok(mac) => mac,
         Err(e) => {
             eprintln!(
@@ -755,7 +755,7 @@ fn set_mac_addresses(
     let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
 
     // set mac address
-    if let Err(e) = linux_netdev::set_mac_addr(sockfd, &ifname, mac, debug) {
+    if let Err(e) = os::linux::netdev::set_mac_addr(sockfd, &ifname, mac, debug) {
         eprintln!("error(mac): error while setting mac address: {}", e);
     }
 }
@@ -774,7 +774,7 @@ fn set_ip_routes(
 
     // for every static routes
     for st in protocols.r#static.as_ref().unwrap() {
-        if let Err(e) = set_ip_route(
+        if let Err(e) = os::linux::netdev::set_ip_route(
             sockfd,
             &vr.parameters.interface,
             st.route(),

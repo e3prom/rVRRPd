@@ -31,7 +31,7 @@ pub fn print_debug(debug: &Verbose, msg_level: u8, src: &str, msg: String) {
     // set debug header
     let mut hdr = format!("");
     if src != DEBUG_SRC_INFO {
-        hdr = format!(" debug({}) -", src);
+        hdr = format!(" debug({}):", src);
     }
 
     // print debugging information with date and time

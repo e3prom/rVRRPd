@@ -221,7 +221,7 @@ pub fn send_advertisement(
         DEBUG_LEVEL_EXTENSIVE,
         DEBUG_SRC_PACKET,
         format!(
-            "sending advertisement frame out if {} -> {:?}",
+            "sending advertisement frame out if {}, {:?}",
             vr.parameters.interface(),
             frame
         ),
