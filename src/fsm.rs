@@ -449,15 +449,20 @@ pub fn fsm_run(
                     // event: If the Timers::master_down reached zero
                     Event::MasterDown => {
                         // print information
-                        print_debug(debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
-                            "VR {}.{}.{}.{} for group {} on interface {} - Master VR is declared Down",
-                            vr.parameters.vip[0],
-                            vr.parameters.vip[1],
-                            vr.parameters.vip[2],
-                            vr.parameters.vip[3],
-                            vr.parameters.vrid,
-                            vr.parameters.interface
-                        ));
+                        print_debug(
+                            debug,
+                            DEBUG_LEVEL_INFO,
+                            DEBUG_SRC_INFO,
+                            format!(
+                                "VR {}.{}.{}.{} for group {} on interface {} - Master VR is down",
+                                vr.parameters.vip[0],
+                                vr.parameters.vip[1],
+                                vr.parameters.vip[2],
+                                vr.parameters.vip[3],
+                                vr.parameters.vrid,
+                                vr.parameters.interface
+                            ),
+                        );
                         // get and store vr's interface mac
                         vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                         // set VRRP virtual mac address
@@ -554,10 +559,19 @@ pub fn fsm_run(
                                 );
                                 // restore interface's MAC address
                                 set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
-                                // remove VIP on the vr's interface
-                                set_ip_addresses(sockfd, &vr, false, debug);
-                                // re-set IP routes
-                                set_ip_routes(sockfd, &vr, true, debug);
+                                // restore primary or delete vip on vr's interface
+                                match vr.parameters.netdrv {
+                                    NetDrivers::ioctl => {
+                                        // restore primary IP
+                                        set_ip_addresses(sockfd, &vr, false, debug);
+                                        // re-set IP routes
+                                        set_ip_routes(sockfd, &vr, true, debug);
+                                    }
+                                    NetDrivers::libnl => {
+                                        // delete vip
+                                        delete_ip_addresses(&vr, debug);
+                                    }
+                                }
                                 // print information
                                 print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                                     "VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Backup",

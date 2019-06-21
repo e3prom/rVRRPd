@@ -9,7 +9,7 @@
 
 # Features
  * Aimed to be *Robust*, Fast and _Secure_ (see development section below)
- * Multi-threaded operation (1 thread per VRRP group,interface pair)
+ * Multi-threaded operation (1 thread per VRRP group, interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml)
  * Interoperable with [RFC3768](https://tools.ietf.org/html/rfc3768) compliant devices
  * Support multiple operating modes:
@@ -27,13 +27,13 @@ The current development roadmap can be consulted [here](https://github.com/e3pro
  * A Linux 64-bits kernel (only Linux is supported at this time)
  * [Rust Cargo](https://doc.rust-lang.org/cargo/) (required to easily compile this project and all its dependencies)
  * One or more Ethernet interface(s) (see [conf/rvrrpd.conf](conf/rvrrpd.conf) for a basic configuration example)
- * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and and access kernel interfaces)
- * [libnl- Netlink Library Suite](https://www.infradead.org/~tgr/libnl/) (required for Linux netlink support)
+ * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and access kernel interfaces)
+ * [libnl - Netlink Library Suite](https://www.infradead.org/~tgr/libnl/) (required for Linux netlink support)
 
 # Build and run
 To quickly build a development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The recommended way is to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) the latest version of Cargo along with the GNU Compiler Collection (GCC) toolchain. 
 
-You will also need the development packages (incl. headers files) of `libnl-3` and `libnl-route-3` for the Linux netlink support.
+You will also need the development packages (including headers files) of `libnl-3` and `libnl-route-3` for the Linux netlink support.
 
 Then build the project by using the `cargo build --release` command:
 ```
@@ -99,8 +99,8 @@ The above configuration do the following:
    * Is configured with the highest priority of `254`.
    * Has preeemption enabled.
    * Has compatibility with RFC3768 turned on (may be required to fully interoperate with vendors like Cisco).
-   * Uses the network driver `libnl` which uses the netlink protocol. By default it uses `ioctls`, which removes primary IP addresses when Master.
-* When master, will install a `static default` route with a next-hop of `10.240.0.254`.
+   * Uses the network driver `libnl` which leverage the netlink protocol. By default it uses `ioctls`, which removes primary IP addresses when in Master state.
+* When master, install a `static default` route with a next-hop of `10.240.0.254`.
 
 Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `Virtual Router (foreground)` operating mode:
 ```
@@ -109,7 +109,7 @@ Starting rVRRPd
 [...]
 ```
 
-Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role when necessary. If the router own the virtual IP address, it will automatically take the Master role with a priority of 255.
+Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role. If the router own the virtual IP address, it will automatically take the Master role with a priority of 255.
 
 # Support
 If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
