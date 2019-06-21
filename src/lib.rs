@@ -35,6 +35,7 @@ use packets::VRRPpkt;
 
 // operating systems support
 mod os;
+use os::linux::drivers::NetDrivers;
 use os::linux::libc::IfAddrs;
 use os::linux::netdev::PflagOp;
 
@@ -152,6 +153,7 @@ impl VirtualRouter {
         mut auth_secret: Option<String>,
         protocols: Arc<Mutex<Protocols>>,
         debug: &Verbose,
+        netdrv: NetDrivers
     ) -> io::Result<VirtualRouter> {
         // get ifindex from interface name
         let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
@@ -240,6 +242,7 @@ impl VirtualRouter {
                 [0; 8],
                 auth_secret,
                 protocols,
+                netdrv,
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
@@ -423,6 +426,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                     vr.auth_secret().clone(),
                     protocols,
                     &debug,
+                    vr.netdrv(),
                 ) {
                     Ok(vr) => {
                         let vr = RwLock::new(vr);

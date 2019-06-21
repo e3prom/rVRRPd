@@ -92,6 +92,7 @@ pub struct VRConfig {
     auth_secret: Option<String>,
     timers: Option<Timers>,
     rfc3768: Option<bool>,
+    netdrv: Option<String>,
 }
 impl VRConfig {
     // group() getter
@@ -162,6 +163,16 @@ impl VRConfig {
         match self.rfc3768 {
             Some(b) => b,
             None => true,
+        }
+    }
+    // netdrv() method
+    pub fn netdrv(&self) -> NetDrivers {
+        match &self.netdrv {
+            Some(s) => match &s[..] {
+                "libnl" => NetDrivers::libnl,
+                _ => NetDrivers::ioctl,
+            },
+            None => NetDrivers::ioctl,
         }
     }
 }

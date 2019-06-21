@@ -32,6 +32,7 @@ pub struct Parameters {
     notification: Option<Arc<Mutex<mpsc::Sender<Event>>>>, // Notification channel
     protocols: Arc<Mutex<Protocols>>, // Internal protocols information
     ifmac: [u8; 6],     // Interface Ethernet MAC address
+    netdrv: NetDrivers, // Network driver
 }
 
 /// Parameters Type Implementation
@@ -54,6 +55,7 @@ impl Parameters {
         auth_data: [u8; 8],
         auth_secret: Option<String>,
         protocols: Arc<Mutex<Protocols>>,
+        netdrv: NetDrivers,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -74,6 +76,7 @@ impl Parameters {
             notification: Option::None,
             protocols,
             ifmac: [0, 0, 0, 0, 0, 0],
+            netdrv,
         }
     }
     // vrid() getter
@@ -461,10 +464,19 @@ pub fn fsm_run(
                         let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                         vmac[5] = vr.parameters.vrid();
                         set_mac_addresses(sockfd, &vr, vmac, debug);
-                        // set IP addresses (including VIP) on the vr's interface
-                        set_ip_addresses(sockfd, &vr, true, debug);
-                        // (re)set IP routes
-                        set_ip_routes(sockfd, &vr, true, debug);
+                        // set VIP according to network driver in use
+                        match vr.parameters.netdrv {
+                            NetDrivers::ioctl => {
+                                // set IP addresses (including VIP) on the vr's interface
+                                set_ip_addresses(sockfd, &vr, true, debug);
+                                // (re)set IP routes
+                                set_ip_routes(sockfd, &vr, true, debug);
+                            }
+                            NetDrivers::libnl => {
+                                // add vip on vr's interface
+                                set_ip_addresses(sockfd, &vr, true, debug);
+                            }
+                        }
                         // send gratuitious ARP requests
                         let arp_sockfd = arp::open_raw_socket_arp().unwrap();
                         arp::broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
@@ -585,10 +597,19 @@ pub fn fsm_run(
                         packets::send_advertisement(sockfd, &vr, debug).unwrap();
                         // restore interface's MAC address
                         set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
-                        // remove VIP on the vr's interface
-                        set_ip_addresses(sockfd, &vr, false, debug);
-                        // re-set IP routes
-                        set_ip_routes(sockfd, &vr, true, debug);
+                        // restore primary or delete vip on vr's interface
+                        match vr.parameters.netdrv {
+                            NetDrivers::ioctl => {
+                                // restore primary IP
+                                set_ip_addresses(sockfd, &vr, false, debug);
+                                // re-set IP routes
+                                set_ip_routes(sockfd, &vr, true, debug);
+                            }
+                            NetDrivers::libnl => {
+                                // delete vip
+                                delete_ip_addresses(&vr, debug);
+                            }
+                        }
                         // transition to Down state
                         States::Down
                     }
@@ -658,7 +679,7 @@ fn is_primary_higher(primary: &[u8; 4], local: &[u8; 4]) -> bool {
 }
 
 // set_ip_addresses_ioctl() function
-/// set or unset IPv4 addresses on a virtual-router interface
+/// set or clear IPv4 addresses on a virtual-router interface
 fn set_ip_addresses(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
@@ -712,11 +733,93 @@ fn set_ip_addresses(
             ifname
         ),
     );
-    if let Err(e) = os::linux::netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx]) {
-        eprintln!(
-            "error(ip): error while assigning IP address on interface {:?}: {}",
-            &ifname, e
-        );
+
+    // set virtual ip address according to the network driver in use
+    match vr.parameters.netdrv {
+        NetDrivers::ioctl => {
+            if let Err(e) =
+                os::linux::netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx])
+            {
+                eprintln!(
+                    "error(ip): error while assigning IP address on interface {:?}: {}",
+                    &ifname, e
+                );
+            }
+        }
+        NetDrivers::libnl => {
+            println!(
+                "DEBUG: setting up IP on interface {:?} (ifindex: {}) using netlink (libnl)",
+                &ifname, vr.parameters.ifindex
+            );
+            if let Err(e) = os::linux::libnl::set_ip_address(
+                vr.parameters.ifindex,
+                &ifname,
+                addrs[idx],
+                netmasks[idx],
+                os::linux::libnl::Operation::Add,
+            ) {
+                eprintln!(
+                    "error(ip): error while assigning IP address on interface {:?}: {}",
+                    &ifname, e
+                );
+            }
+        }
+    }
+}
+
+// delete_ip_addresses() function
+/// delete ip address on a virtual-router interface
+fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &Verbose) {
+    // create netmasks vector
+    let mut netmasks: Vec<[u8; 4]> = Vec::new();
+
+    // push first ip's netmask
+    // always take the mask of the primary (top) ip
+    netmasks.push(vr.parameters.ipmasks[0]);
+
+    // construct interface name
+    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
+
+    // print debugging information
+    print_debug(
+        debug,
+        DEBUG_LEVEL_HIGH,
+        DEBUG_SRC_IP,
+        format!(
+            "deleting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
+            vr.parameters.vip[0],
+            vr.parameters.vip[1],
+            vr.parameters.vip[2],
+            vr.parameters.vip[3],
+            netmasks[0][0],
+            netmasks[0][1],
+            netmasks[0][2],
+            netmasks[0][3],
+            ifname
+        ),
+    );
+
+    // delete virtual ip address according to the network driver in use
+    match vr.parameters.netdrv {
+        NetDrivers::libnl => {
+            println!(
+                "DEBUG: removing IP on interface {:?} (ifindex: {}) using netlink (libnl)",
+                &ifname, vr.parameters.ifindex
+            );
+            if let Err(e) = os::linux::libnl::set_ip_address(
+                vr.parameters.ifindex,
+                &ifname,
+                vr.parameters.vip,
+                netmasks[0],
+                os::linux::libnl::Operation::Rem,
+            ) {
+                eprintln!(
+                    "error(ip): error while removing IP address on interface {:?}: {}",
+                    &ifname, e
+                );
+            }
+        }
+        _ => {}
     }
 }
 
