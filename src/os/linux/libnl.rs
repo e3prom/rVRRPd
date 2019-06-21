@@ -1,5 +1,6 @@
 //! netlink support module
 //! using libnl-3
+use crate::*;
 
 // libc
 use libc::{c_char, c_int, c_uint, c_void, AF_INET, IF_NAMESIZE};
@@ -119,6 +120,7 @@ pub fn set_ip_address(
     ip: [u8; 4],
     netmask: [u8; 4],
     op: Operation,
+    debug: &Verbose,
 ) -> io::Result<()> {
     // null initialize nl_addr 'local'
     let mut local = nl_addr {
@@ -160,9 +162,14 @@ pub fn set_ip_address(
     let ipaddr = CString::new(ip_str).unwrap();
     let mut local_ptr = &mut local;
     let r = unsafe { nl_addr_parse(ipaddr.as_ptr(), AF_INET, &mut local_ptr) };
-    println!(
-        "DEBUG: ip_slice: {:?}, nl_addr {:?}, result: {}",
-        ipaddr, *local_ptr, r
+    print_debug(
+        debug,
+        DEBUG_LEVEL_EXTENSIVE,
+        DEBUG_SRC_IP,
+        format!(
+            "ip_slice: {:?}, nl_addr {:?}, result: {}",
+            ipaddr, *local_ptr, r
+        ),
     );
     let res = unsafe { rtnl_addr_set_local(addr, local_ptr) };
     if res < 0 {
@@ -170,27 +177,48 @@ pub fn set_ip_address(
     }
 
     // debugging finialized 'addr'
-    unsafe { println!("DEBUG: addr {:?}", *addr) };
+    unsafe {
+        print_debug(
+            debug,
+            DEBUG_LEVEL_EXTENSIVE,
+            DEBUG_SRC_IP,
+            format!("addr {:?}", *addr),
+        )
+    };
 
     // Perform add or remove operations
     match op {
         Operation::Add => {
             // call external to rtnl_addr_add()
-            println!(
-                "DEBUG: calling rtnl_addr_add() with nlsock ptr {:?}",
-                nlsock
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("calling rtnl_addr_add() with nlsock ptr {:?}", nlsock),
             );
             let res = unsafe { rtnl_addr_add(nlsock, addr, 0) };
-            println!("DEBUG: call to rtnl_addr_add() returned {}", res);
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("call to rtnl_addr_add() returned {}", res),
+            );
         }
         Operation::Rem => {
             // call external to rtnl_addr_delete()
-            println!(
-                "DEBUG: calling rtnl_addr_delete() with nlsock ptr {:?}",
-                nlsock
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("calling rtnl_addr_delete() with nlsock ptr {:?}", nlsock),
             );
             let res = unsafe { rtnl_addr_delete(nlsock, addr, 0) };
-            println!("DEBUG: call to rtnl_addr_delete() returned {}", res);
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("call to rtnl_addr_delete() returned {}", res),
+            );
         }
     }
 

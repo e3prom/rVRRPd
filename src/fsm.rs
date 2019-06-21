@@ -761,9 +761,14 @@ fn set_ip_addresses(
             }
         }
         NetDrivers::libnl => {
-            println!(
-                "DEBUG: setting up IP on interface {:?} (ifindex: {}) using netlink (libnl)",
-                &ifname, vr.parameters.ifindex
+            print_debug(
+                debug,
+                DEBUG_LEVEL_HIGH,
+                DEBUG_SRC_IP,
+                format!(
+                    "setting up IP on interface {:?} (ifindex: {}) using netlink (libnl)",
+                    &ifname, vr.parameters.ifindex
+                ),
             );
             if let Err(e) = os::linux::libnl::set_ip_address(
                 vr.parameters.ifindex,
@@ -771,6 +776,7 @@ fn set_ip_addresses(
                 addrs[idx],
                 netmasks[idx],
                 os::linux::libnl::Operation::Add,
+                debug,
             ) {
                 eprintln!(
                     "error(ip): error while assigning IP address on interface {:?}: {}",
@@ -816,9 +822,14 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
     // delete virtual ip address according to the network driver in use
     match vr.parameters.netdrv {
         NetDrivers::libnl => {
-            println!(
-                "DEBUG: removing IP on interface {:?} (ifindex: {}) using netlink (libnl)",
-                &ifname, vr.parameters.ifindex
+            print_debug(
+                debug,
+                DEBUG_LEVEL_HIGH,
+                DEBUG_SRC_IP,
+                format!(
+                    "removing IP on interface {:?} (ifindex: {}) using netlink (libnl)",
+                    &ifname, vr.parameters.ifindex
+                ),
             );
             if let Err(e) = os::linux::libnl::set_ip_address(
                 vr.parameters.ifindex,
@@ -826,6 +837,7 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
                 vr.parameters.vip,
                 netmasks[0],
                 os::linux::libnl::Operation::Rem,
+                debug,
             ) {
                 eprintln!(
                     "error(ip): error while removing IP address on interface {:?}: {}",
