@@ -73,12 +73,13 @@ struct rtnl_addr {
 // nl_sock enum (hack to represent opaque foreign types)
 enum NlSock {}
 
-// Operation enumerator
+// Operation public enumerator
 pub enum Operation {
     Add, // Add IP address
     Rem, // Remove IP Address
 }
 
+// FFI
 #[link(name = "nl-3")]
 extern "C" {
     // nl_socket_alloc() external function

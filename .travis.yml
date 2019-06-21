@@ -2,3 +2,9 @@ language: rust
 rust:
   - stable
   - beta
+addons:
+  apt:
+    update: true
+    packages:
+      - libnl-3-dev
+      - libnl-route-3-dev
