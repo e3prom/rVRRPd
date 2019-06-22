@@ -766,7 +766,7 @@ fn set_ip_addresses(
                 DEBUG_LEVEL_HIGH,
                 DEBUG_SRC_IP,
                 format!(
-                    "setting up IP on interface {:?} (ifindex: {}) using netlink (libnl)",
+                    "setting up IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
                     &ifname, vr.parameters.ifindex
                 ),
             );
@@ -827,7 +827,7 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
                 DEBUG_LEVEL_HIGH,
                 DEBUG_SRC_IP,
                 format!(
-                    "removing IP on interface {:?} (ifindex: {}) using netlink (libnl)",
+                    "removing IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
                     &ifname, vr.parameters.ifindex
                 ),
             );

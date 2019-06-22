@@ -134,12 +134,21 @@ pub fn set_ip_address(
 
     // call to external nlsock() function
     let nlsock = unsafe { nl_socket_alloc() };
+    if nlsock.is_null() {
+        return Err(io::Error::last_os_error());
+    }
 
     // call to external nl_connect() function
-    let _r = unsafe { nl_connect(nlsock, 0) };
+    let r = unsafe { nl_connect(nlsock, 0) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
 
     // allocate rtnl_addr 'addr'
     let addr = unsafe { rtnl_addr_alloc() };
+    if addr.is_null() {
+        return Err(io::Error::last_os_error());
+    }
 
     // set ifindex in rtnl_addr 'addr'
     unsafe { rtnl_addr_set_ifindex(addr, ifindex) };
@@ -162,6 +171,9 @@ pub fn set_ip_address(
     let ipaddr = CString::new(ip_str).unwrap();
     let mut local_ptr = &mut local;
     let r = unsafe { nl_addr_parse(ipaddr.as_ptr(), AF_INET, &mut local_ptr) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
     print_debug(
         debug,
         DEBUG_LEVEL_EXTENSIVE,
@@ -171,8 +183,8 @@ pub fn set_ip_address(
             ipaddr, *local_ptr, r
         ),
     );
-    let res = unsafe { rtnl_addr_set_local(addr, local_ptr) };
-    if res < 0 {
+    let r = unsafe { rtnl_addr_set_local(addr, local_ptr) };
+    if r < 0 {
         return Err(io::Error::last_os_error());
     }
 
@@ -187,6 +199,7 @@ pub fn set_ip_address(
     };
 
     // Perform add or remove operations
+    let res: c_int;
     match op {
         Operation::Add => {
             // call external to rtnl_addr_add()
@@ -196,7 +209,7 @@ pub fn set_ip_address(
                 DEBUG_SRC_IP,
                 format!("calling rtnl_addr_add() with nlsock ptr {:?}", nlsock),
             );
-            let res = unsafe { rtnl_addr_add(nlsock, addr, 0) };
+            res = unsafe { rtnl_addr_add(nlsock, addr, 0) };
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
@@ -212,7 +225,7 @@ pub fn set_ip_address(
                 DEBUG_SRC_IP,
                 format!("calling rtnl_addr_delete() with nlsock ptr {:?}", nlsock),
             );
-            let res = unsafe { rtnl_addr_delete(nlsock, addr, 0) };
+            res = unsafe { rtnl_addr_delete(nlsock, addr, 0) };
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
@@ -225,7 +238,7 @@ pub fn set_ip_address(
     // free allocation of rtnl_addr 'addr'
     unsafe { rtnl_addr_put(addr) };
 
-    // check 'rtnl_addr_add()' returned value
+    // check 'rtnl_addr_add()|del()' returned value
     if res < 0 {
         return Err(io::Error::last_os_error());
     }

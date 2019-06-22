@@ -169,10 +169,10 @@ impl VRConfig {
     pub fn netdrv(&self) -> NetDrivers {
         match &self.netdrv {
             Some(s) => match &s[..] {
-                "libnl" => NetDrivers::libnl,
-                _ => NetDrivers::ioctl,
+                "ioctl" => NetDrivers::ioctl,
+                _ => NetDrivers::libnl,
             },
-            None => NetDrivers::ioctl,
+            None => NetDrivers::libnl,
         }
     }
 }

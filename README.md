@@ -109,7 +109,7 @@ Starting rVRRPd
 [...]
 ```
 
-Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role. If the router own the virtual IP address, it will automatically take the Master role with a priority of 255.
+Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role. If the router owns the virtual IP address, it will automatically take the Master role with a priority of 255.
 
 # Support
 If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
