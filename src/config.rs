@@ -88,7 +88,7 @@ pub struct VRConfig {
     vip: Option<String>,
     priority: Option<u8>,
     preemption: Option<bool>,
-    auth_type: Option<u8>,
+    auth_type: Option<String>,
     auth_secret: Option<String>,
     timers: Option<Timers>,
     rfc3768: Option<bool>,
@@ -142,14 +142,13 @@ impl VRConfig {
             None => false,
         }
     }
-    // auth_type() getter
+    // auth_type() method
     pub fn auth_type(&self) -> u8 {
-        match self.auth_type {
-            Some(v) => match v {
-                0 => v,
-                _ => panic!(
-                    "error(config) Only authentication type 0 (plain) is currently supported"
-                ),
+        match &self.auth_type {
+            Some(s) => match &s[..] {
+                "rfc2338-simple" => AUTH_TYPE_SIMPLE,
+                "p0-t8-sha256" => AUTH_TYPE_P0,
+                _ => panic!("error(config): authentication type {} no supported", s),
             },
             None => 0,
         }
@@ -160,6 +159,13 @@ impl VRConfig {
     }
     // rfc3768() getter
     pub fn rfc3768(&self) -> bool {
+        // if auth_type is 'p0-t8-sha256', overwrite rfc3768 compatibility flag
+        if self.auth_type == Some("p0-t8-sha256".to_string()) {
+            println!(
+                "warning(config): authentication p0 is enabled, forcing rfc3768 compatibility."
+            );
+            return true;
+        }
         match self.rfc3768 {
             Some(b) => b,
             None => true,

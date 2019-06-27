@@ -68,6 +68,10 @@ use config::decode_config;
 mod protocols;
 use protocols::{Protocols, Static};
 
+// authentication
+mod auth;
+use auth::gen_auth_data;
+
 // debug
 mod debug;
 use debug::{print_debug, Verbose};
@@ -153,7 +157,7 @@ impl VirtualRouter {
         mut auth_secret: Option<String>,
         protocols: Arc<Mutex<Protocols>>,
         debug: &Verbose,
-        netdrv: NetDrivers
+        netdrv: NetDrivers,
     ) -> io::Result<VirtualRouter> {
         // get ifindex from interface name
         let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
@@ -489,7 +493,8 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                 // Block on receiving IP packets
                 match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                     Ok(len) => {
-                        match verify_vrrp_pkt(sockfd, sockaddr, &pkt_buf[0..len], &vrouters) {
+                        match verify_vrrp_pkt(sockfd, sockaddr, &pkt_buf[0..len], &vrouters, &debug)
+                        {
                             Some((ifindex, vrid, ipsrc, advert_prio)) => {
                                 handle_vrrp_advert(
                                     &vrouters,
@@ -551,6 +556,7 @@ fn verify_vrrp_pkt(
     sockaddr: sockaddr_ll,
     packet: &[u8],
     vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
+    debug: &Verbose,
 ) -> Option<(i32, u8, [u8; 4], u8)> {
     // ignore packets that are too short (plus one IP address and auth. data. field)
     if packet.len() < (mem::size_of::<VRRPpkt>() + 4 + 8) {
@@ -629,27 +635,102 @@ fn verify_vrrp_pkt(
 
             // verify the destination address is not owned by the virtual router
             if vr.parameters.ipaddrs().contains(vrrp_pkt.ipdst()) {
-                println!("warning(main): received a VRRP message for an owned IP address");
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_MEDIUM,
+                    DEBUG_SRC_MAIN,
+                    format!("received a VRRP message for an owned IP address"),
+                );
                 return None;
             }
 
             // verify the authentication type matches the configured method
             // for this virtual router
             if *vrrp_pkt.authtype() != vr.parameters.authtype() {
-                println!(
-                    "warning(main): received a VRRP message with a non-matching authentication type"
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_MEDIUM,
+                    DEBUG_SRC_MAIN,
+                    format!("received a VRRP message with a non-matching authentication type"),
                 );
                 return None;
             }
 
             // perform message authentication
-            // verify the authentication type does match (RFC3768 5.3.6)
+            match vr.parameters.authtype() {
+                // AUTH_TYPE_SIMPLE (RFC2338 Type-1 Plain)
+                AUTH_TYPE_SIMPLE => {
+                    print_debug(
+                        debug,
+                        DEBUG_LEVEL_EXTENSIVE,
+                        DEBUG_SRC_AUTH,
+                        format!("performing VRRP simple (type-1) authentication"),
+                    );
+                    let d = gen_auth_data(
+                        AUTH_TYPE_SIMPLE,
+                        vr.parameters.authsecret(),
+                        Option::Some(&vrrp_pdu[..vrrp_pdu.len() - 8]),
+                    );
+                    if d != authdata {
+                        print_debug(
+                            debug,
+                            DEBUG_LEVEL_MEDIUM,
+                            DEBUG_SRC_AUTH,
+                            format!("VRRP message authentication failed"),
+                        );
+                        return None;
+                    }
+                }
+                // AUTH_TYPE_P0 (PROPRIETARY-TRUNCATED-8B-SHA256)
+                AUTH_TYPE_P0 => {
+                    print_debug(
+                        debug,
+                        DEBUG_LEVEL_EXTENSIVE,
+                        DEBUG_SRC_AUTH,
+                        format!("performing VRRP proprietary (p0) authentication"),
+                    );
+                    // get the verification code on the VRRP PDU minus the authentication header
+                    // and the checksum field zero-ed out (HMAC-then-checksum)
+                    let zchecksum = [0u8, 0u8];
+                    vrrp_pdu.splice(
+                        VRRP_V2_CHECKSUM_POS..VRRP_V2_CHECKSUM_POS + 2,
+                        zchecksum.iter().cloned(),
+                    );
+                    let hmac = gen_auth_data(
+                        AUTH_TYPE_P0,
+                        vr.parameters.authsecret(),
+                        Option::Some(&vrrp_pdu[..vrrp_pdu.len() - 8]),
+                    );
+                    // print debugging information
+                    print_debug(
+                        debug,
+                        DEBUG_LEVEL_EXTENSIVE,
+                        DEBUG_SRC_AUTH,
+                        format!("VRRP message authentication data {:02x?}", &hmac[..]),
+                    );
+                    // check if authentication data matches
+                    if hmac != authdata {
+                        print_debug(
+                            debug,
+                            DEBUG_LEVEL_MEDIUM,
+                            DEBUG_SRC_AUTH,
+                            format!("VRRP message authentication failed"),
+                        );
+                        return None;
+                    }
+                }
+                // skip authentication
+                _ => {}
+            }
 
             // verify the message's 'avertint' field matches the locally
             // configured vr's advertisement interval
             if *vrrp_pkt.adverint() != vr.parameters.adverint() {
-                println!(
-                    "warning(main): received a VRRP message with a non-matching advertisement interval"
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_MEDIUM,
+                    DEBUG_SRC_MAIN,
+                    format!("received a VRRP message with a non-matching advertisement interval"),
                 );
                 return None;
             }
@@ -664,7 +745,12 @@ fn verify_vrrp_pkt(
         }
         // if no matching virtual router exists, simply drop the VRRP message
         None => {
-            println!("warning(main): received a VRRP message for a non-existing virtual router");
+            print_debug(
+                debug,
+                DEBUG_LEVEL_MEDIUM,
+                DEBUG_SRC_MAIN,
+                format!("received a VRRP message for a non-existing virtual router"),
+            );
             return None;
         }
     }

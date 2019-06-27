@@ -8,6 +8,8 @@ pub const RVRRPD_DFLT_WORKDIR: &str = "/tmp";
 pub const RVRRPD_DFLT_LOGFILE: &str = "/var/log/rvrrpd.log";
 pub const RVRRPD_DFLT_ELOGFILE: &str = "/var/log/rvrrpd-error.log";
 pub const RVRRPD_DFLT_DATE_FORMAT: &str = "%b %e %Y %T";
+
+// Debug Constants
 pub const DEBUG_LEVEL_INFO: u8 = 0;
 pub const DEBUG_LEVEL_LOW: u8 = 1;
 pub const DEBUG_LEVEL_MEDIUM: u8 = 2;
@@ -27,6 +29,7 @@ pub const DEBUG_SRC_WORKER: &str = "worker";
 pub const DEBUG_SRC_WORKERG: &str = "worker-reg";
 pub const DEBUG_SRC_TIMER: &str = "timer";
 pub const DEBUG_SRC_IP: &str = "ip";
+pub const DEBUG_SRC_AUTH: &str = "auth";
 
 // Ethernet Constants
 pub const ETHER_P_IP: u16 = 0x0800; // IPv4 (/usr/include/linux/if_ether.h)
@@ -50,7 +53,12 @@ pub const IP_DSCP_CS6: u8 = 0xc0;
 
 // VRRP Constants
 pub const VRRP_V2_FRAME_OFFSET: usize = 34;
+pub const VRRP_V2_CHECKSUM_POS: usize = 6;
 pub const VRRP_V2_VER_TYPE_AUTHMSG: u8 = 0x21;
 pub const VRRP_V2_IP_MCAST_DST: [u8; 4] = [224, 0, 0, 18];
 pub const VRRP_V2_ADVERT_VERSION_TYPE: u8 = 0x21;
 pub const VRRP_V2_DEFAULT_PRIORITY: u8 = 100;
+
+// Authentication Constants
+pub const AUTH_TYPE_SIMPLE: u8 = 1;
+pub const AUTH_TYPE_P0: u8 = 250;

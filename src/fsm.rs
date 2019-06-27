@@ -28,7 +28,7 @@ pub struct Parameters {
     rfc3768: bool,      // RFC2338 compatibility flag
     auth_type: u8,      // Authentication type being used
     auth_data: [u8; 8], // Autentication data (type specific)
-    auth_secret: Option<String>, // Authentication secret for type-1 RFC3768 authentication
+    auth_secret: Option<String>, // Authentication secret
     notification: Option<Arc<Mutex<mpsc::Sender<Event>>>>, // Notification channel
     protocols: Arc<Mutex<Protocols>>, // Internal protocols information
     ifmac: [u8; 6],     // Interface Ethernet MAC address

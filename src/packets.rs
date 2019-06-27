@@ -13,6 +13,9 @@ use crate::VirtualRouter;
 // checksums
 use crate::checksums;
 
+// authentication
+use crate::auth::gen_auth_data;
+
 // debugging
 use crate::debug::{print_debug, Verbose};
 
@@ -205,7 +208,7 @@ pub fn send_advertisement(
         frame.push(vip[i]);
     }
 
-    // check if rfc3768 compatibility flag is false
+    // check if rfc3768 compatibility flag is true
     if !vr.parameters.rfc3768() {
         // extend the frame with the variable-length list of local IP addresses
         for addr in vr.parameters.ipaddrs() {
@@ -228,8 +231,27 @@ pub fn send_advertisement(
     );
 
     // add authentication data
-    for b in gen_auth_data(vr.parameters.authsecret()) {
-        frame.push(b);
+    match vr.parameters.authtype() {
+        // AUTH_TYPE_P0 (PROPRIETARY-TRUNCATED-8B-SHA256)
+        AUTH_TYPE_P0 => {
+            for b in gen_auth_data(
+                vr.parameters.authtype(),
+                vr.parameters.authsecret(),
+                Option::Some(&frame[VRRP_V2_FRAME_OFFSET..]),
+            ) {
+                frame.push(b);
+            }
+        }
+        // all remaining types
+        _ => {
+            for b in gen_auth_data(
+                vr.parameters.authtype(),
+                vr.parameters.authsecret(),
+                Option::None,
+            ) {
+                frame.push(b);
+            }
+        }
     }
 
     // generate VRRP checksum (vrrp checksum is at offset 34+6 bytes)
@@ -308,24 +330,4 @@ pub fn send_advertisement(
 /// transform type T as slice of u8
 unsafe fn as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
-}
-
-// gen_auth_data() function
-/// generate authentication data
-fn gen_auth_data(secret: &Option<String>) -> Vec<u8> {
-    match secret {
-        // Auth Type 1 (RFC2338 backward-compatible)
-        Some(s) => {
-            let secpad = format!("{:\0<8}", s);
-            secpad.into_bytes()
-        }
-        // Auth Type 0 (null authentication)
-        None => {
-            let mut auth_vec: Vec<u8> = Vec::new();
-            for _ in 0..8 {
-                auth_vec.push(0);
-            }
-            auth_vec
-        }
-    }
 }

@@ -5,37 +5,38 @@
 [![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=dev-0.1.0)](https://travis-ci.org/e3prom/rVRRPd)
 
 # Introduction
-[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and secure VRRPv2 implementation written in Rust, a programming language known for its inherent memory-safety and speed.
+[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and secure VRRPv2 implementation written in Rust, a programming language known for its inherent portability, memory-safety and speed.
 
 # Features
- * Aimed to be *Robust*, Fast and _Secure_ (see development section below)
+ * Aimed to be **Robust**, Fast and _Secure_ (see development section below)
  * Multi-threaded operation (1 thread per VRRP group, interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml)
  * Interoperable with [RFC3768](https://tools.ietf.org/html/rfc3768) compliant devices
+ * Authentication Support
+   * [RFC2338](https://tools.ietf.org/html/rfc2338) Simple Authentication (Type-1) 
+   * Proprietary P0 HMAC (provide authentication and integrity protection between rVRRPD instances)
  * Support multiple operating modes:
    * Sniffer mode (-m0)
    * Virtual Router in foreground mode (-m1)
    * Virtual Router in daemon mode (-m2)
 
 # Development
-This project is still in early development stage and only support the Linux operating system. There is no stable API yet, configuration or even documentation. Please keep in mind that at this stage, the implementation may not be fully interoperable with standard-compliant network equipments and may exhibit stability or even security issues.
+This project is still in early development stage and only support the Linux operating system at this time. There is no stable API yet, configuration or even documentation. Please keep in mind that at this stage, the implementation may not be fully interoperable with standard-compliant network equipments and may exhibit stability or even security issues.
 
 ## Roadmap
-The current development roadmap can be consulted [here](https://github.com/e3prom/rVRRPd/projects/1).
+The current development roadmap can be found [here](https://github.com/e3prom/rVRRPd/projects/1).
 
 # Requirements
- * A Linux 64-bits kernel (only Linux is supported at this time)
+ * A Linux 64-bits kernel (only Linux is currently supported)
  * [Rust Cargo](https://doc.rust-lang.org/cargo/) (required to easily compile this project and all its dependencies)
  * One or more Ethernet interface(s) (see [conf/rvrrpd.conf](conf/rvrrpd.conf) for a basic configuration example)
  * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and access kernel interfaces)
  * [libnl - Netlink Library Suite](https://www.infradead.org/~tgr/libnl/) (required for Linux netlink support)
 
 # Build and run
-To quickly build a development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The recommended way is to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) the latest version of Cargo along with the GNU Compiler Collection (GCC) toolchain. 
+To quickly build a development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have the latest version of Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The easiest way is to [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo first, then the GNU Compiler Collection (GCC) toolchain and lastly the development packages (including headers files) of `libnl-3` and `libnl-route-3` for the Linux netlink support.
 
-You will also need the development packages (including headers files) of `libnl-3` and `libnl-route-3` for the Linux netlink support.
-
-Then build the project by using the `cargo build --release` command:
+To build rVRRPd, use the `cargo build --release` command:
 ```
 $ cargo build --release
    Compiling libc v0.2.57
@@ -68,7 +69,7 @@ Options:
                         0(none), 1(low), 2(medium), 3(high), 5(extensive)
 ```
 
-To run a VRRP virtual router, edit the configuration file in `conf/rvrrpd.conf` to reflect your environment:
+To run a VRRPv2 virtual router, edit the configuration file in `conf/rvrrpd.conf` to reflect your environment:
 ```
 debug = 5
 pid = "/var/tmp/rvrrpd.pid"
@@ -84,6 +85,8 @@ priority = 254
 preemption = true
 rfc3768 = true
 netdrv = "libnl"
+auth_type = "rfc2338-simple"
+auth_secret = "thissecretnolongeris"
 
 [protocols]
     [[protocols.static]]
@@ -98,8 +101,11 @@ The above configuration do the following:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
    * Has preeemption enabled.
-   * Has compatibility with RFC3768 turned on (may be required to fully interoperate with vendors like Cisco).
-   * Uses the network driver `libnl` which leverage the netlink protocol. By default it uses `ioctls`, which removes primary IP addresses when in Master state.
+   * Has compatibility with RFC3768 turned on (may be required to fully interoperate with some vendor).
+   * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, `ioctls` can be used, which removes the primary IP addresses for the VIP when in Master state.
+   * Set authentication to the RFC2338 Simple authentication method
+   * Set the secret password to be shared between the virtual routers.
+  
 * When master, install a `static default` route with a next-hop of `10.240.0.254`.
 
 Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `Virtual Router (foreground)` operating mode:
