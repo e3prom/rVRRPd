@@ -103,8 +103,8 @@ The above configuration do the following:
    * Has preeemption enabled.
    * Has compatibility with RFC3768 turned on (may be required to fully interoperate with some vendor).
    * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, `ioctls` can be used, which removes the primary IP addresses for the VIP when in Master state.
-   * Set authentication to the RFC2338 Simple authentication method
-   * Set the secret password to be shared between the virtual routers.
+   * Set authentication to the RFC2338 Simple authentication method.
+   * Set the secret to be shared between the virtual routers.
   
 * When master, install a `static default` route with a next-hop of `10.240.0.254`.
 

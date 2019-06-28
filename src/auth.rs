@@ -37,7 +37,7 @@ pub fn gen_auth_data(autht: u8, secret: &Option<String>, msg: Option<&[u8]>) -> 
             // secret key
             let key = match secret {
                 Some(s) => s,
-                None => "default",
+                None => "",
             };
             // create HMAC SHA256 instance
             let mut mac = HmacSha256::new_varkey(key.as_bytes()).expect("invalid key size");

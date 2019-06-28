@@ -153,9 +153,23 @@ impl VRConfig {
             None => 0,
         }
     }
-    // auth_secret() getter
-    pub fn auth_secret(&self) -> &Option<String> {
-        &self.auth_secret
+    // auth_secret() method
+    pub fn auth_secret(&self) -> Option<String> {
+        match &self.auth_secret {
+            Some(cs) => match self.auth_type() {
+                // if type-1, then truncate to 8 bytes
+                1 => {
+                    let mut s = cs.clone();
+                    s.truncate(8);
+                    Option::Some(s)
+                }
+                _ => {
+                    let s = cs.clone();
+                    Option::Some(s)
+                }
+            },
+            None => Option::None,
+        }
     }
     // rfc3768() getter
     pub fn rfc3768(&self) -> bool {

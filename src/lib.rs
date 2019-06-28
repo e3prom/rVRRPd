@@ -154,7 +154,7 @@ impl VirtualRouter {
         preempt: bool,
         rfc3768: bool,
         auth_type: u8,
-        mut auth_secret: Option<String>,
+        auth_secret: Option<String>,
         protocols: Arc<Mutex<Protocols>>,
         debug: &Verbose,
         netdrv: NetDrivers,
@@ -216,11 +216,20 @@ impl VirtualRouter {
             ),
         );
 
-        // make secure all parameters are valid,
-        // such as auth. secret is always < 8 chars
-        if auth_secret.is_some() {
-            let r = auth_secret.as_mut();
-            r.unwrap().truncate(8);
+        // verify authentication settings
+        match auth_type {
+            // if authentication types require a secret
+            1 | 250 => {
+                if auth_secret.is_none() {
+                    print_debug(
+                        debug,
+                        DEBUG_LEVEL_MEDIUM,
+                        DEBUG_SRC_VR,
+                        format!("no authentication secret configured"),
+                    );
+                }
+            }
+            _ => {}
         }
 
         // calculate skew_time according to RFC3768 6.1
