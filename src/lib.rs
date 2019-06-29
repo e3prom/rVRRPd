@@ -691,12 +691,16 @@ fn verify_vrrp_pkt(
                     }
                 }
                 // AUTH_TYPE_P0 (PROPRIETARY-TRUNCATED-8B-SHA256)
-                AUTH_TYPE_P0 => {
+                // AUTH_TYPE_P1 (PROPRIETARY-XOF-8B-SHAKE256)
+                AUTH_TYPE_P0 | AUTH_TYPE_P1 => {
                     print_debug(
                         debug,
                         DEBUG_LEVEL_EXTENSIVE,
                         DEBUG_SRC_AUTH,
-                        format!("performing VRRP proprietary (p0) authentication"),
+                        format!(
+                            "performing VRRP proprietary ({}) authentication",
+                            vr.parameters.authtype()
+                        ),
                     );
                     // get the verification code on the VRRP PDU minus the authentication header
                     // and the checksum field zero-ed out (HMAC-then-checksum)
@@ -706,7 +710,7 @@ fn verify_vrrp_pkt(
                         zchecksum.iter().cloned(),
                     );
                     let hmac = gen_auth_data(
-                        AUTH_TYPE_P0,
+                        vr.parameters.authtype(),
                         vr.parameters.authsecret(),
                         Option::Some(&vrrp_pdu[..vrrp_pdu.len() - 8]),
                     );

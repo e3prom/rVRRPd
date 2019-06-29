@@ -14,7 +14,8 @@
  * Interoperable with [RFC3768](https://tools.ietf.org/html/rfc3768) compliant devices
  * Authentication Support
    * [RFC2338](https://tools.ietf.org/html/rfc2338) Simple Authentication (Type-1) 
-   * Proprietary P0 HMAC (provide authentication and integrity protection between rVRRPD instances)
+   * Proprietary P0 HMAC (based on SHA256 truncated to 8 bytes)
+   * Proprietary P1 (SHAKE256 XOF)
  * Support multiple operating modes:
    * Sniffer mode (-m0)
    * Virtual Router in foreground mode (-m1)
@@ -104,7 +105,7 @@ The above configuration do the following:
    * Has compatibility with RFC3768 turned on (may be required to fully interoperate with some vendor).
    * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, `ioctls` can be used, which removes the primary IP addresses for the VIP when in Master state.
    * Set authentication to the RFC2338 Simple authentication method.
-   * Set the secret to be shared between the virtual routers.
+   * Set the secret key to be shared between the virtual routers.
   
 * When master, install a `static default` route with a next-hop of `10.240.0.254`.
 

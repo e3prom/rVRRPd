@@ -62,3 +62,4 @@ pub const VRRP_V2_DEFAULT_PRIORITY: u8 = 100;
 // Authentication Constants
 pub const AUTH_TYPE_SIMPLE: u8 = 1;
 pub const AUTH_TYPE_P0: u8 = 250;
+pub const AUTH_TYPE_P1: u8 = 251;

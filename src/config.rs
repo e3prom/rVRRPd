@@ -148,6 +148,7 @@ impl VRConfig {
             Some(s) => match &s[..] {
                 "rfc2338-simple" => AUTH_TYPE_SIMPLE,
                 "p0-t8-sha256" => AUTH_TYPE_P0,
+                "p1-b8-shake256" => AUTH_TYPE_P1,
                 _ => panic!("error(config): authentication type {} no supported", s),
             },
             None => 0,
@@ -173,12 +174,20 @@ impl VRConfig {
     }
     // rfc3768() getter
     pub fn rfc3768(&self) -> bool {
-        // if auth_type is 'p0-t8-sha256', overwrite rfc3768 compatibility flag
-        if self.auth_type == Some("p0-t8-sha256".to_string()) {
-            println!(
-                "warning(config): authentication p0 is enabled, forcing rfc3768 compatibility."
-            );
-            return true;
+        // if auth_type is 'p0-t8-sha256', or 'p1-b8-shake256',
+        // overwrite rfc3768 compatibility flag
+        match &self.auth_type {
+            Some(t) => match &t[..] {
+                "p0-t8-sha256" | "p1-b8-shake256" => {
+                    println!(
+                        "warning(config): authentication type {} is enabled, forcing rfc3768 compatibility.",
+                        t
+                    );
+                    return true;
+                }
+                _ => {}
+            },
+            None => {}
         }
         match self.rfc3768 {
             Some(b) => b,

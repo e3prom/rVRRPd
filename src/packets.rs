@@ -233,7 +233,8 @@ pub fn send_advertisement(
     // add authentication data
     match vr.parameters.authtype() {
         // AUTH_TYPE_P0 (PROPRIETARY-TRUNCATED-8B-SHA256)
-        AUTH_TYPE_P0 => {
+        // AUTH_TYPE_P1 (PROPRIETARY-XOF-8B-SHAKE256)
+        AUTH_TYPE_P0 | AUTH_TYPE_P1 => {
             for b in gen_auth_data(
                 vr.parameters.authtype(),
                 vr.parameters.authsecret(),
