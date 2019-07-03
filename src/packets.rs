@@ -98,7 +98,7 @@ impl VRRPpkt {
     pub fn s_addrcount(&self, framesize: usize) -> u8 {
         // make sure the address count matches the frame size,
         // a valid packet with one address should equal 60 bytes
-        if framesize != 56 + (self.addrcount * 4) as usize {
+        if framesize != 56 + (self.addrcount as usize * 4) as usize {
             return 0u8;
         }
         self.addrcount
