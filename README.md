@@ -2,43 +2,43 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/e3prom/rvrrpd.svg)
 ![GitHub issues](https://img.shields.io/github/issues/e3prom/rvrrpd.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/e3prom/rvrrpd.svg)
-[![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=dev-0.1.0)](https://travis-ci.org/e3prom/rVRRPd)
+[![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=master)](https://travis-ci.org/e3prom/rVRRPd)
 
 # Introduction
-[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and secure VRRPv2 implementation written in Rust, a programming language known for its inherent portability, memory-safety and speed.
+[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in Rust, a programming language known for its inherent portability, memory-safety and speed.
 
 # Features
- * Aimed to be **Robust**, Fast and _Secure_ (see development section below)
- * Multi-threaded operation (1 thread per VRRP group, interface pair)
+ * Aimed to be Robust, Fast and Secure
+ * Multi-threaded operation (1 thread per VRRP group/interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml)
- * Interoperable with [RFC3768](https://tools.ietf.org/html/rfc3768) compliant devices
+ * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) compliant devices
  * Authentication Support
-   * [RFC2338](https://tools.ietf.org/html/rfc2338) Simple Authentication (Type-1) 
+   * [`RFC2338`](https://tools.ietf.org/html/rfc2338) Simple Authentication (Type-1) 
    * Proprietary P0 HMAC (based on SHA256 truncated to 8 bytes)
    * Proprietary P1 (SHAKE256 XOF)
  * Support multiple operating modes:
-   * Sniffer mode (-m0)
-   * Virtual Router in foreground mode (-m1)
-   * Virtual Router in daemon mode (-m2)
+   * Sniffer mode (`-m0`)
+   * Virtual Router in foreground mode (`-m1`)
+   * Virtual Router in daemon mode (`-m2`)
 
 # Development
-This project is still in early development stage and only support the Linux operating system at this time. There is no stable API yet, configuration or even documentation. Please keep in mind that at this stage, the implementation may not be fully interoperable with standard-compliant network equipments and may exhibit stability or even security issues.
+This project is still in **_early development_** stage and at this time, only support the Linux operating system. There is no stable API yet, configuration or even documentation. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be fully interoperable with standard-compliant network equipments and may exhibit stability issues, therefore use at your own risks.
 
 ## Roadmap
-The current development roadmap can be found [here](https://github.com/e3prom/rVRRPd/projects/1).
+The current development roadmap for version 0.2.0 can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Requirements
- * A Linux 64-bits kernel (only Linux is currently supported)
- * [Rust Cargo](https://doc.rust-lang.org/cargo/) (required to easily compile this project and all its dependencies)
- * One or more Ethernet interface(s) (see [conf/rvrrpd.conf](conf/rvrrpd.conf) for a basic configuration example)
- * Root privileges (required to put interfaces in promiscuous mode, access raw sockets and access kernel interfaces)
- * [libnl - Netlink Library Suite](https://www.infradead.org/~tgr/libnl/) (required for Linux netlink support)
+ * A Linux 64-bits kernel (only Linux is currently supported).
+ * [`Cargo`](https://doc.rust-lang.org/cargo/), which is not required but recommended to easily compile this project and all its dependencies.
+ * One or more Ethernet interface(s) (see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example).
+ * Root privileges, required to put interfaces in promiscuous mode, access raw sockets and to access kernel interfaces.
+ * [`libnl`](https://www.infradead.org/~tgr/libnl/) library for accessing the Linux netlink interface.
 
 # Build and run
-To quickly build a development version of [rVRRPd](https://github.com/e3prom/rVRRPd), first make sure you have the latest version of Rust's [Cargo](https://doc.rust-lang.org/cargo/) installed. The easiest way is to [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo first, then the GNU Compiler Collection (GCC) toolchain and lastly the development packages (including headers files) of `libnl-3` and `libnl-route-3` for the Linux netlink support.
+To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the latest version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl` development packages (including headers files), namely `libnl-3` and `libnl-route-3` on Debian and derivatives.
 
-To build rVRRPd, use the `cargo build --release` command:
-```
+To quickly build [`rVRRPd`](https://github.com/e3prom/rVRRPd), use the `cargo build --release` command:
+```console
 $ cargo build --release
    Compiling libc v0.2.57
    Compiling autocfg v0.1.4
@@ -70,8 +70,9 @@ Options:
                         0(none), 1(low), 2(medium), 3(high), 5(extensive)
 ```
 
-To run a VRRPv2 virtual router, edit the configuration file in `conf/rvrrpd.conf` to reflect your environment:
-```
+To run a VRRPv2 virtual router, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default `/etc/rvrrpd/rvrrpd.conf`.
+Then use your favorite text editor to configure the virtual router(s) to your needs. See below for an example of a virtual router running on an Ethernet interface with password authentication and preemption enabled:
+```TOML
 debug = 5
 pid = "/var/tmp/rvrrpd.pid"
 working_dir = "/var/tmp"
@@ -102,21 +103,20 @@ The above configuration do the following:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
    * Has preeemption enabled.
-   * Has compatibility with RFC3768 turned on (may be required to fully interoperate with some vendor).
-   * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, `ioctls` can be used, which removes the primary IP addresses for the VIP when in Master state.
-   * Set authentication to the RFC2338 Simple authentication method.
-   * Set the secret key to be shared between the virtual routers.
-  
+   * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendor).
+   * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctls` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
+   * Set authentication to the [`RFC2338`](https://tools.ietf.org/html/rfc2338) Simple authentication method.
+   * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a `static default` route with a next-hop of `10.240.0.254`.
 
-Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to enter the `Virtual Router (foreground)` operating mode:
-```
+Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
+```bash
 $ sudo target/release/main -m1 -c conf/rvrrpd.conf
 Starting rVRRPd
 [...]
 ```
 
-Your virtual router will now listen for VRRPv2 packets and will take the Master or Backup role. If the router owns the virtual IP address, it will automatically take the Master role with a priority of 255.
+Your virtual router will now listen for VRRPv2 packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
 
 # Support
 If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
