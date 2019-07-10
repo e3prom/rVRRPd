@@ -209,7 +209,7 @@ impl VirtualRouter {
         print_debug(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
-            DEBUG_SRC_INFO,
+            DEBUG_SRC_MAIN,
             format!(
                 "creating new virtal-router, vrid {} on interface {}, ipaddrs {:?}",
                 vrid, ifname, v4addrs
@@ -372,7 +372,7 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                     .stderr(stderr);
                 // daemonize the process
                 match deamon.start() {
-                    Ok(_) => println!("rVRRPd daemon started"),
+                    Ok(_) => println!("rVRRPd (v{}) daemon started", RVRRPD_VERSION_STRING),
                     Err(e) => eprintln!("Error while starting rVRRPd daemon: {}", e),
                 }
             }
@@ -421,8 +421,17 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
             // create an atomic reference count
             let protocols = Arc::new(protocols);
 
+            // check if at least one VR exists
+            let vcvr = match config.vrouter {
+                Some(vr) => vr,
+                None => {
+                    eprintln!("error(main): no virtual router configured. exiting...");
+                    std::process::exit(1);
+                }
+            };
+
             // create a new virtual router and push it into the 'vrouters' vector
-            for vr in config.vrouter.unwrap() {
+            for vr in vcvr {
                 // clone protocols
                 let protocols = Arc::clone(&protocols);
 

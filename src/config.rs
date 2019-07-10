@@ -111,9 +111,9 @@ impl VRConfig {
         match &self.vip {
             Some(ip) => match ip.parse::<IpAddr>().unwrap() {
                 IpAddr::V4(ip) => ip.octets(),
-                IpAddr::V6(_ipv6) => panic!("error(config) Only IPv4 addresses are supported"),
+                IpAddr::V6(_ipv6) => panic!("error(config): Only IPv4 addresses are supported"),
             },
-            None => panic!("error(config) No virtual IP specified"),
+            None => panic!("error(config): No virtual IP specified"),
         }
     }
     // timer_advert() getter
@@ -128,7 +128,7 @@ impl VRConfig {
         match self.priority {
             Some(v) => {
                 if v < 1 || v > 254 {
-                    panic!("error(config) Please configure a priority between 1 and 254");
+                    panic!("error(config): Please configure a priority between 1 and 254");
                 }
                 v
             }
@@ -240,21 +240,21 @@ impl Static {
     pub fn route(&self) -> [u8; 4] {
         match self.route.parse::<IpAddr>().unwrap() {
             IpAddr::V4(ip) => ip.octets(),
-            IpAddr::V6(_ipv6) => panic!("error(config-static) Only IPv4 routes are supported"),
+            IpAddr::V6(_ipv6) => panic!("error(config-static): Only IPv4 routes are supported"),
         }
     }
     // mask() getter
     pub fn mask(&self) -> [u8; 4] {
         match self.mask.parse::<IpAddr>().unwrap() {
             IpAddr::V4(ip) => ip.octets(),
-            IpAddr::V6(_ipv6) => panic!("error(config-static) Only IPv4 masks are supported"),
+            IpAddr::V6(_ipv6) => panic!("error(config-static): Only IPv4 masks are supported"),
         }
     }
     // nh() getter
     pub fn nh(&self) -> [u8; 4] {
         match self.nh.parse::<IpAddr>().unwrap() {
             IpAddr::V4(ip) => ip.octets(),
-            IpAddr::V6(_ipv6) => panic!("error(config-static) Only IPv4 next-hops are supported"),
+            IpAddr::V6(_ipv6) => panic!("error(config-static): Only IPv4 next-hops are supported"),
         }
     }
     // metric() getter
@@ -276,7 +276,16 @@ impl Static {
 // decode_config() function
 /// read and decode configuration file
 pub fn decode_config(filename: String) -> CConfig {
-    let file = std::fs::read_to_string(filename).expect("Cannot read rVRRPd configuration file");
+    let file: std::string::String = match std::fs::read_to_string(filename) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!(
+                "error(config): Cannot read rVRRPd configuration file: {}",
+                e
+            );
+            std::process::exit(1);
+        }
+    };
     let config: CConfig = match toml::from_str(&file) {
         Ok(c) => c,
         Err(e) => panic!("error(config): Cannot parse configuration file:\n {}", e),

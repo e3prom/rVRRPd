@@ -108,14 +108,7 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
     let conf = matches.opt_str("conf");
     let conf = match conf {
         Some(x) => Option::Some(x.parse::<String>().unwrap()),
-        None => {
-            // if mode == 1 {
-            //     return Result::Err(Box::new(MyError(
-            //         "No configuration file specified (-c)".into(),
-            //     )));
-            // }
-            Option::None
-        }
+        None => Option::None,
     };
 
     // debug level command-line option

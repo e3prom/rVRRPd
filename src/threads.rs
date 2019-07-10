@@ -68,7 +68,7 @@ impl ThreadPool {
     pub fn drop(&mut self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) {
         print_debug(
             debug,
-            DEBUG_LEVEL_INFO,
+            DEBUG_LEVEL_LOW,
             DEBUG_SRC_THREAD,
             format!("signaling workers to shut down"),
         );
