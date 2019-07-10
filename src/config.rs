@@ -288,7 +288,10 @@ pub fn decode_config(filename: String) -> CConfig {
     };
     let config: CConfig = match toml::from_str(&file) {
         Ok(c) => c,
-        Err(e) => panic!("error(config): Cannot parse configuration file:\n {}", e),
+        Err(e) => {
+            eprintln!("error(config): Cannot parse configuration file: {}", e);
+            std::process::exit(1);
+        }
     };
     // return config
     config

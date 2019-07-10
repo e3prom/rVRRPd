@@ -288,11 +288,28 @@ fn open_raw_socket_fd() -> io::Result<i32> {
     }
 }
 
+// setup_signal_handler function
+/// Setup a signal handler for SIGINT or SIGTERM signals
+fn setup_signal_handler() -> Arc<AtomicBool> {
+    // create a thread-safe flag
+    let flag = Arc::new(AtomicBool::new(false));
+    // clone flag for the handler's thread
+    let flag_c1 = flag.clone();
+    // setup signal handler
+    ctrlc::set_handler(move || {
+        println!("\nReceived termination signal");
+        flag_c1.swap(true, Ordering::Relaxed);
+    })
+    .expect("Error while setting up signal handler.");
+    // return flag
+    flag
+}
+
 // listen_ip_pkts() function
 /// Listen for IP packets
 ///
 /// Library entry point for Virtual Router functions
-pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()> {
+pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
     // initialize sockaddr and packet buffer
     let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
     let mut pkt_buf: [u8; 1024] = [0; 1024];
@@ -301,6 +318,9 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
     match cfg.mode {
         // sniffer mode
         0 => {
+            // setup signal handler
+            let shutdown = setup_signal_handler();
+
             // open raw socket
             let sockfd = open_raw_socket_fd()?;
 
@@ -376,6 +396,9 @@ pub fn listen_ip_pkts(cfg: &Config, shutdown: Arc<AtomicBool>) -> io::Result<()>
                     Err(e) => eprintln!("Error while starting rVRRPd daemon: {}", e),
                 }
             }
+
+            // setup signal handler for the possibly forked process
+            let shutdown = setup_signal_handler();
 
             // initialize the virtual router vector
             let mut vrouters: Vec<Arc<RwLock<VirtualRouter>>> = Vec::new();

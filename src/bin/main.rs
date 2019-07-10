@@ -10,8 +10,6 @@ use getopts::Options;
 // std
 use std::env;
 use std::error::Error;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 // ctrlc (linux signal handling)
 extern crate ctrlc;
@@ -126,19 +124,8 @@ fn run(cfg: Config) -> Result<(), Box<dyn Error>> {
     // print information
     println!("Starting rVRRPd");
 
-    // Thread safe shared variable
-    let shutdown = Arc::new(AtomicBool::new(false));
-
-    // Set up SIGINT signal handler
-    let shutdown_c1 = Arc::clone(&shutdown);
-    ctrlc::set_handler(move || {
-        println!("\nReceived SIGINT (Signal 2)");
-        shutdown_c1.swap(true, Ordering::Relaxed);
-    })
-    .expect("Error while setting SIGINT signal handler.");
-
     // Listen to IP packets
-    match listen_ip_pkts(&cfg, shutdown) {
+    match listen_ip_pkts(&cfg) {
         Ok(_) => Ok(()),
         Err(e) => {
             return Result::Err(Box::new(MyError(
