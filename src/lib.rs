@@ -35,9 +35,7 @@ use packets::VRRPpkt;
 
 // operating systems support
 mod os;
-use os::linux::drivers::NetDrivers;
-use os::linux::libc::IfAddrs;
-use os::linux::netdev::PflagOp;
+use os::drivers::{NetDrivers, PflagOp};
 
 // finite state machine
 mod fsm;
@@ -81,7 +79,6 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io;
 use std::mem;
-use std::net::IpAddr::V4;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -171,28 +168,10 @@ impl VirtualRouter {
         // create new IPv4 netmasks vecto
         let mut v4masks = Vec::new();
 
-        // get list of all ip address per interfaces
-        let addrlist = IfAddrs::get().unwrap();
-        // create a vector of tuples (ifname: &str, ipaddr: IpAddr, netmask: IpAddr)
-        let addrlist = addrlist
-            .iter()
-            .map(|a| (a.name(), a.addr(), a.netmask()))
-            .collect::<Vec<_>>();
+        // if the operating system is Linux
+        #[cfg(target_os = "linux")]
+        let _r = os::linux::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
 
-        // for every tuples in addrlist:
-        // if the key matches the vr's interface, push the converted IPv4 address
-        // into the v4addrs vector.
-        for t in addrlist {
-            // take the address and netmask of the matching vr's interface
-            if t.0.to_lowercase() == ifname {
-                if let Some(V4(ip)) = t.1 {
-                    v4addrs.push(ip.octets());
-                    if let Some(V4(netmask)) = t.2 {
-                        v4masks.push(netmask.octets())
-                    }
-                }
-            }
-        }
         // make sure there is a least one ip/mask pair, otherwise return an error
         if v4addrs.is_empty() || v4masks.is_empty() {
             println!(

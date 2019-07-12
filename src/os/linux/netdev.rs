@@ -5,15 +5,10 @@ use crate::*;
 // std, libc, ffi
 use libc::{
     c_short, c_uchar, c_ulong, c_ushort, ioctl, AF_INET, ARPHRD_ETHER, ETH_ALEN, IF_NAMESIZE,
-    RTF_UP,
+    RTF_UP, IFF_UP, IFF_PROMISC, IFF_RUNNING
 };
 use std::ffi::CString;
 use std::io;
-
-// flags values (/usr/include/net/if.h)
-const IFF_UP: c_short = 0x01;
-const IFF_RUNNING: c_short = 0x40;
-const IFF_PROMISC: c_short = 0x100;
 
 /// ioctl_flags Structure
 #[repr(C)]
@@ -90,12 +85,6 @@ struct int_sockaddr_ether {
     sa_data: [u8; ETH_ALEN as usize],
 }
 
-/// pflag operation Enumerator
-pub enum PflagOp {
-    Set,
-    Unset,
-}
-
 // set_if_promiscuous() function
 /// Set (or Unset) interface in promiscuous mode
 pub fn set_if_promiscuous(sockfd: i32, ifname: &CString, op: PflagOp) -> io::Result<()> {
@@ -127,7 +116,7 @@ pub fn set_if_promiscuous(sockfd: i32, ifname: &CString, op: PflagOp) -> io::Res
     match op {
         PflagOp::Set => {
             // set the flags to UP,RUNNING,PROMISC using bitwise OR operation.
-            ifopts.ifr_flags |= IFF_UP | IFF_RUNNING | IFF_PROMISC;
+            ifopts.ifr_flags |= IFF_UP as c_short | IFF_RUNNING as c_short | IFF_PROMISC as c_short;
             let res = unsafe { ioctl(sockfd, libc::SIOCSIFFLAGS, &mut ifopts) };
             if res < 0 {
                 return Err(io::Error::last_os_error());
@@ -135,7 +124,7 @@ pub fn set_if_promiscuous(sockfd: i32, ifname: &CString, op: PflagOp) -> io::Res
         }
         PflagOp::Unset => {
             // unset PROMISC flag
-            ifopts.ifr_flags |= IFF_UP | IFF_RUNNING;
+            ifopts.ifr_flags |= IFF_UP as c_short | IFF_RUNNING as c_short;
             let res = unsafe { ioctl(sockfd, libc::SIOCSIFFLAGS, &mut ifopts) };
             if res < 0 {
                 return Err(io::Error::last_os_error());

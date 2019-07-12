@@ -196,12 +196,19 @@ impl VRConfig {
     }
     // netdrv() method
     pub fn netdrv(&self) -> NetDrivers {
-        match &self.netdrv {
-            Some(s) => match &s[..] {
-                "ioctl" => NetDrivers::ioctl,
-                _ => NetDrivers::libnl,
-            },
-            None => NetDrivers::libnl,
+        // if os is Linux
+        if cfg!(target_os = "linux") {
+            match &self.netdrv {
+                Some(s) => match &s[..] {
+                    "ioctl" => NetDrivers::ioctl,
+                    _ => NetDrivers::libnl,
+                },
+                None => NetDrivers::libnl,
+            }
+        }
+        // unspecified OSes
+        else {
+            NetDrivers::ioctl
         }
     }
 }

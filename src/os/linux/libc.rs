@@ -3,7 +3,7 @@
 // std, libc, ffi
 use std::ffi::{CStr, CString};
 use std::io;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, IpAddr::V4, Ipv4Addr, Ipv6Addr};
 use std::ptr;
 
 // foreign_types
@@ -153,6 +153,39 @@ pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
             Ok(r)
         }
     }
+}
+
+// get_addrlist() function
+/// get list of IP address(es) and store them into vectors
+pub fn get_addrlist(
+    ifname: &String,
+    v4addrs: &mut Vec<[u8; 4]>,
+    v4masks: &mut Vec<[u8; 4]>,
+) -> io::Result<()> {
+    // get list of all ip address per interfaces
+    let addrlist = IfAddrs::get().unwrap();
+    // create a vector of tuples (ifname: &str, ipaddr: IpAddr, netmask: IpAddr)
+    let addrlist = addrlist
+        .iter()
+        .map(|a| (a.name(), a.addr(), a.netmask()))
+        .collect::<Vec<_>>();
+
+    // for every tuples in addrlist:
+    // if the key matches the vr's interface, push the converted IPv4 address
+    // into the v4addrs vector.
+    for t in addrlist {
+        // take the address and netmask of the matching vr's interface
+        if t.0.to_lowercase() == *ifname {
+            if let Some(V4(ip)) = t.1 {
+                v4addrs.push(ip.octets());
+                if let Some(V4(netmask)) = t.2 {
+                    v4masks.push(netmask.octets())
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 // Tests
