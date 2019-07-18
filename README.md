@@ -11,9 +11,9 @@
  * Aimed to be Robust, Fast and Secure
  * Multi-threaded operation (1 thread per VRRP group/interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml)
- * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) compliant devices
+ * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
  * Authentication Support
-   * [`RFC2338`](https://tools.ietf.org/html/rfc2338) Simple Authentication (Type-1) 
+   * Password Authentication (Type-1) based on [`RFC2338`](https://tools.ietf.org/html/rfc2338) 
    * Proprietary P0 HMAC (based on SHA256 truncated to 8 bytes)
    * Proprietary P1 (SHAKE256 XOF)
  * Support multiple operating modes:
@@ -22,22 +22,22 @@
    * Virtual Router in daemon mode (`-m2`)
 
 # Development
-This project is still in **_early development_** stage and at this time, only support the Linux operating system. There is no stable API yet, configuration or even documentation. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be fully interoperable with standard-compliant network equipments and may exhibit stability issues, therefore use at your own risks.
+This project is still in **_early development_** stage, and at this time, only supports the Linux operating system. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be fully interoperable with standard-compliant network equipments and may also exhibit stability issues, therefore use at your own risks.
 
 ## Roadmap
 The current development roadmap for version 0.2.0 can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
-# Requirements
+# Dependencies
  * A Linux 64-bits kernel (only Linux is currently supported).
- * [`Cargo`](https://doc.rust-lang.org/cargo/), which is not required but recommended to easily compile this project and all its dependencies.
- * One or more Ethernet interface(s) (see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example).
- * Root privileges, required to put interfaces in promiscuous mode, access raw sockets and to access kernel interfaces.
- * [`libnl`](https://www.infradead.org/~tgr/libnl/) library for accessing the Linux netlink interface.
+ * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/), which is not required but recommended to easily compile this project and all its dependencies.
+ * One or more Ethernet interface(s), see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example.
+ * Root privileges, required to put interfaces in promiscuous mode and access raw sockets.
+ * The [`libnl`](https://www.infradead.org/~tgr/libnl/) library for accessing the netlink interface on Linux.
 
 # Build and run
-To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the latest version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl` development packages (including headers files), namely `libnl-3` and `libnl-route-3` on Debian and derivatives.
+To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the latest version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Debian and derivatives.
 
-To quickly build [`rVRRPd`](https://github.com/e3prom/rVRRPd), use the `cargo build --release` command:
+To quickly build the daemon executable, use the `cargo build --release` command:
 ```console
 $ cargo build --release
    Compiling libc v0.2.57
@@ -70,8 +70,9 @@ Options:
                         0(none), 1(low), 2(medium), 3(high), 5(extensive)
 ```
 
-To run a VRRPv2 virtual router, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default `/etc/rvrrpd/rvrrpd.conf`.
-Then use your favorite text editor to configure the virtual router(s) to your needs. See below for an example of a virtual router running on an Ethernet interface with password authentication and preemption enabled:
+Before running the VRRPv2 daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
+
+See below for an example of a virtual router running on an Ethernet interface with password authentication and preemption enabled:
 ```TOML
 debug = 5
 pid = "/var/tmp/rvrrpd.pid"
@@ -103,11 +104,11 @@ The above configuration do the following:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
    * Has preeemption enabled.
-   * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendor).
+   * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendors).
    * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctls` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
-   * Set authentication to the [`RFC2338`](https://tools.ietf.org/html/rfc2338) Simple authentication method.
+   * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
-* When master, install a `static default` route with a next-hop of `10.240.0.254`.
+* When master, install a static default route with a next-hop of `10.240.0.254`.
 
 Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
 ```bash
