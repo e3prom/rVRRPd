@@ -9,6 +9,12 @@ use libc::{c_char, c_int, c_uint, c_void, AF_INET, IF_NAMESIZE};
 use std::ffi::CString;
 use std::io;
 
+// constants
+const INT_RTAX_MAX: usize = 8; // to verify __RTAX_MAX enum value
+
+// operating system drivers
+use crate::os::drivers::Operation;
+
 // custom libnl types
 // nl_list_head type
 #[repr(C)]
@@ -71,14 +77,77 @@ struct rtnl_addr {
     a_flag_mask: u32,
 }
 
+// rtnl_rtcacheinfo type
+#[repr(C)]
+#[derive(Debug)]
+struct rtnl_rtcacheinfo {
+    rtci_clntref: u32,
+    rtci_last_use: u32,
+    rtci_expires: u32,
+    rtci_error: i32,
+    rtci_used: u32,
+    rtci_id: u32,
+    rtci_ts: u32,
+    rtci_tsafe: u32,
+}
+
+// rtnl_route type
+#[repr(C)]
+#[derive(Debug)]
+struct rtnl_route {
+    // NLHDR_COMMON
+    ce_refcnt: c_int,
+    ce_ops: *mut c_void,
+    ce_cache: *mut c_void,
+    ce_list: nl_list_head,
+    ce_msgtype: c_int,
+    ce_flags: c_int,
+    ce_mask: u32,
+
+    rt_family: u8,
+    rt_dst_len: u8,
+    rt_src_len: u8,
+    rt_tos: u8,
+    rt_table: u8,
+    rt_protocol: u8,
+    rt_scope: u8,
+    rt_type: u8,
+    rt_flags: u32,
+
+    rt_dst: *mut nl_addr,
+    rt_src: *mut nl_addr,
+
+    rt_iiff: [c_char; IF_NAMESIZE],
+    rt_oif: u32,
+    rt_gateway: *mut nl_addr,
+    rt_prio: u32,
+    rt_metrics: [u32; INT_RTAX_MAX],
+    rt_metrics_mask: u32,
+
+    rt_pref_src: *mut nl_addr,
+    rt_nexthops: *mut nl_list_head,
+    rt_realms: u32, // substitue for realm_t as returned by rtnl_rule_get_realms(),
+    rt_cacheinfo: rtnl_rtcacheinfo,
+    rt_mp_algo: u32,
+    rt_flag_mask: u32,
+}
+
+// rtnl_nexhop type
+#[repr(C)]
+#[derive(Debug)]
+struct rtnl_nexthop {
+    rtnh_flags: u8,
+    rtnh_flag_mask: u8,
+    rtnh_weight: u8,
+    rtnh_ifindex: u32,
+    rtnh_gateway: *mut nl_addr,
+    ce_mask: u32,
+    rtnh_list: nl_list_head,
+    rtnh_realms: u32,
+}
+
 // nl_sock enum (hack to represent opaque foreign types)
 enum NlSock {}
-
-// Operation public enumerator
-pub enum Operation {
-    Add, // Add IP address
-    Rem, // Remove IP Address
-}
 
 // FFI
 #[link(name = "nl-3")]
@@ -110,6 +179,29 @@ extern "C" {
     // rtnl_addr_put() external function
     // free rtnl_addr allocation
     fn rtnl_addr_put(addr: *mut rtnl_addr);
+    // rtnl_route_alloc() external function
+    fn rtnl_route_alloc() -> *mut rtnl_route;
+    // rtnl_route_add() external function
+    fn rtnl_route_add(sk: *mut NlSock, route: *mut rtnl_route, flags: c_int) -> c_int;
+    // rtnl_route_delete() external function
+    fn rtnl_route_delete(sk: *mut NlSock, route: *mut rtnl_route, flags: c_int) -> c_int;
+    // rtnl_route_set_iif() external function
+    fn rtnl_route_set_iif(route: *mut rtnl_route, ifindex: i32);
+    // rtnl_route_set_dst() external function
+    fn rtnl_route_set_dst(route: *mut rtnl_route, addr: *mut nl_addr) -> c_int;
+    // rtnl_route_add_nexthop() external function
+    fn rtnl_route_add_nexthop(route: *mut rtnl_route, nh: *mut rtnl_nexthop);
+    // rtnl_route_set_metric() external function
+    fn rtnl_route_set_metric(route: *mut rtnl_route, metric: u32, value: u32) -> c_int;
+    // rtnl_route_nh_alloc() external function
+    fn rtnl_route_nh_alloc() -> *mut rtnl_nexthop;
+    // rtnl_route_nh_set_gateway() external function
+    fn rtnl_route_nh_set_gateway(nh: *mut rtnl_nexthop, addr: *mut nl_addr);
+    // rtnl_route_nh_set_ifindex() external function
+    fn rtnl_route_nh_set_ifindex(nh: *mut rtnl_nexthop, int: i32);
+    // rtnl_route_put() external function
+    // free rtnl_route allocation
+    fn rtnl_route_put(route: *mut rtnl_route);
 }
 
 // set_ip_address() function
@@ -122,16 +214,6 @@ pub fn set_ip_address(
     op: Operation,
     debug: &Verbose,
 ) -> io::Result<()> {
-    // null initialize nl_addr 'local'
-    let mut local = nl_addr {
-        a_family: 0,
-        a_maxsize: 0,
-        a_len: 0,
-        a_prefixlen: 0,
-        a_refcnt: 0,
-        a_addr: [0; 4],
-    };
-
     // call to external nlsock() function
     let nlsock = unsafe { nl_socket_alloc() };
     if nlsock.is_null() {
@@ -144,17 +226,27 @@ pub fn set_ip_address(
         return Err(io::Error::last_os_error());
     }
 
-    // allocate rtnl_addr 'addr'
-    let addr = unsafe { rtnl_addr_alloc() };
-    if addr.is_null() {
+    // allocate rtnl_addr 'nladdr'
+    let nladdr = unsafe { rtnl_addr_alloc() };
+    if nladdr.is_null() {
         return Err(io::Error::last_os_error());
     }
 
-    // set ifindex in rtnl_addr 'addr'
-    unsafe { rtnl_addr_set_ifindex(addr, ifindex) };
+    // set ifindex in rtnl_addr 'nladdr'
+    unsafe { rtnl_addr_set_ifindex(nladdr, ifindex) };
 
-    // set interface label in rtnl_addr 'addr'
-    unsafe { rtnl_addr_set_label(addr, ifname.as_ptr()) };
+    // set interface label in rtnl_addr 'nladdr'
+    unsafe { rtnl_addr_set_label(nladdr, ifname.as_ptr()) };
+
+    // null initialize nl_addr 'local'
+    let mut laddr = nl_addr {
+        a_family: 0,
+        a_maxsize: 0,
+        a_len: 0,
+        a_prefixlen: 0,
+        a_refcnt: 0,
+        a_addr: [0; 4],
+    };
 
     // convert netmask to prefix length
     // by counting the number of bit set
@@ -169,8 +261,8 @@ pub fn set_ip_address(
 
     // set local IP address in rtnl_addr 'addr'
     let ipaddr = CString::new(ip_str).unwrap();
-    let mut local_ptr = &mut local;
-    let r = unsafe { nl_addr_parse(ipaddr.as_ptr(), AF_INET, &mut local_ptr) };
+    let mut laddr_ptr = &mut laddr;
+    let r = unsafe { nl_addr_parse(ipaddr.as_ptr(), AF_INET, &mut laddr_ptr) };
     if r < 0 {
         return Err(io::Error::last_os_error());
     }
@@ -180,10 +272,10 @@ pub fn set_ip_address(
         DEBUG_SRC_IP,
         format!(
             "ip_slice: {:?}, nl_addr {:?}, result: {}",
-            ipaddr, *local_ptr, r
+            ipaddr, *laddr_ptr, r
         ),
     );
-    let r = unsafe { rtnl_addr_set_local(addr, local_ptr) };
+    let r = unsafe { rtnl_addr_set_local(nladdr, laddr_ptr) };
     if r < 0 {
         return Err(io::Error::last_os_error());
     }
@@ -194,7 +286,7 @@ pub fn set_ip_address(
             debug,
             DEBUG_LEVEL_EXTENSIVE,
             DEBUG_SRC_IP,
-            format!("addr {:?}", *addr),
+            format!("addr {:?}", *nladdr),
         )
     };
 
@@ -202,14 +294,14 @@ pub fn set_ip_address(
     let res: c_int;
     match op {
         Operation::Add => {
-            // call external to rtnl_addr_add()
+            // external call to rtnl_addr_add()
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_IP,
                 format!("calling rtnl_addr_add() with nlsock ptr {:?}", nlsock),
             );
-            res = unsafe { rtnl_addr_add(nlsock, addr, 0) };
+            res = unsafe { rtnl_addr_add(nlsock, nladdr, 0) };
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
@@ -218,14 +310,14 @@ pub fn set_ip_address(
             );
         }
         Operation::Rem => {
-            // call external to rtnl_addr_delete()
+            // external call to rtnl_addr_delete()
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_IP,
                 format!("calling rtnl_addr_delete() with nlsock ptr {:?}", nlsock),
             );
-            res = unsafe { rtnl_addr_delete(nlsock, addr, 0) };
+            res = unsafe { rtnl_addr_delete(nlsock, nladdr, 0) };
             print_debug(
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
@@ -235,10 +327,187 @@ pub fn set_ip_address(
         }
     }
 
-    // free allocation of rtnl_addr 'addr'
-    unsafe { rtnl_addr_put(addr) };
+    // free allocation of rtnl_addr 'nladdr'
+    unsafe { rtnl_addr_put(nladdr) };
 
     // check 'rtnl_addr_add()|del()' returned value
+    if res < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    Ok(())
+}
+
+// set_ip_route() function
+//
+/// Add or delete a route using libnl-3 (netlink interface)
+pub fn set_ip_route(
+    ifindex: i32,
+    _ifname: &String,
+    route: [u8; 4],
+    rtmask: [u8; 4],
+    gw: [u8; 4],
+    metric: i16,
+    mtu: u64,
+    op: &Operation,
+    debug: &Verbose,
+) -> io::Result<()> {
+    // call to external nlsock() function
+    let nlsock = unsafe { nl_socket_alloc() };
+    if nlsock.is_null() {
+        return Err(io::Error::last_os_error());
+    }
+
+    // call to external nl_connect() function
+    let r = unsafe { nl_connect(nlsock, 0) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    // allocate rtnl_route 'nlroute'
+    let nlroute = unsafe { rtnl_route_alloc() };
+    if nlroute.is_null() {
+        return Err(io::Error::last_os_error());
+    }
+
+    // set ifindex in 'nlroute'
+    unsafe { rtnl_route_set_iif(nlroute, ifindex) };
+
+    // null initialize nl_addr 'rtdst'
+    let mut rtdst = nl_addr {
+        a_family: 0,
+        a_maxsize: 0,
+        a_len: 0,
+        a_prefixlen: 0,
+        a_refcnt: 0,
+        a_addr: [0; 4],
+    };
+
+    // convert netmask to prefix length
+    let mut prefixlen = 0;
+    for b in rtmask.iter() {
+        prefixlen += b.count_ones();
+    }
+    // create route string
+    let route_str = format!(
+        "{}.{}.{}.{}/{}",
+        route[0], route[1], route[2], route[3], prefixlen
+    );
+    // convert route string to a Cstring type
+    let route_cstr = CString::new(route_str).unwrap();
+    // create pointer to 'nl_addr' rtdst
+    let mut rtdst_ptr = &mut rtdst;
+    // parse destination route
+    let r = unsafe { nl_addr_parse(route_cstr.as_ptr(), AF_INET, &mut rtdst_ptr) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    // debug information
+    print_debug(
+        debug,
+        DEBUG_LEVEL_EXTENSIVE,
+        DEBUG_SRC_IP,
+        format!(
+            "route_slice: {:?}, nl_addr {:?}, result: {}",
+            route, *rtdst_ptr, r
+        ),
+    );
+    // set destination route in 'nlroute'
+    let r = unsafe { rtnl_route_set_dst(nlroute, rtdst_ptr) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    // null initialize nl_addr 'nhaddr'
+    let mut nhaddr = nl_addr {
+        a_family: 0,
+        a_maxsize: 0,
+        a_len: 0,
+        a_prefixlen: 0,
+        a_refcnt: 0,
+        a_addr: [0; 4],
+    };
+    // create nexthop string
+    let nh_str = format!("{}.{}.{}.{}", gw[0], gw[1], gw[2], gw[3]);
+    // convert nh_str string to a CString
+    let nh_cstr = CString::new(nh_str).unwrap();
+    // create pointer to 'nl_addr' nhaddr
+    let mut nhaddr_ptr = &mut nhaddr;
+    // parse Cstring nexthop address in nhaddr
+    let r = unsafe { nl_addr_parse(nh_cstr.as_ptr(), AF_INET, &mut nhaddr_ptr) };
+    // check for error(s)
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    // debug information
+    print_debug(
+        debug,
+        DEBUG_LEVEL_EXTENSIVE,
+        DEBUG_SRC_IP,
+        format!(
+            "gw_slice: {:?}, nl_addr {:?}, result: {}",
+            gw, *nhaddr_ptr, r
+        ),
+    );
+
+    // allocate nexthop
+    let rtnh = unsafe { rtnl_route_nh_alloc() };
+
+    // set nexthop's address using 'nhaddr'
+    unsafe { rtnl_route_nh_set_gateway(rtnh, nhaddr_ptr) };
+
+    // set nexthop's ifindex
+    unsafe { rtnl_route_nh_set_ifindex(rtnh, ifindex) };
+
+    // set nexthop in 'nlroute'
+    unsafe { rtnl_route_add_nexthop(nlroute, rtnh) };
+
+    // set route metric and mtu
+    //let r = unsafe { rtnl_route_set_metric(nlroute, 0, metric as u32) };
+    eprintln!("DEBUG: metric {}, r equal {}", metric, r);
+    let _r = unsafe { rtnl_route_set_metric(nlroute, 2, mtu as u32) };
+
+    // add or remove routes
+    let res: c_int;
+    match op {
+        Operation::Add => {
+            // external call to rtnl_route_add()
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("calling rtnl_route_add() with nlsock ptr {:?}", nlsock),
+            );
+            res = unsafe { rtnl_route_add(nlsock, nlroute, 0) };
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("call to rtnl_route_add() returned {}", res),
+            );
+        }
+        Operation::Rem => {
+            // external call to rtnl_route_delete()
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("calling rtnl_route_delete() with nlsock ptr {:?}", nlsock),
+            );
+            res = unsafe { rtnl_route_delete(nlsock, nlroute, 0) };
+            print_debug(
+                debug,
+                DEBUG_LEVEL_EXTENSIVE,
+                DEBUG_SRC_IP,
+                format!("call to rtnl_route_delete() returned {}", res),
+            );
+        }
+    }
+
+    // free nlroute
+    unsafe { rtnl_route_put(nlroute) };
+
+    // check 'rtnl_route_add()|delete()' returned value
     if res < 0 {
         return Err(io::Error::last_os_error());
     }

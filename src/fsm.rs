@@ -11,6 +11,9 @@ use std::thread;
 // debugging
 use crate::debug::Verbose;
 
+// operating system drivers
+use crate::os::drivers::Operation;
+
 /// Virtual Router Parameters Structure
 #[derive(Debug)]
 pub struct Parameters {
@@ -474,13 +477,15 @@ pub fn fsm_run(
                             match vr.parameters.netdrv {
                                 NetDrivers::ioctl => {
                                     // set IP addresses (including VIP) on the vr's interface
-                                    set_ip_addresses(sockfd, &vr, true, debug);
-                                    // (re)set IP routes
-                                    set_ip_routes(sockfd, &vr, true, debug);
+                                    set_ip_addresses(sockfd, &vr, Operation::Add, debug);
+                                    // set routes
+                                    set_ip_routes(sockfd, &vr, Operation::Add, debug);
                                 }
                                 NetDrivers::libnl => {
                                     // add vip on vr's interface
-                                    set_ip_addresses(sockfd, &vr, true, debug);
+                                    set_ip_addresses(sockfd, &vr, Operation::Add, debug);
+                                    // set routes
+                                    set_ip_routes(sockfd, &vr, Operation::Add, debug);
                                 }
                             }
                         }
@@ -566,9 +571,9 @@ pub fn fsm_run(
                                     match vr.parameters.netdrv {
                                         NetDrivers::ioctl => {
                                             // restore primary IP
-                                            set_ip_addresses(sockfd, &vr, false, debug);
+                                            set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
                                             // re-set IP routes
-                                            set_ip_routes(sockfd, &vr, true, debug);
+                                            set_ip_routes(sockfd, &vr, Operation::Add, debug);
                                         }
                                         NetDrivers::libnl => {
                                             // delete vip
@@ -620,13 +625,15 @@ pub fn fsm_run(
                             match vr.parameters.netdrv {
                                 NetDrivers::ioctl => {
                                     // restore primary IP
-                                    set_ip_addresses(sockfd, &vr, false, debug);
-                                    // re-set IP routes
-                                    set_ip_routes(sockfd, &vr, true, debug);
+                                    set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
+                                    // remove IP routes
+                                    set_ip_routes(sockfd, &vr, Operation::Rem, debug);
                                 }
                                 NetDrivers::libnl => {
                                     // delete vip
                                     delete_ip_addresses(&vr, debug);
+                                    // remove IP routes
+                                    set_ip_routes(sockfd, &vr, Operation::Rem, debug);
                                 }
                             }
                         }
@@ -703,7 +710,7 @@ fn is_primary_higher(primary: &[u8; 4], local: &[u8; 4]) -> bool {
 fn set_ip_addresses(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    vip: bool,
+    op: Operation,
     debug: &Verbose,
 ) {
     // create addr and netmask vector
@@ -722,11 +729,14 @@ fn set_ip_addresses(
     // if true, add vip and netmask to the respective vectors
     // make sure this is done last, so the VIP is on top of the addrs vector
     // otherwise it will never replace the current IP when using ioctls
-    if vip == true {
-        // add vip to the IP addresses vector
-        addrs.push(vr.parameters.vip);
-        // add first address' netmask
-        netmasks.push(vr.parameters.ipmasks[0]);
+    match op {
+        Operation::Add => {
+            // add vip to the IP addresses vector
+            addrs.push(vr.parameters.vip);
+            // add first address' netmask
+            netmasks.push(vr.parameters.ipmasks[0]);
+        }
+        _ => {}
     }
 
     // construct interface name
@@ -782,7 +792,7 @@ fn set_ip_addresses(
                     &ifname,
                     addrs[idx],
                     netmasks[idx],
-                    os::linux::libnl::Operation::Add,
+                    Operation::Add,
                     debug,
                 ) {
                     eprintln!(
@@ -814,7 +824,7 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
         DEBUG_LEVEL_HIGH,
         DEBUG_SRC_IP,
         format!(
-            "deleting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
+            "removing IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
             vr.parameters.vip[0],
             vr.parameters.vip[1],
             vr.parameters.vip[2],
@@ -846,7 +856,7 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
                     &ifname,
                     vr.parameters.vip,
                     netmasks[0],
-                    os::linux::libnl::Operation::Rem,
+                    Operation::Rem,
                     debug,
                 ) {
                     eprintln!(
@@ -905,31 +915,79 @@ fn set_mac_addresses(
 fn set_ip_routes(
     sockfd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    set_flag: bool,
+    op: Operation,
     debug: &Verbose,
 ) {
     // acquire mutex lock on protocols
     let protocols = &vr.parameters.protocols;
     let protocols = protocols.lock().unwrap();
 
+    // construct interface name
+    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
+
     // for every static routes
     for st in protocols.r#static.as_ref().unwrap() {
-        if let Err(e) = os::linux::netdev::set_ip_route(
-            sockfd,
-            &vr.parameters.interface,
-            st.route(),
-            st.mask(),
-            st.nh(),
-            st.metric(),
-            st.mtu(),
-            set_flag,
-            debug,
-        ) {
-            eprintln!(
-                "error(route): cannot set or delete route {:?}: {}",
-                st.route(),
-                e
-            );
+        // if the operating system is Linux
+        if cfg!(target_os = "linux") {
+            // add route acccording to the network driver in use
+            match vr.parameters.netdrv {
+                NetDrivers::ioctl => {
+                    print_debug(
+                        debug,
+                        DEBUG_LEVEL_HIGH,
+                        DEBUG_SRC_IP,
+                        format!(
+                        "setting up route on interface {:?} (ifindex: {}) using netlink (ioctl)",
+                        &ifname, vr.parameters.ifindex
+                    ),
+                    );
+                    if let Err(e) = os::linux::netdev::set_ip_route(
+                        sockfd,
+                        &vr.parameters.interface,
+                        st.route(),
+                        st.mask(),
+                        st.nh(),
+                        st.metric(),
+                        st.mtu(),
+                        &op,
+                        debug,
+                    ) {
+                        eprintln!(
+                            "error(route): cannot add or delete route {:?}: {}",
+                            st.route(),
+                            e
+                        );
+                    }
+                }
+                NetDrivers::libnl => {
+                    print_debug(
+                        debug,
+                        DEBUG_LEVEL_HIGH,
+                        DEBUG_SRC_IP,
+                        format!(
+                        "setting up route on interface {:?} (ifindex: {}) using netlink (libnl)",
+                        &ifname, vr.parameters.ifindex
+                    ),
+                    );
+                    if let Err(e) = os::linux::libnl::set_ip_route(
+                        sockfd,
+                        &vr.parameters.interface,
+                        st.route(),
+                        st.mask(),
+                        st.nh(),
+                        st.metric(),
+                        st.mtu(),
+                        &op,
+                        debug,
+                    ) {
+                        eprintln!(
+                            "error(route): cannot add or delete route {:?}: {}",
+                            st.route(),
+                            e
+                        );
+                    }
+                }
+            }
         }
     }
 }

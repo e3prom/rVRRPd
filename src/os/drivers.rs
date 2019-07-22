@@ -1,6 +1,5 @@
 //! generic drivers module
 #[allow(non_camel_case_types)]
-
 // network drivers enumerator
 #[derive(Debug)]
 pub enum NetDrivers {
@@ -12,4 +11,10 @@ pub enum NetDrivers {
 pub enum PflagOp {
     Set,
     Unset,
+}
+
+// Operation enumerator
+pub enum Operation {
+    Add, // Add IP address
+    Rem, // Remove IP Address
 }

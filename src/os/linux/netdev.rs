@@ -10,6 +10,9 @@ use libc::{
 use std::ffi::CString;
 use std::io;
 
+// operating system drivers
+use crate::os::drivers::Operation;
+
 /// ioctl_flags Structure
 #[repr(C)]
 struct ioctl_flags {
@@ -355,7 +358,7 @@ pub fn set_ip_route(
     gw: [u8; 4],
     metric: i16,
     mtu: u64,
-    set_flag: bool,
+    op: &Operation,
     debug: &Verbose,
 ) -> io::Result<()> {
     // convert interface name to CString type
@@ -451,25 +454,29 @@ pub fn set_ip_route(
     ifroute.rt_flags |= RTF_UP | libc::RTF_GATEWAY;
 
     // ioctl - set/delete route
-    let result: i32;
-    if set_flag == true {
-        print_debug(
-            debug,
-            DEBUG_LEVEL_HIGH,
-            DEBUG_SRC_ROUTE,
-            format!("adding route {:?}", ifroute),
-        );
-        result = unsafe { ioctl(sockfd, libc::SIOCADDRT, &mut ifroute) };
-    } else {
-        print_debug(
-            debug,
-            DEBUG_LEVEL_HIGH,
-            DEBUG_SRC_ROUTE,
-            format!("removing route {:?}", ifroute),
-        );
-        result = unsafe { ioctl(sockfd, libc::SIOCDELRT, &mut ifroute) };
+    let res: i32;
+    match op {
+        Operation::Add => {
+            print_debug(
+                debug,
+                DEBUG_LEVEL_HIGH,
+                DEBUG_SRC_ROUTE,
+                format!("adding route {:?}", ifroute),
+            );
+            res = unsafe { ioctl(sockfd, libc::SIOCADDRT, &mut ifroute) };
+        }
+        Operation::Rem => {
+            print_debug(
+                debug,
+                DEBUG_LEVEL_HIGH,
+                DEBUG_SRC_ROUTE,
+                format!("removing route {:?}", ifroute),
+            );
+            res = unsafe { ioctl(sockfd, libc::SIOCDELRT, &mut ifroute) };
+        }
     }
-    if result < 0 {
+    // check result of ioctls
+    if res < 0 {
         return Err(io::Error::last_os_error());
     }
 
