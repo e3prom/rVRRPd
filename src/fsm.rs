@@ -925,69 +925,75 @@ fn set_ip_routes(
     // construct interface name
     let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
 
-    // for every static routes
-    for st in protocols.r#static.as_ref().unwrap() {
-        // if the operating system is Linux
-        if cfg!(target_os = "linux") {
-            // add route acccording to the network driver in use
-            match vr.parameters.netdrv {
-                NetDrivers::ioctl => {
-                    print_debug(
-                        debug,
-                        DEBUG_LEVEL_HIGH,
-                        DEBUG_SRC_IP,
-                        format!(
-                        "setting up route on interface {:?} (ifindex: {}) using netlink (ioctl)",
-                        &ifname, vr.parameters.ifindex
-                    ),
-                    );
-                    if let Err(e) = os::linux::netdev::set_ip_route(
-                        sockfd,
-                        &vr.parameters.interface,
-                        st.route(),
-                        st.mask(),
-                        st.nh(),
-                        st.metric(),
-                        st.mtu(),
-                        &op,
-                        debug,
-                    ) {
-                        eprintln!(
-                            "error(route): cannot add or delete route {:?}: {}",
-                            st.route(),
-                            e
-                        );
-                    }
-                }
-                NetDrivers::libnl => {
-                    print_debug(
-                        debug,
-                        DEBUG_LEVEL_HIGH,
-                        DEBUG_SRC_IP,
-                        format!(
-                        "setting up route on interface {:?} (ifindex: {}) using netlink (libnl)",
-                        &ifname, vr.parameters.ifindex
-                    ),
-                    );
-                    if let Err(e) = os::linux::libnl::set_ip_route(
-                        sockfd,
-                        &vr.parameters.interface,
-                        st.route(),
-                        st.mask(),
-                        st.nh(),
-                        st.metric(),
-                        st.mtu(),
-                        &op,
-                        debug,
-                    ) {
-                        eprintln!(
-                            "error(route): cannot add or delete route {:?}: {}",
-                            st.route(),
-                            e
-                        );
+    // check if static protocol reference exists
+    match protocols.r#static.as_ref() {
+        Some(r) => {
+            // for every static routes
+            for st in r {
+                // if the operating system is Linux
+                if cfg!(target_os = "linux") {
+                    // add route acccording to the network driver in use
+                    match vr.parameters.netdrv {
+                        NetDrivers::ioctl => {
+                            print_debug(
+                                debug,
+                                DEBUG_LEVEL_HIGH,
+                                DEBUG_SRC_IP,
+                                format!(
+                                "setting up route on interface {:?} (ifindex: {}) using netlink (ioctl)",
+                                &ifname, vr.parameters.ifindex
+                            ),
+                            );
+                            if let Err(e) = os::linux::netdev::set_ip_route(
+                                sockfd,
+                                &vr.parameters.interface,
+                                st.route(),
+                                st.mask(),
+                                st.nh(),
+                                st.metric(),
+                                st.mtu(),
+                                &op,
+                                debug,
+                            ) {
+                                eprintln!(
+                                    "error(route): cannot add or delete route {:?}: {}",
+                                    st.route(),
+                                    e
+                                );
+                            }
+                        }
+                        NetDrivers::libnl => {
+                            print_debug(
+                                debug,
+                                DEBUG_LEVEL_HIGH,
+                                DEBUG_SRC_IP,
+                                format!(
+                                "setting up route on interface {:?} (ifindex: {}) using netlink (libnl)",
+                                &ifname, vr.parameters.ifindex
+                            ),
+                            );
+                            if let Err(e) = os::linux::libnl::set_ip_route(
+                                sockfd,
+                                &vr.parameters.interface,
+                                st.route(),
+                                st.mask(),
+                                st.nh(),
+                                st.metric(),
+                                st.mtu(),
+                                &op,
+                                debug,
+                            ) {
+                                eprintln!(
+                                    "error(route): cannot add or delete route {:?}: {}",
+                                    st.route(),
+                                    e
+                                );
+                            }
+                        }
                     }
                 }
             }
         }
+        None => {}
     }
 }

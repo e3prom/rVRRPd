@@ -463,7 +463,7 @@ pub fn set_ip_route(
     unsafe { rtnl_route_add_nexthop(nlroute, rtnh) };
 
     // set route metric and mtu
-    //let r = unsafe { rtnl_route_set_metric(nlroute, 0, metric as u32) };
+    let r = unsafe { rtnl_route_set_metric(nlroute, 0, metric as u32) };
     eprintln!("DEBUG: metric {}, r equal {}", metric, r);
     let _r = unsafe { rtnl_route_set_metric(nlroute, 2, mtu as u32) };
 

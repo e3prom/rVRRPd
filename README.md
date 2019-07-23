@@ -105,7 +105,7 @@ The above configuration do the following:
    * Is configured with the highest priority of `254`.
    * Has preeemption enabled.
    * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendors).
-   * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctls` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
+   * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctl` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
    * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.
