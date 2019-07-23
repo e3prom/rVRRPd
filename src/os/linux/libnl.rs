@@ -198,7 +198,7 @@ extern "C" {
     // rtnl_route_nh_set_gateway() external function
     fn rtnl_route_nh_set_gateway(nh: *mut rtnl_nexthop, addr: *mut nl_addr);
     // rtnl_route_nh_set_ifindex() external function
-    fn rtnl_route_nh_set_ifindex(nh: *mut rtnl_nexthop, int: i32);
+    //fn rtnl_route_nh_set_ifindex(nh: *mut rtnl_nexthop, int: i32);
     // rtnl_route_put() external function
     // free rtnl_route allocation
     fn rtnl_route_put(route: *mut rtnl_route);
@@ -340,7 +340,7 @@ pub fn set_ip_address(
 
 // set_ip_route() function
 //
-/// Add or delete a route using libnl-3 (netlink interface)
+/// Add or delete a route using libnl-3 (netlink)
 pub fn set_ip_route(
     ifindex: i32,
     _ifname: &String,
@@ -452,20 +452,26 @@ pub fn set_ip_route(
 
     // allocate nexthop
     let rtnh = unsafe { rtnl_route_nh_alloc() };
+    if rtnh.is_null() {
+        return Err(io::Error::last_os_error());
+    }
 
     // set nexthop's address using 'nhaddr'
     unsafe { rtnl_route_nh_set_gateway(rtnh, nhaddr_ptr) };
 
-    // set nexthop's ifindex
-    unsafe { rtnl_route_nh_set_ifindex(rtnh, ifindex) };
+    // // set nexthop's ifindex
+    // // (removed: seems to cause issues on some interfaces)
+    // unsafe { rtnl_route_nh_set_ifindex(rtnh, ifindex) };
 
     // set nexthop in 'nlroute'
     unsafe { rtnl_route_add_nexthop(nlroute, rtnh) };
 
-    // set route metric and mtu
-    let r = unsafe { rtnl_route_set_metric(nlroute, 0, metric as u32) };
-    eprintln!("DEBUG: metric {}, r equal {}", metric, r);
-    let _r = unsafe { rtnl_route_set_metric(nlroute, 2, mtu as u32) };
+    // set route metric (possible issue with libl-3) and mtu
+    let _r = unsafe { rtnl_route_set_metric(nlroute, 0, metric as u32) };
+    let r = unsafe { rtnl_route_set_metric(nlroute, 2, mtu as u32) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
 
     // add or remove routes
     let res: c_int;
@@ -504,13 +510,13 @@ pub fn set_ip_route(
         }
     }
 
-    // free nlroute
-    unsafe { rtnl_route_put(nlroute) };
-
     // check 'rtnl_route_add()|delete()' returned value
     if res < 0 {
         return Err(io::Error::last_os_error());
     }
+
+    // free nlroute
+    unsafe { rtnl_route_put(nlroute) };
 
     Ok(())
 }
