@@ -159,6 +159,8 @@ extern "C" {
     fn nl_connect(sk: *mut NlSock, protocol: c_int) -> c_int;
     // nl_addr_parse() external function
     fn nl_addr_parse(addrstr: *const c_char, hint: c_int, result: &&mut nl_addr) -> c_int;
+    // nl_addr_put() external function
+    fn nl_addr_put(addr: *mut nl_addr);
 }
 #[link(name = "nl-route-3")]
 extern "C" {
@@ -185,20 +187,20 @@ extern "C" {
     fn rtnl_route_add(sk: *mut NlSock, route: *mut rtnl_route, flags: c_int) -> c_int;
     // rtnl_route_delete() external function
     fn rtnl_route_delete(sk: *mut NlSock, route: *mut rtnl_route, flags: c_int) -> c_int;
-    // rtnl_route_set_iif() external function
-    fn rtnl_route_set_iif(route: *mut rtnl_route, ifindex: i32);
+    // // rtnl_route_set_iif() external function
+    // fn rtnl_route_set_iif(route: *mut rtnl_route, ifindex: i32);
     // rtnl_route_set_dst() external function
     fn rtnl_route_set_dst(route: *mut rtnl_route, addr: *mut nl_addr) -> c_int;
     // rtnl_route_add_nexthop() external function
     fn rtnl_route_add_nexthop(route: *mut rtnl_route, nh: *mut rtnl_nexthop);
     // rtnl_route_set_metric() external function
-    fn rtnl_route_set_metric(route: *mut rtnl_route, metric: u32, value: u32) -> c_int;
+    fn rtnl_route_set_metric(route: *mut rtnl_route, metric: i32, value: u32) -> c_int;
     // rtnl_route_nh_alloc() external function
     fn rtnl_route_nh_alloc() -> *mut rtnl_nexthop;
     // rtnl_route_nh_set_gateway() external function
     fn rtnl_route_nh_set_gateway(nh: *mut rtnl_nexthop, addr: *mut nl_addr);
-    // rtnl_route_nh_set_ifindex() external function
-    //fn rtnl_route_nh_set_ifindex(nh: *mut rtnl_nexthop, int: i32);
+    // // rtnl_route_nh_set_ifindex() external function
+    // fn rtnl_route_nh_set_ifindex(nh: *mut rtnl_nexthop, int: i32);
     // rtnl_route_put() external function
     // free rtnl_route allocation
     fn rtnl_route_put(route: *mut rtnl_route);
@@ -342,7 +344,7 @@ pub fn set_ip_address(
 //
 /// Add or delete a route using libnl-3 (netlink)
 pub fn set_ip_route(
-    ifindex: i32,
+    _ifindex: i32,
     _ifname: &String,
     route: [u8; 4],
     rtmask: [u8; 4],
@@ -370,8 +372,8 @@ pub fn set_ip_route(
         return Err(io::Error::last_os_error());
     }
 
-    // set ifindex in 'nlroute'
-    unsafe { rtnl_route_set_iif(nlroute, ifindex) };
+    // // set ifindex in 'nlroute' if no nh is present
+    // unsafe { rtnl_route_set_iif(nlroute, ifindex) };
 
     // null initialize nl_addr 'rtdst'
     let mut rtdst = nl_addr {
@@ -458,6 +460,8 @@ pub fn set_ip_route(
 
     // set nexthop's address using 'nhaddr'
     unsafe { rtnl_route_nh_set_gateway(rtnh, nhaddr_ptr) };
+    // free nhaddr
+    unsafe { nl_addr_put(nhaddr_ptr) };
 
     // // set nexthop's ifindex
     // // (removed: seems to cause issues on some interfaces)
@@ -467,7 +471,8 @@ pub fn set_ip_route(
     unsafe { rtnl_route_add_nexthop(nlroute, rtnh) };
 
     // set route metric (possible issue with libl-3) and mtu
-    let _r = unsafe { rtnl_route_set_metric(nlroute, 0, metric as u32) };
+    // see 'include/uapi/linux/rtnetlink.h' for RTAX_* types
+    let _r = unsafe { rtnl_route_set_metric(nlroute, 32, metric as u32) };
     let r = unsafe { rtnl_route_set_metric(nlroute, 2, mtu as u32) };
     if r < 0 {
         return Err(io::Error::last_os_error());
