@@ -3,7 +3,7 @@
 use crate::*;
 
 // libc
-use libc::{c_char, c_int, c_uint, c_void, AF_INET, IF_NAMESIZE};
+use libc::{c_char, c_int, c_uint, c_void, AF_INET, AF_LLC, ETH_ALEN, IF_NAMESIZE};
 
 // std
 use std::ffi::CString;
@@ -11,6 +11,7 @@ use std::io;
 
 // constants
 const INT_RTAX_MAX: usize = 8; // to verify __RTAX_MAX enum value
+const INT_NLM_F_CREATE: i32 = 0x400; // include/linux/netlink.h
 
 // operating system drivers
 use crate::os::drivers::Operation;
@@ -146,6 +147,13 @@ struct rtnl_nexthop {
     rtnh_realms: u32,
 }
 
+// int_ether_addr type
+#[repr(C)]
+#[derive(Debug)]
+struct int_ether_addr {
+    ether_addr: [u8; ETH_ALEN as usize],
+}
+
 // nl_sock enum (hack to represent opaque foreign types)
 enum NlSock {}
 
@@ -161,9 +169,12 @@ extern "C" {
     fn nl_addr_parse(addrstr: *const c_char, hint: c_int, result: &&mut nl_addr) -> c_int;
     // nl_addr_put() external function
     fn nl_addr_put(addr: *mut nl_addr);
+    // nl_addr_build() external function
+    fn nl_addr_build(family: c_int, buf: *const int_ether_addr, size: i32) -> *mut nl_addr;
 }
 #[link(name = "nl-route-3")]
 extern "C" {
+    // ** libnl - addresses
     // rtnl_addr_alloc() external function
     fn rtnl_addr_alloc() -> *mut rtnl_addr;
     // rtnl_addr_set_local() external function
@@ -181,6 +192,8 @@ extern "C" {
     // rtnl_addr_put() external function
     // free rtnl_addr allocation
     fn rtnl_addr_put(addr: *mut rtnl_addr);
+
+    // ** libnl - routing
     // rtnl_route_alloc() external function
     fn rtnl_route_alloc() -> *mut rtnl_route;
     // rtnl_route_add() external function
@@ -204,6 +217,22 @@ extern "C" {
     // rtnl_route_put() external function
     // free rtnl_route allocation
     fn rtnl_route_put(route: *mut rtnl_route);
+
+    // ** libnl - link
+    // rtnl_link_macvlan_alloc() external function
+    fn rtnl_link_macvlan_alloc() -> *mut c_void;
+    // rtnl_link_set_link() external function
+    fn rtnl_link_set_link(link: *mut c_void, ifindex: i32);
+    // rtnl_link_set_addr() external function
+    fn rtnl_link_set_addr(link: *mut c_void, addr: *mut nl_addr);
+    // rtnl_link_macvlan_set_mode() external function
+    fn rtnl_link_macvlan_set_mode(link: *mut c_void, mode: u32) -> c_int;
+    // rtnl_link_macvlan_str2mode() external function
+    fn rtnl_link_macvlan_str2mode(name: &[u8]) -> c_uint;
+    // rtnl_link_add() external function
+    fn rtnl_link_add(sk: *mut NlSock, link: *mut c_void, flags: c_int) -> c_int;
+    // rtnl_link_put() external function
+    fn rtnl_link_put(link: *mut c_void);
 }
 
 // set_ip_address() function
@@ -522,6 +551,60 @@ pub fn set_ip_route(
 
     // free nlroute
     unsafe { rtnl_route_put(nlroute) };
+
+    Ok(())
+}
+
+// create_macvlan_link() function
+//
+/// Create a new macvlan interface
+pub fn create_macvlan_link(ifindex: i32) -> io::Result<()> {
+    // call to external nlsock() function
+    let nlsock = unsafe { nl_socket_alloc() };
+    if nlsock.is_null() {
+        return Err(io::Error::last_os_error());
+    }
+
+    // call to external nl_connect() function
+    let r = unsafe { nl_connect(nlsock, 0) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    // allocate macvlan
+    let link = unsafe { rtnl_link_macvlan_alloc() };
+
+    // set macvlan master interface to our vr's interface
+    unsafe { rtnl_link_set_link(link, ifindex) };
+
+    // initialize ether_vmac
+    let vmac_eaddr = int_ether_addr {
+        ether_addr: [0, 0, 0, 0, 0, 0],
+    };
+
+    // set mac address of macvlan interface to the vr's vmac
+    let vmac = unsafe { nl_addr_build(AF_LLC, &vmac_eaddr, ETH_ALEN) };
+    unsafe {
+        rtnl_link_set_addr(link, vmac);
+        nl_addr_put(vmac);
+    }
+
+    // set modes on macvlan interface
+    let r = unsafe {
+        rtnl_link_macvlan_set_mode(link, rtnl_link_macvlan_str2mode("bridge\0".as_bytes()))
+    };
+    eprintln!("DEBUG: link mode: {}", r);
+
+    // add macvlan link
+    let res = unsafe { rtnl_link_add(nlsock, link, INT_NLM_F_CREATE) };
+
+    // check 'rtnl_link_add()|delete()' returned value
+    if res < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    // free link object
+    unsafe { rtnl_link_put(link) };
 
     Ok(())
 }
