@@ -601,18 +601,26 @@ pub fn create_macvlan_link(ifindex: i32, mac: [u8; 6]) -> io::Result<(i32, Strin
     unsafe { rtnl_link_set_flags(link, IFF_UP as u32) };
 
     // add macvlan link
+    // may return -25 if link is 'busy', often due to duplicate MAC
     let res = unsafe { rtnl_link_add(nlsock, link, INT_NLM_F_CREATE) };
 
     // check 'rtnl_link_add()|delete()' returned value
-    if res < 0 {
-        return Err(io::Error::last_os_error());
+    match res {
+        25 => {
+            return Err(io::Error::new(
+                std::io::ErrorKind::Other,
+                "Master interface address collides with virtual router's",
+            ));
+        }
+        r if r < 0 => return Err(io::Error::last_os_error()),
+        _ => {}
     }
 
     // free link object
     unsafe { rtnl_link_put(link) };
 
     // find new macvlan ifindex
-    let vif_name = "macvlan0".to_string();
+    let vif_name = "macvlan0".to_string();  // replace with non-hardcoded
     let vif_idx = match os::linux::libc::c_ifnametoindex(&vif_name) {
         Ok(i) => i as i32,
         Err(e) => return Err(e),

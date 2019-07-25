@@ -354,6 +354,32 @@ pub fn fsm_run(
                         if vr.is_owner_vip(&vr.parameters.vip) || vr.parameters.prio == 255 {
                             // force the priority to 255
                             vr.parameters.prio = 255;
+                            // get and store vr's interface mac
+                            vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                            // set VRRP virtual mac address
+                            let mut vmac = ETHER_VRRP_V2_SRC_MAC;
+                            vmac[5] = vr.parameters.vrid();
+                            // setup MAC address or virtual interface
+                            match vr.parameters.iftype {
+                                // if vr's interface is of type macvlan
+                                IfTypes::macvlan => {
+                                    // create macvlan interface
+                                    match create_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                        Some((vif_idx, vif_name)) => {
+                                            // change vr's ifindex to the virtual interface's index
+                                            vr.parameters.ifindex = vif_idx;
+                                            // change vr's interface name to virtual interface name
+                                            vr.parameters.interface = vif_name;
+                                        }
+                                        // if it failed for some reasons, do not change vr's interface
+                                        None => (),
+                                    };
+                                }
+                                _ => {
+                                    // set virtual router's MAC address
+                                    set_mac_addresses(sockfd, &vr, vmac, debug);
+                                }
+                            }
                             // send an ADVERTISEMENT message
                             // and panic on error
                             packets::send_advertisement(sockfd, &vr, &debug).unwrap();
@@ -493,6 +519,7 @@ pub fn fsm_run(
                                     };
                                 }
                                 _ => {
+                                    // set virtual router's MAC address
                                     set_mac_addresses(sockfd, &vr, vmac, debug);
                                 }
                             }
