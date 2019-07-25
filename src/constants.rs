@@ -31,6 +31,7 @@ pub const DEBUG_SRC_WORKERG: &str = "worker-reg";
 pub const DEBUG_SRC_TIMER: &str = "timer";
 pub const DEBUG_SRC_IP: &str = "ip";
 pub const DEBUG_SRC_AUTH: &str = "auth";
+pub const DEBUG_SRC_MACVLAN: &str = "macvlan";
 
 // Ethernet Constants
 pub const ETHER_P_IP: u16 = 0x0800; // IPv4 (/usr/include/linux/if_ether.h)

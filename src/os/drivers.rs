@@ -1,10 +1,19 @@
 //! generic drivers module
-#[allow(non_camel_case_types)]
+
 // network drivers enumerator
+#[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub enum NetDrivers {
     ioctl, // ioctl
     libnl, // netlink (libnl-3)
+}
+
+// network interfaces type enumerator
+#[allow(non_camel_case_types)]
+#[derive(Debug)]
+pub enum IfTypes {
+    ether,   // default ethernet
+    macvlan, // macvlan
 }
 
 // pflag operation Enumerator

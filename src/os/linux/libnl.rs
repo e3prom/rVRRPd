@@ -3,7 +3,7 @@
 use crate::*;
 
 // libc
-use libc::{c_char, c_int, c_uint, c_void, AF_INET, AF_LLC, ETH_ALEN, IF_NAMESIZE};
+use libc::{c_char, c_int, c_uint, c_void, AF_INET, AF_LLC, ETH_ALEN, IFF_UP, IF_NAMESIZE};
 
 // std
 use std::ffi::CString;
@@ -228,9 +228,11 @@ extern "C" {
     // rtnl_link_macvlan_set_mode() external function
     fn rtnl_link_macvlan_set_mode(link: *mut c_void, mode: u32) -> c_int;
     // rtnl_link_macvlan_str2mode() external function
-    fn rtnl_link_macvlan_str2mode(name: &[u8]) -> c_uint;
+    fn rtnl_link_macvlan_str2mode(name: *const c_void) -> c_uint;
     // rtnl_link_add() external function
     fn rtnl_link_add(sk: *mut NlSock, link: *mut c_void, flags: c_int) -> c_int;
+    // rtnl_link_set_flags() external function
+    fn rtnl_link_set_flags(link: *mut c_void, flags: c_uint);
     // rtnl_link_put() external function
     fn rtnl_link_put(link: *mut c_void);
 }
@@ -558,7 +560,7 @@ pub fn set_ip_route(
 // create_macvlan_link() function
 //
 /// Create a new macvlan interface
-pub fn create_macvlan_link(ifindex: i32) -> io::Result<()> {
+pub fn create_macvlan_link(ifindex: i32, mac: [u8; 6]) -> io::Result<(i32, String)> {
     // call to external nlsock() function
     let nlsock = unsafe { nl_socket_alloc() };
     if nlsock.is_null() {
@@ -578,22 +580,25 @@ pub fn create_macvlan_link(ifindex: i32) -> io::Result<()> {
     unsafe { rtnl_link_set_link(link, ifindex) };
 
     // initialize ether_vmac
-    let vmac_eaddr = int_ether_addr {
-        ether_addr: [0, 0, 0, 0, 0, 0],
-    };
+    let vmac_eaddr = int_ether_addr { ether_addr: mac };
 
     // set mac address of macvlan interface to the vr's vmac
-    let vmac = unsafe { nl_addr_build(AF_LLC, &vmac_eaddr, ETH_ALEN) };
+    let nlmac = unsafe { nl_addr_build(AF_LLC, &vmac_eaddr, ETH_ALEN) };
     unsafe {
-        rtnl_link_set_addr(link, vmac);
-        nl_addr_put(vmac);
+        rtnl_link_set_addr(link, nlmac);
+        nl_addr_put(nlmac);
     }
 
     // set modes on macvlan interface
-    let r = unsafe {
-        rtnl_link_macvlan_set_mode(link, rtnl_link_macvlan_str2mode("bridge\0".as_bytes()))
+    let _r = unsafe {
+        rtnl_link_macvlan_set_mode(
+            link,
+            rtnl_link_macvlan_str2mode("bridge\0".as_bytes().as_ptr() as *const c_void),
+        )
     };
-    eprintln!("DEBUG: link mode: {}", r);
+
+    // set interface up
+    unsafe { rtnl_link_set_flags(link, IFF_UP as u32) };
 
     // add macvlan link
     let res = unsafe { rtnl_link_add(nlsock, link, INT_NLM_F_CREATE) };
@@ -606,5 +611,12 @@ pub fn create_macvlan_link(ifindex: i32) -> io::Result<()> {
     // free link object
     unsafe { rtnl_link_put(link) };
 
-    Ok(())
+    // find new macvlan ifindex
+    let vif_name = "macvlan0".to_string();
+    let vif_idx = match os::linux::libc::c_ifnametoindex(&vif_name) {
+        Ok(i) => i as i32,
+        Err(e) => return Err(e),
+    };
+
+    Ok((vif_idx, vif_name))
 }

@@ -93,6 +93,7 @@ pub struct VRConfig {
     timers: Option<Timers>,
     rfc3768: Option<bool>,
     netdrv: Option<String>,
+    iftype: Option<String>,
 }
 impl VRConfig {
     // group() getter
@@ -209,6 +210,21 @@ impl VRConfig {
         // unspecified OSes
         else {
             NetDrivers::ioctl
+        }
+    }
+    // iftype() method
+    pub fn iftype(&self) -> IfTypes {
+        // if os is Linux
+        if cfg!(target_os = "linux") {
+            match &self.iftype {
+                Some(s) => match &s[..] {
+                    "macvlan" => IfTypes::macvlan,
+                    _ => IfTypes::ether,
+                },
+                None => IfTypes::ether
+            }
+        } else {
+            IfTypes::ether
         }
     }
 }

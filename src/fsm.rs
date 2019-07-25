@@ -36,6 +36,7 @@ pub struct Parameters {
     protocols: Arc<Mutex<Protocols>>, // Internal protocols information
     ifmac: [u8; 6],     // Interface Ethernet MAC address
     netdrv: NetDrivers, // Network driver
+    iftype: IfTypes,    // Interfaces type
 }
 
 /// Parameters Type Implementation
@@ -59,6 +60,7 @@ impl Parameters {
         auth_secret: Option<String>,
         protocols: Arc<Mutex<Protocols>>,
         netdrv: NetDrivers,
+        iftype: IfTypes,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -80,6 +82,7 @@ impl Parameters {
             protocols,
             ifmac: [0, 0, 0, 0, 0, 0],
             netdrv,
+            iftype,
         }
     }
     // vrid() getter
@@ -466,14 +469,34 @@ pub fn fsm_run(
                                 vr.parameters.interface
                             ),
                         );
-                        // get and store vr's interface mac
-                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
-                        // set VRRP virtual mac address
-                        let mut vmac = ETHER_VRRP_V2_SRC_MAC;
-                        vmac[5] = vr.parameters.vrid();
-                        set_mac_addresses(sockfd, &vr, vmac, debug);
-                        // set VIP according to network driver in use
+                        // linux specific network functions
                         if cfg!(target_os = "linux") {
+                            // get and store vr's interface mac
+                            vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                            // set VRRP virtual mac address
+                            let mut vmac = ETHER_VRRP_V2_SRC_MAC;
+                            vmac[5] = vr.parameters.vrid();
+                            // setup MAC address or virtual interface
+                            match vr.parameters.iftype {
+                                // if vr's interface is of type macvlan
+                                IfTypes::macvlan => {
+                                    // create macvlan interface
+                                    match create_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                        Some((vif_idx, vif_name)) => {
+                                            // change vr's ifindex to the virtual interface's index
+                                            vr.parameters.ifindex = vif_idx;
+                                            // change vr's interface name to virtual interface name
+                                            vr.parameters.interface = vif_name;
+                                        }
+                                        // if it failed for some reasons, do not change vr's interface
+                                        None => (),
+                                    };
+                                }
+                                _ => {
+                                    set_mac_addresses(sockfd, &vr, vmac, debug);
+                                }
+                            }
+                            // set VIP according to network driver in use
                             match vr.parameters.netdrv {
                                 NetDrivers::ioctl => {
                                     // set IP addresses (including VIP) on the vr's interface
@@ -995,5 +1018,36 @@ fn set_ip_routes(
             }
         }
         None => {}
+    }
+}
+
+// create_mac_vlan_link function
+fn create_macvlan_link(
+    vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
+    vmac: [u8; 6],
+    _op: Operation,
+    debug: &Verbose,
+) -> Option<(i32, String)> {
+    // print debugging information
+    print_debug(
+        debug,
+        DEBUG_LEVEL_HIGH,
+        DEBUG_SRC_MACVLAN,
+        format!(
+            "creating macvlan interface on master {:?}",
+            vr.parameters.interface
+        ),
+    );
+
+    // call to libnl create_macvlan_link()
+    match os::linux::libnl::create_macvlan_link(vr.parameters.ifindex, vmac) {
+        Ok((i, n)) => Some((i, n)),
+        Err(e) => {
+            eprintln!(
+                "error(macvlan): cannot create macvlan interface (master if: {:?}): {}",
+                vr.parameters.interface, e
+            );
+            None
+        }
     }
 }
