@@ -156,6 +156,7 @@ impl VirtualRouter {
         debug: &Verbose,
         netdrv: NetDrivers,
         iftype: IfTypes,
+        vifname: String
     ) -> io::Result<VirtualRouter> {
         // get ifindex from interface name
         let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
@@ -237,6 +238,7 @@ impl VirtualRouter {
                 protocols,
                 netdrv,
                 iftype,
+                vifname,
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
@@ -454,6 +456,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     &debug,
                     vr.netdrv(),
                     vr.iftype(),
+                    vr.vifname(),
                 ) {
                     Ok(vr) => {
                         let vr = RwLock::new(vr);

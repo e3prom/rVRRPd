@@ -225,12 +225,18 @@ extern "C" {
     fn rtnl_link_set_link(link: *mut c_void, ifindex: i32);
     // rtnl_link_set_addr() external function
     fn rtnl_link_set_addr(link: *mut c_void, addr: *mut nl_addr);
+    // rtnl_link_set_ifindex() external function
+    fn rtnl_link_set_ifindex(link: *mut c_void, ifindex: i32);
+    // rtnl_link_set_name() external function
+    fn rtnl_link_set_name(link: *mut c_void, name: *const c_char);
     // rtnl_link_macvlan_set_mode() external function
     fn rtnl_link_macvlan_set_mode(link: *mut c_void, mode: u32) -> c_int;
     // rtnl_link_macvlan_str2mode() external function
     fn rtnl_link_macvlan_str2mode(name: *const c_void) -> c_uint;
     // rtnl_link_add() external function
     fn rtnl_link_add(sk: *mut NlSock, link: *mut c_void, flags: c_int) -> c_int;
+    // rtnl_link_delete() external function
+    fn rtnl_link_delete(sk: *mut NlSock, link: *mut c_void) -> c_int;
     // rtnl_link_set_flags() external function
     fn rtnl_link_set_flags(link: *mut c_void, flags: c_uint);
     // rtnl_link_put() external function
@@ -557,10 +563,10 @@ pub fn set_ip_route(
     Ok(())
 }
 
-// create_macvlan_link() function
+// setup_macvlan_link() function
 //
-/// Create a new macvlan interface
-pub fn create_macvlan_link(ifindex: i32, mac: [u8; 6]) -> io::Result<(i32, String)> {
+/// Create new or delete existing macvlan interface
+pub fn setup_macvlan_link(ifindex: i32, vifname: &String, mac: [u8; 6], op: &Operation) -> io::Result<()> {
     // call to external nlsock() function
     let nlsock = unsafe { nl_socket_alloc() };
     if nlsock.is_null() {
@@ -575,9 +581,6 @@ pub fn create_macvlan_link(ifindex: i32, mac: [u8; 6]) -> io::Result<(i32, Strin
 
     // allocate macvlan
     let link = unsafe { rtnl_link_macvlan_alloc() };
-
-    // set macvlan master interface to our vr's interface
-    unsafe { rtnl_link_set_link(link, ifindex) };
 
     // initialize ether_vmac
     let vmac_eaddr = int_ether_addr { ether_addr: mac };
@@ -600,31 +603,49 @@ pub fn create_macvlan_link(ifindex: i32, mac: [u8; 6]) -> io::Result<(i32, Strin
     // set interface up
     unsafe { rtnl_link_set_flags(link, IFF_UP as u32) };
 
-    // add macvlan link
-    // may return -25 if link is 'busy', often due to duplicate MAC
-    let res = unsafe { rtnl_link_add(nlsock, link, INT_NLM_F_CREATE) };
+    match op {
+        Operation::Add => {
+            // set interface name
+            let mut ifname = vifname.clone();
+            ifname.push_str("\0");
+            
+            unsafe { rtnl_link_set_name(link, ifname.as_bytes().as_ptr() as *const c_char) };
 
-    // check 'rtnl_link_add()|delete()' returned value
-    match res {
-        25 => {
-            return Err(io::Error::new(
-                std::io::ErrorKind::Other,
-                "Master interface address collides with virtual router's",
-            ));
+            // set macvlan master interface to our vr's interface
+            unsafe { rtnl_link_set_link(link, ifindex) };
+
+            // add macvlan link
+            let res = unsafe { rtnl_link_add(nlsock, link, INT_NLM_F_CREATE) };
+
+            // check 'rtnl_link_add()|delete()' returned value
+            match res {
+                25 => {
+                    return Err(io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Master interface address collides with virtual router's",
+                    ));
+                }
+                r if r < 0 => return Err(io::Error::last_os_error()),
+                _ => {}
+            }
         }
-        r if r < 0 => return Err(io::Error::last_os_error()),
-        _ => {}
+        Operation::Rem => {
+            // set macvlan ifindex
+            unsafe { rtnl_link_set_ifindex(link, ifindex as i32) };
+
+            // delete macvlan link
+            let res = unsafe { rtnl_link_delete(nlsock, link) };
+
+            // check rtnl_link_delete() returned values
+            match res {
+                r if r < 0 => return Err(io::Error::last_os_error()),
+                _ => {}
+            }
+        }
     }
 
     // free link object
     unsafe { rtnl_link_put(link) };
 
-    // find new macvlan ifindex
-    let vif_name = "macvlan0".to_string();  // replace with non-hardcoded
-    let vif_idx = match os::linux::libc::c_ifnametoindex(&vif_name) {
-        Ok(i) => i as i32,
-        Err(e) => return Err(e),
-    };
-
-    Ok((vif_idx, vif_name))
+    Ok(())
 }

@@ -23,6 +23,7 @@ pub enum PflagOp {
 }
 
 // Operation enumerator
+#[derive(Debug)]
 pub enum Operation {
     Add, // Add IP address
     Rem, // Remove IP Address

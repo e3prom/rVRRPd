@@ -94,6 +94,7 @@ pub struct VRConfig {
     rfc3768: Option<bool>,
     netdrv: Option<String>,
     iftype: Option<String>,
+    vifname: Option<String>,
 }
 impl VRConfig {
     // group() getter
@@ -225,6 +226,13 @@ impl VRConfig {
             }
         } else {
             IfTypes::ether
+        }
+    }
+    // vifname() method
+    pub fn vifname(&self) -> String {
+        match &self.vifname {
+            Some(s) => s.clone(),
+            None => RVRRPD_DFLT_MACVLAN_NAME.to_string()
         }
     }
 }

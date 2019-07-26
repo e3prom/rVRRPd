@@ -37,6 +37,7 @@ pub struct Parameters {
     ifmac: [u8; 6],     // Interface Ethernet MAC address
     netdrv: NetDrivers, // Network driver
     iftype: IfTypes,    // Interfaces type
+    vifname: String,    // Virtual interface name
 }
 
 /// Parameters Type Implementation
@@ -61,6 +62,7 @@ impl Parameters {
         protocols: Arc<Mutex<Protocols>>,
         netdrv: NetDrivers,
         iftype: IfTypes,
+        vifname: String,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -83,6 +85,7 @@ impl Parameters {
             ifmac: [0, 0, 0, 0, 0, 0],
             netdrv,
             iftype,
+            vifname,
         }
     }
     // vrid() getter
@@ -354,8 +357,6 @@ pub fn fsm_run(
                         if vr.is_owner_vip(&vr.parameters.vip) || vr.parameters.prio == 255 {
                             // force the priority to 255
                             vr.parameters.prio = 255;
-                            // get and store vr's interface mac
-                            vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                             // set VRRP virtual mac address
                             let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                             vmac[5] = vr.parameters.vrid();
@@ -364,18 +365,23 @@ pub fn fsm_run(
                                 // if vr's interface is of type macvlan
                                 IfTypes::macvlan => {
                                     // create macvlan interface
-                                    match create_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                    match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
                                         Some((vif_idx, vif_name)) => {
                                             // change vr's ifindex to the virtual interface's index
                                             vr.parameters.ifindex = vif_idx;
                                             // change vr's interface name to virtual interface name
                                             vr.parameters.interface = vif_name;
+                                            // save vif interface mac
+                                            vr.parameters.ifmac =
+                                                get_mac_addresses(sockfd, &vr, debug);
                                         }
                                         // if it failed for some reasons, do not change vr's interface
                                         None => (),
                                     };
                                 }
                                 _ => {
+                                    // save vr's interface mac (old)
+                                    vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                                     // set virtual router's MAC address
                                     set_mac_addresses(sockfd, &vr, vmac, debug);
                                 }
@@ -497,8 +503,6 @@ pub fn fsm_run(
                         );
                         // linux specific network functions
                         if cfg!(target_os = "linux") {
-                            // get and store vr's interface mac
-                            vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                             // set VRRP virtual mac address
                             let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                             vmac[5] = vr.parameters.vrid();
@@ -507,18 +511,23 @@ pub fn fsm_run(
                                 // if vr's interface is of type macvlan
                                 IfTypes::macvlan => {
                                     // create macvlan interface
-                                    match create_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                    match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
                                         Some((vif_idx, vif_name)) => {
                                             // change vr's ifindex to the virtual interface's index
                                             vr.parameters.ifindex = vif_idx;
                                             // change vr's interface name to virtual interface name
                                             vr.parameters.interface = vif_name;
+                                            // save vif interface mac
+                                            vr.parameters.ifmac =
+                                                get_mac_addresses(sockfd, &vr, debug);
                                         }
                                         // if it failed for some reasons, do not change vr's interface
                                         None => (),
                                     };
                                 }
                                 _ => {
+                                    // save vr's interface mac (old)
+                                    vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
                                     // set virtual router's MAC address
                                     set_mac_addresses(sockfd, &vr, vmac, debug);
                                 }
@@ -618,16 +627,39 @@ pub fn fsm_run(
                                 set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
                                 // restore primary or delete vip on vr's interface
                                 if cfg!(target_os = "linux") {
-                                    match vr.parameters.netdrv {
-                                        NetDrivers::ioctl => {
-                                            // restore primary IP
-                                            set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
-                                            // re-set IP routes
-                                            set_ip_routes(sockfd, &vr, Operation::Add, debug);
+                                    match vr.parameters.iftype {
+                                        IfTypes::macvlan => {
+                                            // removes macvlan interface
+                                            setup_macvlan_link(
+                                                &vr,
+                                                vr.parameters.ifmac,
+                                                Operation::Rem,
+                                                debug,
+                                            );
                                         }
-                                        NetDrivers::libnl => {
-                                            // delete vip
-                                            delete_ip_addresses(&vr, debug);
+                                        _ => {
+                                            match vr.parameters.netdrv {
+                                                NetDrivers::ioctl => {
+                                                    // restore primary IP
+                                                    set_ip_addresses(
+                                                        sockfd,
+                                                        &vr,
+                                                        Operation::Rem,
+                                                        debug,
+                                                    );
+                                                    // re-set IP routes
+                                                    set_ip_routes(
+                                                        sockfd,
+                                                        &vr,
+                                                        Operation::Add,
+                                                        debug,
+                                                    );
+                                                }
+                                                NetDrivers::libnl => {
+                                                    // delete vip
+                                                    delete_ip_addresses(&vr, debug);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -668,22 +700,36 @@ pub fn fsm_run(
                         // send ADVERTISEMENT with priority equal 0
                         vr.parameters.prio = 0;
                         packets::send_advertisement(sockfd, &vr, debug).unwrap();
+                        // if os is linux
                         if cfg!(target_os = "linux") {
-                            // restore interface's MAC address
-                            set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
-                            // restore primary or delete vip on vr's interface
-                            match vr.parameters.netdrv {
-                                NetDrivers::ioctl => {
-                                    // restore primary IP
-                                    set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
-                                    // remove IP routes
-                                    set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                            match vr.parameters.iftype {
+                                IfTypes::macvlan => {
+                                    // removes macvlan interface
+                                    setup_macvlan_link(
+                                        &vr,
+                                        vr.parameters.ifmac,
+                                        Operation::Rem,
+                                        debug,
+                                    );
                                 }
-                                NetDrivers::libnl => {
-                                    // delete vip
-                                    delete_ip_addresses(&vr, debug);
-                                    // remove IP routes
-                                    set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                _ => {
+                                    // restore interface's MAC address
+                                    set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
+                                    // restore primary or delete vip on vr's interface
+                                    match vr.parameters.netdrv {
+                                        NetDrivers::ioctl => {
+                                            // restore primary IP
+                                            set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
+                                            // remove IP routes
+                                            set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                        }
+                                        NetDrivers::libnl => {
+                                            // delete vip
+                                            delete_ip_addresses(&vr, debug);
+                                            // remove IP routes
+                                            set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1048,11 +1094,11 @@ fn set_ip_routes(
     }
 }
 
-// create_mac_vlan_link function
-fn create_macvlan_link(
+// setup_mac_vlan_link function
+fn setup_macvlan_link(
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     vmac: [u8; 6],
-    _op: Operation,
+    op: Operation,
     debug: &Verbose,
 ) -> Option<(i32, String)> {
     // print debugging information
@@ -1061,18 +1107,41 @@ fn create_macvlan_link(
         DEBUG_LEVEL_HIGH,
         DEBUG_SRC_MACVLAN,
         format!(
-            "creating macvlan interface on master {:?}",
+            "setting up macvlan interface on master {:?} using libnl",
             vr.parameters.interface
         ),
     );
 
-    // call to libnl create_macvlan_link()
-    match os::linux::libnl::create_macvlan_link(vr.parameters.ifindex, vmac) {
-        Ok((i, n)) => Some((i, n)),
+    // call to libnl setup_macvlan_link()
+    match os::linux::libnl::setup_macvlan_link(
+        vr.parameters.ifindex,
+        &vr.parameters.vifname,
+        vmac,
+        &op,
+    ) {
+        // the macvlan interface has been added or deleted successfully
+        Ok(()) => {
+            // If added, return the ifindex and name of the virtual interface
+            match op {
+                Operation::Add => {
+                    // find new macvlan ifindex
+                    match os::linux::libc::c_ifnametoindex(&vr.parameters.vifname) {
+                        Ok(i) => {
+                            return Some((i as i32, vr.parameters.vifname.clone()));
+                        }
+                        Err(_e) => return None,
+                    }
+                }
+                Operation::Rem => {
+                    return None;
+                }
+            }
+        }
+        // catched an error while setting up the macvlan interface
         Err(e) => {
             eprintln!(
-                "error(macvlan): cannot create macvlan interface (master if: {:?}): {}",
-                vr.parameters.interface, e
+                "error(macvlan): cannot perform operation {:?} on macvlan interface (master if: {:?}): {}",
+                op, vr.parameters.interface, e
             );
             None
         }
