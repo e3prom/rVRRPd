@@ -360,30 +360,33 @@ pub fn fsm_run(
                             // set VRRP virtual mac address
                             let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                             vmac[5] = vr.parameters.vrid();
-                            // setup MAC address or virtual interface
-                            match vr.parameters.iftype {
-                                // if vr's interface is of type macvlan
-                                IfTypes::macvlan => {
-                                    // create macvlan interface
-                                    match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
-                                        Some((vif_idx, vif_name)) => {
-                                            // change vr's ifindex to the virtual interface's index
-                                            vr.parameters.ifindex = vif_idx;
-                                            // change vr's interface name to virtual interface name
-                                            vr.parameters.interface = vif_name;
-                                            // save vif interface mac
-                                            vr.parameters.ifmac =
-                                                get_mac_addresses(sockfd, &vr, debug);
-                                        }
-                                        // if it failed for some reasons, do not change vr's interface
-                                        None => (),
-                                    };
-                                }
-                                _ => {
-                                    // save vr's interface mac (old)
-                                    vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
-                                    // set virtual router's MAC address
-                                    set_mac_addresses(sockfd, &vr, vmac, debug);
+                            // if os is Linux
+                            if cfg!(target_os = "linux") {
+                                // setup MAC address or virtual interface
+                                match vr.parameters.iftype {
+                                    // if vr's interface is of type macvlan
+                                    IfTypes::macvlan => {
+                                        // create macvlan interface
+                                        match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                            Some((vif_idx, vif_name)) => {
+                                                // change vr's ifindex to the virtual interface's index
+                                                vr.parameters.ifindex = vif_idx;
+                                                // change vr's interface name to virtual interface name
+                                                vr.parameters.interface = vif_name;
+                                                // save vif interface mac
+                                                vr.parameters.ifmac =
+                                                    get_mac_addresses(sockfd, &vr, debug);
+                                            }
+                                            // if it failed for some reasons, do not change vr's interface
+                                            None => (),
+                                        };
+                                    }
+                                    _ => {
+                                        // save vr's interface mac (old)
+                                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                                        // set virtual router's MAC address
+                                        set_mac_addresses(sockfd, &vr, vmac, debug);
+                                    }
                                 }
                             }
                             // send an ADVERTISEMENT message
@@ -623,8 +626,6 @@ pub fn fsm_run(
                                     DEBUG_SRC_FSM,
                                     format!("down flag cleared in Master state"),
                                 );
-                                // restore interface's MAC address
-                                set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
                                 // restore primary or delete vip on vr's interface
                                 if cfg!(target_os = "linux") {
                                     match vr.parameters.iftype {
@@ -638,6 +639,13 @@ pub fn fsm_run(
                                             );
                                         }
                                         _ => {
+                                            // restore interface's MAC address
+                                            set_mac_addresses(
+                                                sockfd,
+                                                &vr,
+                                                vr.parameters.ifmac,
+                                                debug,
+                                            );
                                             match vr.parameters.netdrv {
                                                 NetDrivers::ioctl => {
                                                     // restore primary IP
