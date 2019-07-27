@@ -37,7 +37,8 @@ pub struct Parameters {
     ifmac: [u8; 6],     // Interface Ethernet MAC address
     netdrv: NetDrivers, // Network driver
     iftype: IfTypes,    // Interfaces type
-    vifname: String,    // Virtual interface name
+    vif_name: String,    // Virtual interface name
+    vif_idx: i32,        // Virtual interface ifindex
 }
 
 /// Parameters Type Implementation
@@ -62,7 +63,8 @@ impl Parameters {
         protocols: Arc<Mutex<Protocols>>,
         netdrv: NetDrivers,
         iftype: IfTypes,
-        vifname: String,
+        vif_name: String,
+        vif_idx: i32,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -85,7 +87,8 @@ impl Parameters {
             ifmac: [0, 0, 0, 0, 0, 0],
             netdrv,
             iftype,
-            vifname,
+            vif_name,
+            vif_idx,
         }
     }
     // vrid() getter
@@ -144,9 +147,17 @@ impl Parameters {
         // return the first array in vector
         self.ipaddrs[0]
     }
-    // notification method
+    // notification() method
     pub fn notification(&self) -> &Option<Arc<Mutex<mpsc::Sender<Event>>>> {
         &self.notification
+    }
+    // vif_name() getter
+    pub fn vif_name(&self) -> String {
+        self.vif_name.clone()
+    }
+    // vif_idx() getter
+    pub fn vif_idx(&self) -> i32 {
+        self.vif_idx
     }
 }
 
@@ -370,7 +381,7 @@ pub fn fsm_run(
                                         match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
                                             Some((vif_idx, vif_name)) => {
                                                 // change vr's ifindex to the virtual interface's index
-                                                vr.parameters.ifindex = vif_idx;
+                                                vr.parameters.vif_idx = vif_idx;
                                                 // change vr's interface name to virtual interface name
                                                 vr.parameters.interface = vif_name;
                                                 // save vif interface mac
@@ -517,7 +528,7 @@ pub fn fsm_run(
                                     match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
                                         Some((vif_idx, vif_name)) => {
                                             // change vr's ifindex to the virtual interface's index
-                                            vr.parameters.ifindex = vif_idx;
+                                            vr.parameters.vif_idx = vif_idx;
                                             // change vr's interface name to virtual interface name
                                             vr.parameters.interface = vif_name;
                                             // save vif interface mac
@@ -869,6 +880,11 @@ fn set_ip_addresses(
     );
 
     if cfg!(target_os = "linux") {
+        // set ifindex on physical or macvlan interface
+        let ifindex = match vr.parameters.iftype {
+            IfTypes::macvlan => vr.parameters.vif_idx,
+            _ => vr.parameters.ifindex,
+        };
         // set virtual ip address according to the network driver in use
         match vr.parameters.netdrv {
             NetDrivers::ioctl => {
@@ -888,11 +904,11 @@ fn set_ip_addresses(
                     DEBUG_SRC_IP,
                     format!(
                         "setting up IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
-                        &ifname, vr.parameters.ifindex
+                        &ifname, ifindex
                     ),
                 );
                 if let Err(e) = os::linux::libnl::set_ip_address(
-                    vr.parameters.ifindex,
+                    ifindex,
                     &ifname,
                     addrs[idx],
                     netmasks[idx],
@@ -1121,21 +1137,16 @@ fn setup_macvlan_link(
     );
 
     // call to libnl setup_macvlan_link()
-    match os::linux::libnl::setup_macvlan_link(
-        vr.parameters.ifindex,
-        &vr.parameters.vifname,
-        vmac,
-        &op,
-    ) {
+    match os::linux::libnl::setup_macvlan_link(&vr, vmac, &op) {
         // the macvlan interface has been added or deleted successfully
         Ok(()) => {
             // If added, return the ifindex and name of the virtual interface
             match op {
                 Operation::Add => {
                     // find new macvlan ifindex
-                    match os::linux::libc::c_ifnametoindex(&vr.parameters.vifname) {
+                    match os::linux::libc::c_ifnametoindex(&vr.parameters.vif_name) {
                         Ok(i) => {
-                            return Some((i as i32, vr.parameters.vifname.clone()));
+                            return Some((i as i32, vr.parameters.vif_name.clone()));
                         }
                         Err(_e) => return None,
                     }

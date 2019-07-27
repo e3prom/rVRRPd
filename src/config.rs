@@ -200,6 +200,11 @@ impl VRConfig {
     pub fn netdrv(&self) -> NetDrivers {
         // if os is Linux
         if cfg!(target_os = "linux") {
+            // if macvlan is configured, return libnl
+            match self.iftype() {
+                IfTypes::macvlan => return NetDrivers::libnl,
+                _ => {}
+            }
             match &self.netdrv {
                 Some(s) => match &s[..] {
                     "ioctl" => NetDrivers::ioctl,
@@ -222,7 +227,7 @@ impl VRConfig {
                     "macvlan" => IfTypes::macvlan,
                     _ => IfTypes::ether,
                 },
-                None => IfTypes::ether
+                None => IfTypes::ether,
             }
         } else {
             IfTypes::ether
@@ -232,7 +237,7 @@ impl VRConfig {
     pub fn vifname(&self) -> String {
         match &self.vifname {
             Some(s) => s.clone(),
-            None => RVRRPD_DFLT_MACVLAN_NAME.to_string()
+            None => RVRRPD_DFLT_MACVLAN_NAME.to_string(),
         }
     }
 }
