@@ -657,6 +657,8 @@ pub fn fsm_run(
                                             // restore interface to physical interface name
                                             vr.parameters.interface =
                                                 vr.parameters.vif_name.clone();
+                                            // remove added routes
+                                            set_ip_routes(sockfd, &vr, Operation::Rem, debug);
                                         }
                                         _ => {
                                             // restore interface's MAC address
@@ -675,7 +677,7 @@ pub fn fsm_run(
                                                         Operation::Rem,
                                                         debug,
                                                     );
-                                                    // re-set IP routes
+                                                    // re-set routes
                                                     set_ip_routes(
                                                         sockfd,
                                                         &vr,
@@ -739,6 +741,10 @@ pub fn fsm_run(
                                         Operation::Rem,
                                         debug,
                                     );
+                                    // restore interface to physical interface name
+                                    vr.parameters.interface = vr.parameters.vif_name.clone();
+                                    // remove routes
+                                    set_ip_routes(sockfd, &vr, Operation::Rem, debug);
                                 }
                                 _ => {
                                     // restore interface's MAC address
@@ -748,13 +754,13 @@ pub fn fsm_run(
                                         NetDrivers::ioctl => {
                                             // restore primary IP
                                             set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
-                                            // remove IP routes
+                                            // remove routes
                                             set_ip_routes(sockfd, &vr, Operation::Rem, debug);
                                         }
                                         NetDrivers::libnl => {
                                             // delete vip
                                             delete_ip_addresses(&vr, debug);
-                                            // remove IP routes
+                                            // remove added routes
                                             set_ip_routes(sockfd, &vr, Operation::Rem, debug);
                                         }
                                     }
