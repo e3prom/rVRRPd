@@ -37,8 +37,8 @@ pub struct Parameters {
     ifmac: [u8; 6],     // Interface Ethernet MAC address
     netdrv: NetDrivers, // Network driver
     iftype: IfTypes,    // Interfaces type
-    vif_name: String,    // Virtual interface name
-    vif_idx: i32,        // Virtual interface ifindex
+    vif_name: String,   // Virtual interface name (or physical when saved)
+    vif_idx: i32,       // Virtual interface ifindex
 }
 
 /// Parameters Type Implementation
@@ -380,9 +380,12 @@ pub fn fsm_run(
                                         // create macvlan interface
                                         match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
                                             Some((vif_idx, vif_name)) => {
-                                                // change vr's ifindex to the virtual interface's index
+                                                // store the virtual interface's index
                                                 vr.parameters.vif_idx = vif_idx;
-                                                // change vr's interface name to virtual interface name
+                                                // save physical interface name to vif_name
+                                                vr.parameters.vif_name =
+                                                    vr.parameters.interface.clone();
+                                                // change current vr's interface to the virtual interface
                                                 vr.parameters.interface = vif_name;
                                                 // save vif interface mac
                                                 vr.parameters.ifmac =
@@ -527,9 +530,12 @@ pub fn fsm_run(
                                     // create macvlan interface
                                     match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
                                         Some((vif_idx, vif_name)) => {
-                                            // change vr's ifindex to the virtual interface's index
+                                            // store the virtual interface's index
                                             vr.parameters.vif_idx = vif_idx;
-                                            // change vr's interface name to virtual interface name
+                                            // save physical interface name to vif_name
+                                            vr.parameters.vif_name =
+                                                vr.parameters.interface.clone();
+                                            // change current vr's interface to the virtual interface
                                             vr.parameters.interface = vif_name;
                                             // save vif interface mac
                                             vr.parameters.ifmac =
@@ -648,6 +654,9 @@ pub fn fsm_run(
                                                 Operation::Rem,
                                                 debug,
                                             );
+                                            // restore interface to physical interface name
+                                            vr.parameters.interface =
+                                                vr.parameters.vif_name.clone();
                                         }
                                         _ => {
                                             // restore interface's MAC address

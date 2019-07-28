@@ -20,7 +20,7 @@
    * Sniffer mode (`-m0`)
    * Virtual Router in foreground mode (`-m1`)
    * Virtual Router in daemon mode (`-m2`)
- * MAC-Based Virtual LAN Interface (`macvlan`) support
+ * MAC-based Virtual LAN interface (`macvlan`) support
 
 # Development
 This project is still in **_early development_** stage, and at this time, only supports the Linux operating system. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be fully interoperable with standard-compliant network equipments and may also exhibit stability issues, therefore use at your own risks.
