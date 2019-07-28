@@ -156,7 +156,7 @@ impl VirtualRouter {
         debug: &Verbose,
         netdrv: NetDrivers,
         iftype: IfTypes,
-        vif_name: String
+        vif_name: String,
     ) -> io::Result<VirtualRouter> {
         // get ifindex from interface name
         let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
@@ -239,7 +239,7 @@ impl VirtualRouter {
                 netdrv,
                 iftype,
                 vif_name,
-                0
+                0,
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
