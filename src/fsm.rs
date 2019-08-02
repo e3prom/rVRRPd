@@ -382,7 +382,7 @@ pub fn fsm_run(
                                             Some((vif_idx, vif_name)) => {
                                                 // store the virtual interface's index
                                                 vr.parameters.vif_idx = vif_idx;
-                                                // save physical interface name to vif_name
+                                                // save master interface to vif_name
                                                 vr.parameters.vif_name =
                                                     vr.parameters.interface.clone();
                                                 // change current vr's interface to the virtual interface
@@ -532,7 +532,7 @@ pub fn fsm_run(
                                         Some((vif_idx, vif_name)) => {
                                             // store the virtual interface's index
                                             vr.parameters.vif_idx = vif_idx;
-                                            // save physical interface name to vif_name
+                                            // save master interface to vif_name
                                             vr.parameters.vif_name =
                                                 vr.parameters.interface.clone();
                                             // change current vr's interface to the virtual interface
@@ -654,7 +654,10 @@ pub fn fsm_run(
                                                 Operation::Rem,
                                                 debug,
                                             );
-                                            // restore interface to physical interface name
+                                            // restore configured virtual interface name
+                                            vr.parameters.vif_name =
+                                                vr.parameters.interface.clone();
+                                            // restore master interface name
                                             vr.parameters.interface =
                                                 vr.parameters.vif_name.clone();
                                             // remove added routes
@@ -741,7 +744,9 @@ pub fn fsm_run(
                                         Operation::Rem,
                                         debug,
                                     );
-                                    // restore interface to physical interface name
+                                    // restore configured virtual interface name
+                                    vr.parameters.vif_name = vr.parameters.interface.clone();
+                                    // restore master interface name
                                     vr.parameters.interface = vr.parameters.vif_name.clone();
                                     // remove routes
                                     set_ip_routes(sockfd, &vr, Operation::Rem, debug);
