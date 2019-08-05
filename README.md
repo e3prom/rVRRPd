@@ -45,7 +45,7 @@ $ cargo build --release
    Compiling itoa v0.4.4
    Compiling ctrlc v3.1.2
    Compiling serde_json v1.0.40
-   Compiling rVRRPd v0.1.0 (/home/e3prom/rVRRPd)
+   Compiling rVRRPd v0.1.1 (/home/e3prom/rVRRPd)
     Finished release [optimized] target(s) in 9.63s
 
 $ target/release/main
@@ -88,8 +88,11 @@ priority = 254
 preemption = true
 rfc3768 = true
 netdrv = "libnl"
+iftype = "macvlan"
+vifname = "vrrp0"
 auth_type = "rfc2338-simple"
 auth_secret = "thissecretnolongeris"
+
 
 [protocols]
     [[protocols.static]]
@@ -106,6 +109,8 @@ The above configuration do the following:
    * Has preeemption enabled.
    * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendors).
    * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctl` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
+   * Is configured for a `macvlan` type interface, a MAC-based virtual interface.
+   * Name the child virtual interface `vrrp0`, the latter will be used to holds the virtual router IP address.
    * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.

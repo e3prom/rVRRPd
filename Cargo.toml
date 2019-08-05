@@ -1,10 +1,10 @@
 [package]
 name = "rVRRPd"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 repository = "httsp://github.com/e3prom/rvrrpd"
-description = "An open and secure VRRPv2 implementation written in Rust"
+description = "A fast, open and secure VRRPv2 implementation written in Rust"
 license = "GPL-3.0"
 publish = false
 
