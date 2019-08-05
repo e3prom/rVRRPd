@@ -5,6 +5,12 @@ use super::*;
 // std
 use std::net::IpAddr;
 
+/// CfgType Enumerator
+pub enum CfgType {
+    Toml, // TOML
+    Json, // JSON
+}
+
 /// Main Configuration Structure
 #[derive(Debug, Deserialize)]
 pub struct CConfig {
@@ -311,7 +317,7 @@ impl Static {
 
 // decode_config() function
 /// read and decode configuration file
-pub fn decode_config(filename: String) -> CConfig {
+pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
     let file: std::string::String = match std::fs::read_to_string(filename) {
         Ok(s) => s,
         Err(e) => {
@@ -322,13 +328,28 @@ pub fn decode_config(filename: String) -> CConfig {
             std::process::exit(1);
         }
     };
-    let config: CConfig = match toml::from_str(&file) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("error(config): Cannot parse configuration file: {}", e);
-            std::process::exit(1);
+    match cfgtype {
+        // TOML
+        CfgType::Toml => {
+            let config: CConfig = match toml::from_str(&file) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("error(config): Cannot parse TOML configuration file: {}", e);
+                    std::process::exit(1);
+                }
+            };
+            return config;
         }
-    };
-    // return config
-    config
+        // JSON
+        CfgType::Json => {
+            let config: CConfig = match serde_json::from_str(&file) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("error(config): Cannot parse JSON configuration file: {}", e);
+                    std::process::exit(1);
+                }
+            };
+            return config;
+        }
+    }
 }

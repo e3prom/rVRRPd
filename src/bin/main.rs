@@ -69,6 +69,12 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
         "debugging level:\n0(none), 1(low), 2(medium), 3(high), 5(extensive)",
         "LEVEL",
     );
+    opts.optopt(
+        "g",
+        "cfg-format",
+        "configuration format: toml(default), json",
+        "FORMAT",
+    );
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -116,7 +122,14 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
         None => None,
     };
 
-    Ok(Config::new(iface, mode, conf, debug))
+    // configuration file format command-line option
+    let cfg_format = matches.opt_str("cfg-format");
+    let cfg_format = match cfg_format {
+        Some(x) => Option::Some(x.parse::<String>().unwrap()),
+        None => Option::None,
+    };
+
+    Ok(Config::new(iface, mode, conf, debug, cfg_format))
 }
 
 // run() function

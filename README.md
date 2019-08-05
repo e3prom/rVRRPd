@@ -5,12 +5,12 @@
 [![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=master)](https://travis-ci.org/e3prom/rVRRPd)
 
 # Introduction
-[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in Rust, a programming language known for its inherent portability, memory-safety and speed.
+[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a programming language known for its inherent portability, memory-safety and speed.
 
 # Features
  * Aimed to be Robust, Fast and Secure
  * Multi-threaded operation (1 thread per VRRP group/interface pair)
- * Easily configurable using [TOML](https://github.com/toml-lang/toml)
+ * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
  * Authentication Support
    * Password Authentication (Type-1) based on [`RFC2338`](https://tools.ietf.org/html/rfc2338) 
@@ -41,15 +41,12 @@ To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/r
 To quickly build the daemon executable, use the `cargo build --release` command:
 ```console
 $ cargo build --release
-   Compiling libc v0.2.57
-   Compiling autocfg v0.1.4
-   Compiling semver-parser v0.7.0
-   Compiling rand_core v0.4.0
-   Compiling arrayvec v0.4.10
-   Compiling byteorder v1.3.1
-[...]
+   Compiling ryu v1.0.0
+   Compiling itoa v0.4.4
+   Compiling ctrlc v3.1.2
+   Compiling serde_json v1.0.40
    Compiling rVRRPd v0.1.0 (/home/e3prom/rVRRPd)
-    Finished release [optimized] target(s) in 14.99s
+    Finished release [optimized] target(s) in 9.63s
 
 $ target/release/main
 Usage: target/release/main -m0|1|2 [options]
@@ -69,6 +66,8 @@ Options:
                         (default to /etc/rvrrpd/rvrrpd.conf)
     -d, --debug LEVEL   debugging level:
                         0(none), 1(low), 2(medium), 3(high), 5(extensive)
+    -g, --cfg-format FORMAT
+                        configuration format: toml(default), json
 ```
 
 Before running the VRRPv2 daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.

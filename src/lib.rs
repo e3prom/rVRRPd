@@ -17,6 +17,7 @@ use itertools::Itertools;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_json;
 
 // deamonize
 extern crate daemonize;
@@ -91,17 +92,25 @@ pub struct Config {
     mode: u8,
     conf: Option<String>,
     debug: Option<u8>,
+    cfg_format: Option<String>,
 }
 
 // Config Implementation
 impl Config {
     // new() method
-    pub fn new(iface: Option<String>, mode: u8, conf: Option<String>, debug: Option<u8>) -> Config {
+    pub fn new(
+        iface: Option<String>,
+        mode: u8,
+        conf: Option<String>,
+        debug: Option<u8>,
+        cfg_format: Option<String>,
+    ) -> Config {
         Config {
             iface,
             mode,
             conf,
             debug,
+            cfg_format,
         }
     }
     // iface() getter
@@ -126,6 +135,16 @@ impl Config {
     // debug() getter
     pub fn debug(&self) -> Option<u8> {
         self.debug
+    }
+    // cfg_format() method
+    pub fn cfg_format(&self) -> config::CfgType {
+        match &self.cfg_format {
+            Some(s) => match &s[..] {
+                "json" => config::CfgType::Json,
+                _ => config::CfgType::Toml,
+            },
+            None => config::CfgType::Toml,
+        }
     }
 }
 
@@ -345,7 +364,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
         // virtual router modes
         1 | 2 => {
             // read configuration file
-            let config = decode_config(cfg.conf());
+            let config = decode_config(cfg.conf(), cfg.cfg_format());
 
             // read debugging level from Config first
             let debug_level = match cfg.debug() {
