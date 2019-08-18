@@ -20,6 +20,7 @@ use crate::auth::gen_auth_data;
 use crate::debug::{print_debug, Verbose};
 
 // libc
+#[cfg(target_os = "linux")]
 use libc::{c_void, sendto, sockaddr, sockaddr_ll, AF_PACKET};
 
 // std

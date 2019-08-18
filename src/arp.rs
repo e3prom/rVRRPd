@@ -15,7 +15,7 @@ use std::io;
 use std::mem;
 
 // libc
-extern crate libc;
+#[cfg(target_os = "linux")]
 use libc::{c_void, sendto, sockaddr, sockaddr_ll, socket, AF_PACKET, ETH_P_ARP, SOCK_RAW};
 
 /// Address Resolution Protocol (ARP) Structure

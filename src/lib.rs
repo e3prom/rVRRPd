@@ -3,6 +3,7 @@
 
 // libc
 extern crate libc;
+#[cfg(target_os = "linux")]
 use libc::{c_void, recvfrom, sockaddr, sockaddr_ll, socket, socklen_t, AF_PACKET, SOCK_RAW};
 
 // foreign-types
