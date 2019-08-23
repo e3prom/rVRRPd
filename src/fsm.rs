@@ -151,6 +151,10 @@ impl Parameters {
     pub fn notification(&self) -> &Option<Arc<Mutex<mpsc::Sender<Event>>>> {
         &self.notification
     }
+    // iftype() getter
+    pub fn iftype(&self) -> &IfTypes {
+        &self.iftype
+    }
     // vif_name() getter
     pub fn vif_name(&self) -> String {
         self.vif_name.clone()
@@ -1142,7 +1146,8 @@ fn set_ip_routes(
     }
 }
 
-// setup_mac_vlan_link function
+// setup_mac_vlan_link function (Linux specific)
+#[cfg(target_os = "linux")]
 fn setup_macvlan_link(
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     vmac: [u8; 6],

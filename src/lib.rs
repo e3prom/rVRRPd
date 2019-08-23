@@ -178,11 +178,14 @@ impl VirtualRouter {
         iftype: IfTypes,
         vif_name: String,
     ) -> io::Result<VirtualRouter> {
+        // --- Linux specific interface handling
+        #[cfg(target_os = "linux")]
         // get ifindex from interface name
         let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
             Ok(i) => i as i32,
             Err(e) => return Err(e),
         };
+        // END Linux specific interface handling
 
         // create new IPv4 addresses vector
         let mut v4addrs = Vec::new();
@@ -333,9 +336,13 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
             // set promiscuous flag on interface
             let iface = CString::new(iface.as_bytes() as &[u8]).unwrap();
-            if let Err(e) = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
-                return Err(e);
+            // --- Linux specific interface handling
+            #[cfg(target_os = "linux")]
+            match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                Err(e) => return Err(e),
+                _ => {}
             }
+            // END Linux specific interface handling
 
             // print information
             println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
@@ -345,14 +352,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // check if global shutdown variable is set
                 // if set, then call set_if_promiscuous() to remove promisc mode on interface
                 if shutdown.load(Ordering::Relaxed) {
-                    if let Err(e) =
-                        os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset)
-                    {
-                        return Err(e);
-                    } else {
-                        println!("Exiting...");
-                        std::process::exit(0);
-                    }
+                    // --- Linux specific interface handling
+                    #[cfg(target_os = "linux")]
+                    let _r = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset);
+                    println!("Exiting...");
+                    std::process::exit(0);
+                    // END Linux specific interface handling
                 }
 
                 // Block on receiving IP packets
@@ -494,11 +499,17 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             for vr in &vrouters {
                 // acquire read lock
                 let vr = vr.read().unwrap();
+
+                // convert interface string
                 let iface = CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
-                if let Err(e) = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set)
-                {
-                    return Err(e);
+
+                // --- Linux specific interface handling
+                #[cfg(target_os = "linux")]
+                match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                    Err(e) => return Err(e),
+                    _ => {}
                 }
+                // END Linux specific interface handling
             }
 
             // print debugging information
@@ -523,13 +534,49 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     for vr in &vrouters {
                         // acquire read lock
                         let vr = vr.read().unwrap();
-                        let iface =
-                            CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
-                        if let Err(e) =
-                            os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset)
-                        {
-                            return Err(e);
+
+                        // --- Linux specific interface handling
+                        #[cfg(target_os = "linux")]
+                        match vr.parameters.iftype() {
+                            IfTypes::macvlan => {
+                                let iface =
+                                    CString::new(vr.parameters.interface().as_bytes() as &[u8])
+                                        .unwrap();
+                                match os::linux::netdev::set_if_promiscuous(
+                                    sockfd,
+                                    &iface,
+                                    PflagOp::Unset,
+                                ) {
+                                    Err(e) => return Err(e),
+                                    _ => {}
+                                }
+                                let vifname =
+                                    CString::new(vr.parameters.vif_name().as_bytes() as &[u8])
+                                        .unwrap();
+                                match os::linux::netdev::set_if_promiscuous(
+                                    sockfd,
+                                    &vifname,
+                                    PflagOp::Unset,
+                                ) {
+                                    Err(e) => return Err(e),
+                                    _ => {}
+                                }
+                            }
+                            _ => {
+                                let iface =
+                                    CString::new(vr.parameters.interface().as_bytes() as &[u8])
+                                        .unwrap();
+                                match os::linux::netdev::set_if_promiscuous(
+                                    sockfd,
+                                    &iface,
+                                    PflagOp::Unset,
+                                ) {
+                                    Err(e) => return Err(e),
+                                    _ => {}
+                                }
+                            }
                         }
+                        // END Linux specific interface handling
                     }
                     println!("Exiting...");
                     // Manually calling the threads pool desctructor
