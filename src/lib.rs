@@ -522,12 +522,39 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     for vr in &vrouters {
                         // acquire read lock
                         let vr = vr.read().unwrap();
-                        let iface =
-                            CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
-                        if let Err(e) =
-                            os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset)
-                        {
-                            return Err(e);
+
+                        match vr.parameters.iftype() {
+                            IfTypes::macvlan => {
+                                let iface =
+                                    CString::new(vr.parameters.interface().as_bytes() as &[u8])
+                                        .unwrap();
+                                let _r = os::linux::netdev::set_if_promiscuous(
+                                    sockfd,
+                                    &iface,
+                                    PflagOp::Unset,
+                                );
+                                let vifname =
+                                    CString::new(vr.parameters.vif_name().as_bytes() as &[u8])
+                                        .unwrap();
+                                let _r = os::linux::netdev::set_if_promiscuous(
+                                    sockfd,
+                                    &vifname,
+                                    PflagOp::Unset,
+                                );
+                            }
+                            _ => {
+                                let iface =
+                                    CString::new(vr.parameters.interface().as_bytes() as &[u8])
+                                        .unwrap();
+                                match os::linux::netdev::set_if_promiscuous(
+                                    sockfd,
+                                    &iface,
+                                    PflagOp::Unset,
+                                ) {
+                                    Err(e) => return Err(e),
+                                    _ => {}
+                                }
+                            }
                         }
                     }
                     println!("Exiting...");

@@ -151,6 +151,10 @@ impl Parameters {
     pub fn notification(&self) -> &Option<Arc<Mutex<mpsc::Sender<Event>>>> {
         &self.notification
     }
+    // iftype() getter
+    pub fn iftype(&self) -> &IfTypes {
+        &self.iftype
+    }
     // vif_name() getter
     pub fn vif_name(&self) -> String {
         self.vif_name.clone()
