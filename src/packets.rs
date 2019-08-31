@@ -20,6 +20,8 @@ use crate::auth::gen_auth_data;
 use crate::debug::{print_debug, Verbose};
 
 // libc
+#[cfg(target_os = "openbsd")]
+use libc::{c_void, sendto, sockaddr, AF_INET};
 #[cfg(target_os = "linux")]
 use libc::{c_void, sendto, sockaddr, sockaddr_ll, AF_PACKET};
 
@@ -300,6 +302,32 @@ pub fn send_advertisement(
     frame[IP_FRAME_OFFSET + 2] = frame_size.to_be() as u8;
     frame[IP_FRAME_OFFSET + 2 + 1] = frame_size as u8;
 
+    // sending raw ethernet frame (linux)
+    #[cfg(target_os = "linux")]
+    let res = lnx_raweth_sendto(sockfd, vr, &mut frame);
+
+    // sendring raw ethernet frame (openbsd)
+    #[cfg(target_os = "openbsd")]
+    let res = obsd_raweth_sendto(sockfd, vr, &mut frame);
+
+    // return above call result
+    return res;
+}
+
+// as_u8_slice() unsafe function
+/// transform type T as slice of u8
+unsafe fn as_u8_slice<T: Sized>(p: &T) -> &[u8] {
+    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
+}
+
+// lnx_raweth_sendto() function (linux)
+// send raw ethernet frame
+#[cfg(target_os = "linux")]
+fn lnx_raweth_sendto(
+    sockfd: i32,
+    vr: &RwLockWriteGuard<VirtualRouter>,
+    frame: &mut Vec<u8>,
+) -> io::Result<()> {
     // sockaddr_ll (man 7 packet)
     let mut sa = sockaddr_ll {
         sll_family: AF_PACKET as u16,
@@ -328,8 +356,41 @@ pub fn send_advertisement(
     }
 }
 
-// as_u8_slice() unsafe function
-/// transform type T as slice of u8
-unsafe fn as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
+// lnx_raweth_sendto() function (openbsd)
+// send raw ethernet frame using BPF?
+//
+// see https://www.vankuik.nl/2012-02-09_Writing_ethernet_packets_on_OS_X_and_BSD
+#[cfg(target_os = "openbsd")]
+fn obsd_raweth_sendto(
+    sockfd: i32,
+    vr: &RwLockWriteGuard<VirtualRouter>,
+    frame: &mut Vec<u8>,
+) -> io::Result<()> {
+    // sockaddr_in
+    let mut sa = sockaddr_in {
+        sin_family: AF_INET as u16,
+        sin_port: 0, // NULL with SOCK_RAW
+        sll_protocol: ETHER_P_IP.to_be(),
+        sll_ifindex: vr.parameters.ifindex(),
+        sll_hatype: 0,
+        sll_pkttype: 0,
+        sll_halen: 0,
+        sll_addr: [0; 8],
+    };
+
+    unsafe {
+        // unsafe call to sendto()
+        let ptr_sockaddr = mem::transmute::<*mut sockaddr_ll, *mut sockaddr>(&mut sa);
+        match sendto(
+            sockfd,
+            &mut frame[..] as *mut _ as *const c_void,
+            mem::size_of_val(&frame[..]),
+            0,
+            ptr_sockaddr,
+            mem::size_of_val(&sa) as u32,
+        ) {
+            -1 => Err(io::Error::last_os_error()),
+            _ => Ok(()),
+        }
+    }
 }
