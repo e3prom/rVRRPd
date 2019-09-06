@@ -26,49 +26,29 @@
 # Development
 This project is still in **_development_** stage, and at this time, only supports the Linux operating system. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be fully interoperable with standard-compliant network equipments.
 
-The development roadmap for the upcoming major release `0.2.0` can be found at its [dedicated project page](https://github.com/e3prom/rVRRPd/projects/2).
+The development roadmap for the upcoming `0.2.0` release can be found on its [dedicated project page](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Dependencies
  * A Linux 64-bits kernel (_only Linux is supported at this time_).
- * A 64-bits Intel / AMD (x86_64), or an ARMv8 processor (AMD64).
- * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (1.33.0 and higher), which is not required to run the daemon but highly recommended to easily build the project and all its dependencies.
- * At least one Ethernet interface(s), see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example.
- * Root privileges, required access raw sockets, configure interfaces and to add kernel routes.
- * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) library for accessing the netlink interface on Linux.
+ * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
+ * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
+ * At least one Ethernet interface(s), see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
+ * Root privileges, required to access raw sockets, configure interfaces and to add kernel routes.
+ * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface.
 
 # Build and run
 To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Debian and derivatives.
 
-To quickly build the daemon executable, use the `cargo build --release` or `make` command:
+To quickly build the daemon executable, use the `make` or `cargo build --release` command:
 ```console
 $ cargo build --release
+   [...]
    Compiling ryu v1.0.0
    Compiling itoa v0.4.4
    Compiling ctrlc v3.1.2
    Compiling serde_json v1.0.40
    Compiling rVRRPd v0.1.1 (/home/e3prom/rVRRPd)
     Finished release [optimized] target(s) in 9.63s
-
-$ target/release/main
-Usage: target/release/main -m0|1|2 [options]
-
-Modes:
-    0 = VRRPv2 Sniffer
-    1 = VRRPv2 Virtual Router (foreground)
-    2 = VRRPv2 Virtual Router (daemon)
-
-Options:
-    -h, --help          display help information
-    -i, --iface INTERFACE
-                        ethernet interface to listen on (sniffer mode)
-    -m, --mode MODE     operation modes (see Modes):
-                        0(sniffer), 1(foreground), 2(daemon)
-    -c, --conf FILE     path to configuration file:
-                        (default to /etc/rvrrpd/rvrrpd.conf)
-    -d, --debug LEVEL   debugging level:
-                        0(none), 1(low), 2(medium), 3(high), 5(extensive)
-    -g, --cfg-format FORMAT
-                        configuration format: toml(default), json
 ```
 
 Then install the `rvrrpd` executable on your system path by entering `make install`.
@@ -109,7 +89,7 @@ The above configuration do the following:
  * Runs one virtual-router with group id `1` on interface `ens192.900`, with the below parameters:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
-   * Has preeemption enabled.
+   * Has preemption enabled.
    * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendors).
    * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctl` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
    * Is configured for a `macvlan` type interface, a MAC-based virtual interface.
