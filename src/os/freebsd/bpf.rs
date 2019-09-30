@@ -7,7 +7,7 @@ use std::convert::TryInto;
 // ffi
 use std::ffi::{CString};
 
-fn open_bpf_device() -> io::Result<(i32)> {
+pub fn open_bpf_device() -> io::Result<(i32)> {
     // find an available BPF device
     for i in 0..99 {
         // print information

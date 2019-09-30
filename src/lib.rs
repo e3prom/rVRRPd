@@ -4,7 +4,7 @@
 // libc
 extern crate libc;
 #[cfg(target_os = "linux")]
-use libc::{c_void, recvfrom, sockaddr, sockaddr_ll, socket, socklen_t, AF_PACKET, SOCK_RAW};
+use libc::{c_void, recvfrom, sockaddr, sockaddr_ll, socklen_t};
 
 // foreign-types
 #[macro_use]
@@ -38,6 +38,10 @@ use packets::VRRPpkt;
 // operating systems support
 mod os;
 use os::drivers::{IfTypes, NetDrivers, PflagOp};
+
+// linux os support
+#[cfg(target_os = "linux")]
+use os::linux::libc::{open_raw_socket_fd};
 
 // finite state machine
 mod fsm;
@@ -275,19 +279,6 @@ impl VirtualRouter {
             true
         } else {
             false
-        }
-    }
-}
-
-// open_raw_socket_fd() function
-/// Open a raw AF_PACKET socket for IPv4
-fn open_raw_socket_fd() -> io::Result<i32> {
-    unsafe {
-        // man 2 socket
-        // returns a file descriptor or -1 if error.
-        match socket(AF_PACKET, SOCK_RAW, ETHER_P_IP.to_be() as i32) {
-            -1 => Err(io::Error::last_os_error()),
-            fd => Ok(fd),
         }
     }
 }

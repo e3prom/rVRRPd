@@ -1,6 +1,8 @@
 //! Linux standard C library compatibility
+use crate::*;
 
 // std, libc, ffi
+use libc::{socket, AF_PACKET, SOCK_RAW};
 use std::ffi::{CStr, CString};
 use std::io;
 use std::net::{IpAddr, IpAddr::V4, Ipv4Addr, Ipv6Addr};
@@ -8,6 +10,7 @@ use std::ptr;
 
 // foreign_types
 use foreign_types::{ForeignType, ForeignTypeRef};
+
 
 // libc-like getifaddrs() function implementation
 // Credit sfackler: https://gist.github.com/sfackler/d614e6c130f3462f443e6c0c6255383a
@@ -138,6 +141,19 @@ impl<'a> Iterator for Iter<'a> {
 
         self.0 = cur.next();
         Some(cur)
+    }
+}
+
+// open_raw_socket_fd() function
+/// Open a raw AF_PACKET socket for IPv4
+pub fn open_raw_socket_fd() -> io::Result<i32> {
+    unsafe {
+        // man 2 socket
+        // returns a file descriptor or -1 if error.
+        match socket(AF_PACKET, SOCK_RAW, ETHER_P_IP.to_be() as i32) {
+            -1 => Err(io::Error::last_os_error()),
+            fd => Ok(fd),
+        }
     }
 }
 
