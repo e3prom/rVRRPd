@@ -13,12 +13,6 @@ pub fn open_bpf_device() -> io::Result<(i32)> {
         // print information
         println!("Opening device /dev/bpf{}", i);
 
-        // build device name
-        // let mut buf: [i8; 11] = [0; 11];
-        // let bpf_fmtstr = "/dev/bpf%i";
-        // let bpf_cstr = CString::new(bpf_fmtstr).unwrap();
-        // libc::sprintf(buf as *mut i8, bpf_cstr as *const i8, i);
-
         // create bpf device name slice
         let bpf_fmtstr = format!("/dev/bpf{}", i);
         let bpf_dev = CString::new(bpf_fmtstr).unwrap();

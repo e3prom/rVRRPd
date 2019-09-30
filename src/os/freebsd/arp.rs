@@ -77,29 +77,32 @@ pub fn broadcast_gratuitious_arp(
     arpframe.src_mac[5] = vr.parameters.vrid();
     arpframe.sender_hw_addr[5] = vr.parameters.vrid();
 
-    // ?? find how to construct ARP frame
-    let mut sa = sockaddr {
-        sa_family: AF_PACKET as u16,
-        sa_protocol: ETHER_P_ARP.to_be(),
-        sa_ifindex: vr.parameters.ifindex(),
-        sa_hatype: 0,
-        sa_pkttype: 0,
-        sa_halen: 0,
-        sa_addr: [0; 8],
-    };
+    // TODO -- find how to construct ARP frame
 
-    unsafe {
-        let ptr_sockaddr = mem::transmute::<*mut sockaddr, *mut sockaddr>(&mut sa);
-        match sendto(
-            sockfd,
-            &mut arpframe as *mut _ as *const c_void,
-            mem::size_of_val(&arpframe),
-            0,
-            ptr_sockaddr,
-            mem::size_of_val(&sa) as u32,
-        ) {
-            -1 => Err(io::Error::last_os_error()),
-            _ => Ok(()),
-        }
-    }
+    // let mut sa = sockaddr {
+    //     sa_family: AF_PACKET as u16,
+    //     sa_protocol: ETHER_P_ARP.to_be(),
+    //     sa_ifindex: vr.parameters.ifindex(),
+    //     sa_hatype: 0,
+    //     sa_pkttype: 0,
+    //     sa_halen: 0,
+    //     sa_addr: [0; 8],
+    // };
+
+    // unsafe {
+    //     let ptr_sockaddr = mem::transmute::<*mut sockaddr, *mut sockaddr>(&mut sa);
+    //     match sendto(
+    //         sockfd,
+    //         &mut arpframe as *mut _ as *const c_void,
+    //         mem::size_of_val(&arpframe),
+    //         0,
+    //         ptr_sockaddr,
+    //         mem::size_of_val(&sa) as u32,
+    //     ) {
+    //         -1 => Err(io::Error::last_os_error()),
+    //         _ => Ok(()),
+    //     }
+    // }
+
+    Ok(())
 }

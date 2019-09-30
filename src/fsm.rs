@@ -1044,6 +1044,13 @@ fn get_mac_addresses(
         }
     }
     // END Linux specific interface type handling
+
+    // --- FreeBSD specific interface tyoe handling
+    #[cfg(target_os = "freebsd")]
+    // TODO
+    [0, 0, 0, 0, 0, 0]
+    // END FreeBSD specific interface type handling
+
 }
 
 // set_mac_addresses() function
