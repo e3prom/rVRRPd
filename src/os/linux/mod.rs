@@ -1,8 +1,10 @@
-//! linux operating system support
+//! Linux Operating System support
 
-// standard c library compatibility
+// standard C library compatibility
 pub mod libc;
 // netdev support
 pub mod netdev;
 // libnl netlink support
 pub mod libnl;
+// Linux ARP support
+pub mod arp;

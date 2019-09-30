@@ -14,6 +14,12 @@ use crate::debug::Verbose;
 // operating system drivers
 use crate::os::drivers::Operation;
 
+// address resolution protocol
+#[cfg(target_os = "linux")]
+use os::linux::arp::{broadcast_gratuitious_arp}; 
+#[cfg(target_os = "freebsd")]
+use os::freebsd::arp::{broadcast_gratuitious_arp};  
+
 /// Virtual Router Parameters Structure
 #[derive(Debug)]
 pub struct Parameters {
@@ -412,9 +418,10 @@ pub fn fsm_run(
                             // send an ADVERTISEMENT message
                             // and panic on error
                             packets::send_advertisement(sockfd, &vr, &debug).unwrap();
-                            // broadcast a gratuitious ARP request
-                            let arp_sockfd = arp::open_raw_socket_arp().unwrap();
-                            arp::broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+
+                            // broadcast gratuitious ARP frame
+                            broadcast_gratuitious_arp(sockfd, &vr);
+
                             // set advertisement interval
                             vr.timers.advert = vr.parameters.adverint;
                             // print debugging information
@@ -578,9 +585,9 @@ pub fn fsm_run(
                         }
                         // END Linux specific interface type handling
 
-                        // send gratuitious ARP requests
-                        let arp_sockfd = arp::open_raw_socket_arp().unwrap();
-                        arp::broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                        // broadcast gratuitious ARP frame
+                        broadcast_gratuitious_arp(sockfd, &vr);
+
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint;
                         // send ADVERTISEMENT
@@ -1146,7 +1153,7 @@ fn set_ip_routes(
     }
 }
 
-// setup_mac_vlan_link function (Linux specific)
+// setup_mac_vlan_link() function (Linux specific)
 #[cfg(target_os = "linux")]
 fn setup_macvlan_link(
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,

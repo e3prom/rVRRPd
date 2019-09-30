@@ -1,4 +1,4 @@
-//! netlink support module
+//! Linux Netlink support
 //! using libnl-3
 use crate::*;
 

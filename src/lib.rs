@@ -45,9 +45,6 @@ mod fsm;
 // checksums
 mod checksums;
 
-// address resolution protocol
-mod arp;
-
 // timers
 mod timers;
 

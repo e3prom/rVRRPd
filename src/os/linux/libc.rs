@@ -1,4 +1,4 @@
-//! linux standard c library compatibility
+//! Linux standard C library compatibility
 
 // std, libc, ffi
 use std::ffi::{CStr, CString};

@@ -1,4 +1,4 @@
-//! linux specific network device functions module
+//! Linux specific network device functions module
 //! This module interfaces with the linux netdevice kernel API and related networking functions of the standard C library.
 use crate::*;
 

@@ -1,4 +1,4 @@
-//! Address Resolution Protocol (ARP) module
+//! FreeBSD Address Resolution Protocol (ARP) module
 //! This module provides ARP related functions.
 
 // constants
@@ -15,8 +15,7 @@ use std::io;
 use std::mem;
 
 // libc
-#[cfg(target_os = "linux")]
-use libc::{c_void, sendto, sockaddr, sockaddr_ll, socket, AF_PACKET, ETH_P_ARP, SOCK_RAW};
+use libc::{c_void, sendto, sockaddr};
 
 /// Address Resolution Protocol (ARP) Structure
 #[repr(C)]
@@ -44,7 +43,7 @@ pub fn open_raw_socket_arp() -> io::Result<i32> {
     unsafe {
         // man 2 socket
         // returns a file descriptor or -1 if error.
-        match socket(AF_PACKET, SOCK_RAW, ETH_P_ARP.to_be() as i32) {
+        match libc::socket(libc::AF_PACKET, libc::SOCK_RAW, ETHER_P_ARP.to_be() as i32) {
             -1 => Err(io::Error::last_os_error()),
             fd => Ok(fd),
         }
@@ -78,19 +77,19 @@ pub fn broadcast_gratuitious_arp(
     arpframe.src_mac[5] = vr.parameters.vrid();
     arpframe.sender_hw_addr[5] = vr.parameters.vrid();
 
-    // sockaddr_ll (man 7 packet)
-    let mut sa = sockaddr_ll {
-        sll_family: AF_PACKET as u16,
-        sll_protocol: ETHER_P_ARP.to_be(),
-        sll_ifindex: vr.parameters.ifindex(),
-        sll_hatype: 0,
-        sll_pkttype: 0,
-        sll_halen: 0,
-        sll_addr: [0; 8],
+    // ?? find how to construct ARP frame
+    let mut sa = sockaddr {
+        sa_family: AF_PACKET as u16,
+        sa_protocol: ETHER_P_ARP.to_be(),
+        sa_ifindex: vr.parameters.ifindex(),
+        sa_hatype: 0,
+        sa_pkttype: 0,
+        sa_halen: 0,
+        sa_addr: [0; 8],
     };
 
     unsafe {
-        let ptr_sockaddr = mem::transmute::<*mut sockaddr_ll, *mut sockaddr>(&mut sa);
+        let ptr_sockaddr = mem::transmute::<*mut sockaddr, *mut sockaddr>(&mut sa);
         match sendto(
             sockfd,
             &mut arpframe as *mut _ as *const c_void,
