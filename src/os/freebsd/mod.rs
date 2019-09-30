@@ -2,3 +2,6 @@
 
 // FreeBSD ARP support
 pub mod arp;
+
+// FreeBSD BPF support
+pub mod bpf;
