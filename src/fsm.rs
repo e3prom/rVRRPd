@@ -15,10 +15,10 @@ use crate::debug::Verbose;
 use crate::os::drivers::Operation;
 
 // address resolution protocol
-#[cfg(target_os = "linux")]
-use os::linux::arp::{broadcast_gratuitious_arp}; 
 #[cfg(target_os = "freebsd")]
-use os::freebsd::arp::{broadcast_gratuitious_arp};  
+use os::freebsd::arp::{broadcast_gratuitious_arp, open_raw_socket_arp};
+#[cfg(target_os = "linux")]
+use os::linux::arp::{broadcast_gratuitious_arp, open_raw_socket_arp};
 
 /// Virtual Router Parameters Structure
 #[derive(Debug)]
@@ -419,8 +419,9 @@ pub fn fsm_run(
                             // and panic on error
                             packets::send_advertisement(sockfd, &vr, &debug).unwrap();
 
-                            // broadcast gratuitious ARP frame
-                            broadcast_gratuitious_arp(sockfd, &vr);
+                            // send gratuitious ARP requests
+                            let arp_sockfd = open_raw_socket_arp().unwrap();
+                            broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
 
                             // set advertisement interval
                             vr.timers.advert = vr.parameters.adverint;
@@ -585,8 +586,9 @@ pub fn fsm_run(
                         }
                         // END Linux specific interface type handling
 
-                        // broadcast gratuitious ARP frame
-                        broadcast_gratuitious_arp(sockfd, &vr);
+                        // send gratuitious ARP requests
+                        let arp_sockfd = open_raw_socket_arp().unwrap();
+                        broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
 
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint;

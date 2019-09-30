@@ -43,7 +43,7 @@ pub fn open_raw_socket_arp() -> io::Result<i32> {
     unsafe {
         // man 2 socket
         // returns a file descriptor or -1 if error.
-        match libc::socket(AF_PACKET, SOCK_RAW, ETH_P_ARP.to_be() as i32) {
+        match socket(AF_PACKET, SOCK_RAW, ETH_P_ARP.to_be() as i32) {
             -1 => Err(io::Error::last_os_error()),
             fd => Ok(fd),
         }
