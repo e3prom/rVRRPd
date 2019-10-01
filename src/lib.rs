@@ -41,7 +41,7 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
 // linux os support
 #[cfg(target_os = "linux")]
-use os::linux::libc::{open_raw_socket_fd};
+use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
 
 // finite state machine
 mod fsm;
@@ -283,6 +283,11 @@ impl VirtualRouter {
     }
 }
 
+/// Packet Header (metadata) Structure
+struct PktHdr {
+    in_ifidx: i32,
+}
+
 // setup_signal_handler function
 /// Setup a signal handler for SIGINT or SIGTERM signals
 fn setup_signal_handler() -> Arc<AtomicBool> {
@@ -350,7 +355,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                 // Block on receiving IP packets
                 match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
-                    Ok(len) => filter_vrrp_pkt(sockfd, sockaddr, &pkt_buf[0..len]),
+                    Ok(len) => {
+                        let pkt_hdr = PktHdr {
+                            in_ifidx: sockaddr.sll_ifindex,
+                        };
+                        filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                    }
                     Err(e) => return Err(e),
                 }
             }
@@ -575,7 +585,10 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // Block on receiving IP packets
                 match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                     Ok(len) => {
-                        match verify_vrrp_pkt(sockfd, sockaddr, &pkt_buf[0..len], &vrouters, &debug)
+                        let pkt_hdr = PktHdr {
+                            in_ifidx: sockaddr.sll_ifindex,
+                        };
+                        match verify_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len], &vrouters, &debug)
                         {
                             Some((ifindex, vrid, ipsrc, advert_prio)) => {
                                 handle_vrrp_advert(
@@ -601,41 +614,11 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
     }
 }
 
-// recv_ip_pkts() function
-/// Receive IP packets
-fn recv_ip_pkts(sockfd: i32, sockaddr: &mut sockaddr_ll, buf: &mut [u8]) -> io::Result<usize> {
-    // stack variables
-    let len: isize;
-    let mut addr_buf_len: socklen_t = mem::size_of::<sockaddr_ll>() as socklen_t;
-
-    unsafe {
-        // unsafe transmut of sockaddr_ll to a sockaddr type
-        let addr_ptr: *mut sockaddr = mem::transmute::<*mut sockaddr_ll, *mut sockaddr>(sockaddr);
-        // unsafe call to libc's recvfrom (man 2 recvfrom)
-        // returns length of message, -1 if error
-        len = match recvfrom(
-            sockfd,                          // socket file descriptor
-            buf.as_mut_ptr() as *mut c_void, // pointer to buffer
-            buf.len(),                       // buffer length
-            0,                               // flags
-            addr_ptr as *mut sockaddr,       // pointer to source address
-            &mut addr_buf_len,               // address buffer length
-        ) {
-            -1 => {
-                return Err(io::Error::last_os_error());
-            }
-            len => len,
-        }
-    }
-
-    Ok(len as usize)
-}
-
 // verify_vrrp_pkt() function
 /// Verify VRRPv2 ADVERTISEMENT packets (as per RFC3768 7.1)
 fn verify_vrrp_pkt(
     _sockfd: i32,
-    sockaddr: sockaddr_ll,
+    pkt_hdr: PktHdr,
     packet: &[u8],
     vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
     debug: &Verbose,
@@ -706,7 +689,7 @@ fn verify_vrrp_pkt(
     // and the local router is not the owner of the destination IP address.
     let ifb_vr = vrouters.iter().find(|&v| {
         let v = v.read().unwrap();
-        (v.parameters.ifindex() == sockaddr.sll_ifindex)
+        (v.parameters.ifindex() == pkt_hdr.in_ifidx)
             && (v.parameters.vrid() == *vrrp_pkt.vrid())
     });
     match ifb_vr {
@@ -913,7 +896,7 @@ fn handle_vrrp_advert(
 
 // filter_vrrp_pkt() function
 /// Filter VRRPv2 packets for sniffing mode
-fn filter_vrrp_pkt(sockfd: i32, _sockaddr: sockaddr_ll, packet: &[u8]) {
+fn filter_vrrp_pkt(sockfd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
     // ignore packets that are way too short (plus auth. data. field)
     if packet.len() < (mem::size_of::<VRRPpkt>() + 8) {
         return;

@@ -157,6 +157,36 @@ pub fn open_raw_socket_fd() -> io::Result<i32> {
     }
 }
 
+// recv_ip_pkts() function
+/// Receive IP packets
+pub fn recv_ip_pkts(sockfd: i32, sockaddr: &mut sockaddr_ll, buf: &mut [u8]) -> io::Result<usize> {
+    // stack variables
+    let len: isize;
+    let mut addr_buf_len: socklen_t = mem::size_of::<sockaddr_ll>() as socklen_t;
+
+    unsafe {
+        // unsafe transmut of sockaddr_ll to a sockaddr type
+        let addr_ptr: *mut sockaddr = mem::transmute::<*mut sockaddr_ll, *mut sockaddr>(sockaddr);
+        // unsafe call to libc's recvfrom (man 2 recvfrom)
+        // returns length of message, -1 if error
+        len = match recvfrom(
+            sockfd,                          // socket file descriptor
+            buf.as_mut_ptr() as *mut c_void, // pointer to buffer
+            buf.len(),                       // buffer length
+            0,                               // flags
+            addr_ptr as *mut sockaddr,       // pointer to source address
+            &mut addr_buf_len,               // address buffer length
+        ) {
+            -1 => {
+                return Err(io::Error::last_os_error());
+            }
+            len => len,
+        }
+    }
+
+    Ok(len as usize)
+}
+
 // c_ifnametoindex() function
 /// see 'man 3 if_nametoindex'
 pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
