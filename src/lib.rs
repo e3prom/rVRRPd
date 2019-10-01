@@ -179,13 +179,18 @@ impl VirtualRouter {
         iftype: IfTypes,
         vif_name: String,
     ) -> io::Result<VirtualRouter> {
+        // initialize ifindex
+        let mut ifindex = -1;
+        
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
-        // get ifindex from interface name
-        let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
-            Ok(i) => i as i32,
-            Err(e) => return Err(e),
-        };
+        {
+            // get ifindex from interface name
+            ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
+                Ok(i) => i as i32,
+                Err(e) => return Err(e),
+            };
+        }
         // END Linux specific interface handling
 
         // create new IPv4 addresses vector
@@ -284,8 +289,18 @@ impl VirtualRouter {
 }
 
 /// Packet Header (metadata) Structure
+///
+/// Holds operating systems independant metadata of incoming frames/packets.
 struct PktHdr {
     in_ifidx: i32,
+}
+
+/// Packet Header Implementation
+impl PktHdr {
+    // new() method
+    fn new() -> PktHdr {
+        PktHdr { in_ifidx: -1 }
+    }
 }
 
 // setup_signal_handler function
@@ -331,9 +346,11 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let iface = CString::new(iface.as_bytes() as &[u8]).unwrap();
             // --- Linux specific interface handling
             #[cfg(target_os = "linux")]
-            match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
-                Err(e) => return Err(e),
-                _ => {}
+            {
+                match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                    Err(e) => return Err(e),
+                    _ => {}
+                }
             }
             // END Linux specific interface handling
 
@@ -347,18 +364,25 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 if shutdown.load(Ordering::Relaxed) {
                     // --- Linux specific interface handling
                     #[cfg(target_os = "linux")]
-                    let _r = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset);
+                    {
+                        let _r =
+                            os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset);
+                    }
+                    // END Linux specific interface handling
                     println!("Exiting...");
                     std::process::exit(0);
-                    // END Linux specific interface handling
                 }
 
                 // Block on receiving IP packets
                 match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                     Ok(len) => {
-                        let pkt_hdr = PktHdr {
-                            in_ifidx: sockaddr.sll_ifindex,
-                        };
+                        // create and initialize pkg_hdr
+                        let mut pkt_hdr = PktHdr::new();
+                        // set inbound interface's ifindex (Linux only)
+                        #[cfg(target_os = "linux")]
+                        {
+                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                        }
                         filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
                     }
                     Err(e) => return Err(e),
@@ -503,9 +527,11 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                 // --- Linux specific interface handling
                 #[cfg(target_os = "linux")]
-                match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
-                    Err(e) => return Err(e),
-                    _ => {}
+                {
+                    match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                        Err(e) => return Err(e),
+                        _ => {}
+                    }
                 }
                 // END Linux specific interface handling
             }
@@ -585,9 +611,13 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // Block on receiving IP packets
                 match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                     Ok(len) => {
-                        let pkt_hdr = PktHdr {
-                            in_ifidx: sockaddr.sll_ifindex,
-                        };
+                        // create and initialize pkg_hdr
+                        let mut pkt_hdr = PktHdr::new();
+                        // set inbound interface's ifindex (Linux only)
+                        #[cfg(target_os = "linux")]
+                        {
+                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                        }
                         match verify_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len], &vrouters, &debug)
                         {
                             Some((ifindex, vrid, ipsrc, advert_prio)) => {
@@ -689,8 +719,7 @@ fn verify_vrrp_pkt(
     // and the local router is not the owner of the destination IP address.
     let ifb_vr = vrouters.iter().find(|&v| {
         let v = v.read().unwrap();
-        (v.parameters.ifindex() == pkt_hdr.in_ifidx)
-            && (v.parameters.vrid() == *vrrp_pkt.vrid())
+        (v.parameters.ifindex() == pkt_hdr.in_ifidx) && (v.parameters.vrid() == *vrrp_pkt.vrid())
     });
     match ifb_vr {
         // if a virtual router exists for this interface / VRID pair:

@@ -1050,7 +1050,6 @@ fn get_mac_addresses(
     // TODO
     [0, 0, 0, 0, 0, 0]
     // END FreeBSD specific interface type handling
-
 }
 
 // set_mac_addresses() function
@@ -1066,10 +1065,12 @@ fn set_mac_addresses(
 
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
-    // set mac address
-    match os::linux::netdev::set_mac_addr(sockfd, &ifname, mac, debug) {
-        Err(e) => eprintln!("error(mac): error while setting mac address: {}", e),
-        _ => {}
+    {
+        // set mac address
+        match os::linux::netdev::set_mac_addr(sockfd, &ifname, mac, debug) {
+            Err(e) => eprintln!("error(mac): error while setting mac address: {}", e),
+            _ => {}
+        }
     }
     // END Linux specific interface type handling
 }
