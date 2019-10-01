@@ -384,33 +384,35 @@ pub fn fsm_run(
 
                             // --- Linux specific interface tyoe handling
                             #[cfg(target_os = "linux")]
-                            // setup MAC address or virtual interface
-                            match vr.parameters.iftype {
-                                // if vr's interface is of type macvlan
-                                IfTypes::macvlan => {
-                                    // create macvlan interface
-                                    match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
-                                        Some((vif_idx, vif_name)) => {
-                                            // store the virtual interface's index
-                                            vr.parameters.vif_idx = vif_idx;
-                                            // save master interface to vif_name
-                                            vr.parameters.vif_name =
-                                                vr.parameters.interface.clone();
-                                            // change current vr's interface to the virtual interface
-                                            vr.parameters.interface = vif_name;
-                                            // save vif interface mac
-                                            vr.parameters.ifmac =
-                                                get_mac_addresses(sockfd, &vr, debug);
-                                        }
-                                        // if it failed for some reasons, do not change vr's interface
-                                        None => (),
-                                    };
-                                }
-                                _ => {
-                                    // save vr's interface mac (old)
-                                    vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
-                                    // set virtual router's MAC address
-                                    set_mac_addresses(sockfd, &vr, vmac, debug);
+                            {
+                                // setup MAC address or virtual interface
+                                match vr.parameters.iftype {
+                                    // if vr's interface is of type macvlan
+                                    IfTypes::macvlan => {
+                                        // create macvlan interface
+                                        match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                            Some((vif_idx, vif_name)) => {
+                                                // store the virtual interface's index
+                                                vr.parameters.vif_idx = vif_idx;
+                                                // save master interface to vif_name
+                                                vr.parameters.vif_name =
+                                                    vr.parameters.interface.clone();
+                                                // change current vr's interface to the virtual interface
+                                                vr.parameters.interface = vif_name;
+                                                // save vif interface mac
+                                                vr.parameters.ifmac =
+                                                    get_mac_addresses(sockfd, &vr, debug);
+                                            }
+                                            // if it failed for some reasons, do not change vr's interface
+                                            None => (),
+                                        };
+                                    }
+                                    _ => {
+                                        // save vr's interface mac (old)
+                                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                                        // set virtual router's MAC address
+                                        set_mac_addresses(sockfd, &vr, vmac, debug);
+                                    }
                                 }
                             }
                             // END Linux specific interface type handling
@@ -915,40 +917,42 @@ fn set_ip_addresses(
 
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
-    // set virtual ip address according to the network driver in use
-    match vr.parameters.netdrv {
-        NetDrivers::ioctl => {
-            if let Err(e) =
-                os::linux::netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx])
-            {
-                eprintln!(
-                    "error(ip): error while assigning IP address on interface {:?}: {}",
-                    &ifname, e
-                );
+    {
+        // set virtual ip address according to the network driver in use
+        match vr.parameters.netdrv {
+            NetDrivers::ioctl => {
+                if let Err(e) =
+                    os::linux::netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx])
+                {
+                    eprintln!(
+                        "error(ip): error while assigning IP address on interface {:?}: {}",
+                        &ifname, e
+                    );
+                }
             }
-        }
-        NetDrivers::libnl => {
-            print_debug(
-                debug,
-                DEBUG_LEVEL_HIGH,
-                DEBUG_SRC_IP,
-                format!(
+            NetDrivers::libnl => {
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_HIGH,
+                    DEBUG_SRC_IP,
+                    format!(
                     "setting up IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
                     &ifname, ifindex
                 ),
-            );
-            if let Err(e) = os::linux::libnl::set_ip_address(
-                ifindex,
-                &ifname,
-                addrs[idx],
-                netmasks[idx],
-                Operation::Add,
-                debug,
-            ) {
-                eprintln!(
-                    "error(ip): error while assigning IP address on interface {:?}: {}",
-                    &ifname, e
                 );
+                if let Err(e) = os::linux::libnl::set_ip_address(
+                    ifindex,
+                    &ifname,
+                    addrs[idx],
+                    netmasks[idx],
+                    Operation::Add,
+                    debug,
+                ) {
+                    eprintln!(
+                        "error(ip): error while assigning IP address on interface {:?}: {}",
+                        &ifname, e
+                    );
+                }
             }
         }
     }
@@ -989,33 +993,35 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
 
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
-    // delete virtual ip address according to the network driver in use
-    match vr.parameters.netdrv {
-        NetDrivers::libnl => {
-            print_debug(
-                debug,
-                DEBUG_LEVEL_HIGH,
-                DEBUG_SRC_IP,
-                format!(
-                    "removing IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
-                    &ifname, vr.parameters.ifindex
-                ),
-            );
-            if let Err(e) = os::linux::libnl::set_ip_address(
-                vr.parameters.ifindex,
-                &ifname,
-                vr.parameters.vip,
-                netmasks[0],
-                Operation::Rem,
-                debug,
-            ) {
-                eprintln!(
-                    "error(ip): error while removing IP address on interface {:?}: {}",
-                    &ifname, e
+    {
+        // delete virtual ip address according to the network driver in use
+        match vr.parameters.netdrv {
+            NetDrivers::libnl => {
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_HIGH,
+                    DEBUG_SRC_IP,
+                    format!(
+                        "removing IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
+                        &ifname, vr.parameters.ifindex
+                    ),
                 );
+                if let Err(e) = os::linux::libnl::set_ip_address(
+                    vr.parameters.ifindex,
+                    &ifname,
+                    vr.parameters.vip,
+                    netmasks[0],
+                    Operation::Rem,
+                    debug,
+                ) {
+                    eprintln!(
+                        "error(ip): error while removing IP address on interface {:?}: {}",
+                        &ifname, e
+                    );
+                }
             }
+            _ => {}
         }
-        _ => {}
     }
     // END Linux specific interface type handling
 }
@@ -1032,15 +1038,19 @@ fn get_mac_addresses(
 
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
-    // get mac address of interface
-    match os::linux::netdev::get_mac_addr(sockfd, &ifname, debug) {
-        Ok(mac) => mac,
-        Err(e) => {
-            eprintln!(
-                "error(mac): error while getting MAC address on interface {:?}: {}",
-                ifname, e
-            );
-            [0, 0, 0, 0, 0, 0]
+    {
+        {
+            // get mac address of interface
+            match os::linux::netdev::get_mac_addr(sockfd, &ifname, debug) {
+                Ok(mac) => mac,
+                Err(e) => {
+                    eprintln!(
+                        "error(mac): error while getting MAC address on interface {:?}: {}",
+                        ifname, e
+                    );
+                    [0, 0, 0, 0, 0, 0]
+                }
+            }
         }
     }
     // END Linux specific interface type handling
@@ -1097,10 +1107,11 @@ fn set_ip_routes(
             for st in r {
                 // --- Linux specific interface tyoe handling
                 #[cfg(target_os = "linux")]
-                // add route acccording to the network driver in use
-                match vr.parameters.netdrv {
-                    NetDrivers::ioctl => {
-                        print_debug(
+                {
+                    // add route acccording to the network driver in use
+                    match vr.parameters.netdrv {
+                        NetDrivers::ioctl => {
+                            print_debug(
                                 debug,
                                 DEBUG_LEVEL_HIGH,
                                 DEBUG_SRC_IP,
@@ -1109,26 +1120,26 @@ fn set_ip_routes(
                                 &ifname, vr.parameters.ifindex
                             ),
                             );
-                        if let Err(e) = os::linux::netdev::set_ip_route(
-                            sockfd,
-                            &vr.parameters.interface,
-                            st.route(),
-                            st.mask(),
-                            st.nh(),
-                            st.metric(),
-                            st.mtu(),
-                            &op,
-                            debug,
-                        ) {
-                            eprintln!(
-                                "error(route): cannot add or delete route {:?}: {}",
+                            if let Err(e) = os::linux::netdev::set_ip_route(
+                                sockfd,
+                                &vr.parameters.interface,
                                 st.route(),
-                                e
-                            );
+                                st.mask(),
+                                st.nh(),
+                                st.metric(),
+                                st.mtu(),
+                                &op,
+                                debug,
+                            ) {
+                                eprintln!(
+                                    "error(route): cannot add or delete route {:?}: {}",
+                                    st.route(),
+                                    e
+                                );
+                            }
                         }
-                    }
-                    NetDrivers::libnl => {
-                        print_debug(
+                        NetDrivers::libnl => {
+                            print_debug(
                                 debug,
                                 DEBUG_LEVEL_HIGH,
                                 DEBUG_SRC_IP,
@@ -1137,22 +1148,23 @@ fn set_ip_routes(
                                 &ifname, vr.parameters.ifindex
                             ),
                             );
-                        if let Err(e) = os::linux::libnl::set_ip_route(
-                            sockfd,
-                            &vr.parameters.interface,
-                            st.route(),
-                            st.mask(),
-                            st.nh(),
-                            st.metric(),
-                            st.mtu(),
-                            &op,
-                            debug,
-                        ) {
-                            eprintln!(
-                                "error(route): cannot add or delete route {:?}: {}",
+                            if let Err(e) = os::linux::libnl::set_ip_route(
+                                sockfd,
+                                &vr.parameters.interface,
                                 st.route(),
-                                e
-                            );
+                                st.mask(),
+                                st.nh(),
+                                st.metric(),
+                                st.mtu(),
+                                &op,
+                                debug,
+                            ) {
+                                eprintln!(
+                                    "error(route): cannot add or delete route {:?}: {}",
+                                    st.route(),
+                                    e
+                                );
+                            }
                         }
                     }
                 }
