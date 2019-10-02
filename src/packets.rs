@@ -364,30 +364,6 @@ fn fbsd_raw_sendto(
     vr: &RwLockWriteGuard<VirtualRouter>,
     frame: &mut Vec<u8>,
 ) -> io::Result<()> {
-    // construct sa of sockaddr type
-    let mut sa = libc::sockaddr {
-        sin_family: libc::AF_INET as u16,
-        sin_port: 0, // NULL with SOCK_RAW
-        sll_protocol: ETHER_P_IP.to_be(),
-        sll_ifindex: vr.parameters.ifindex(),
-        sll_hatype: 0,
-        sll_pkttype: 0,
-        sll_halen: 0,
-        sll_addr: [0; 8],
-    };
-
-    unsafe {
-        // unsafe call to sendto()
-        match libc::sendto(
-            sockfd,
-            &mut frame[..] as *mut _ as *const libc::c_void,
-            mem::size_of_val(&frame[..]),
-            0,
-            sa as *mut _ as *const libc::c_void,
-            mem::size_of_val(&sa) as u32,
-        ) {
-            -1 => Err(io::Error::last_os_error()),
-            _ => Ok(()),
-        }
-    }
+    // TODO
+    Ok(())
 }

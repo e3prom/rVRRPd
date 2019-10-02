@@ -42,6 +42,8 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 // operating system specific support
 #[cfg(target_os = "linux")]
 use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
+#[cfg(target_os = "freebsd")]
+use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf};
 
 // finite state machine
 mod fsm;
@@ -339,15 +341,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // setup signal handler
             let shutdown = setup_signal_handler();
 
-            // open raw socket
-            #[cfg(target_os = "linux")]
-            let sockfd = open_raw_socket_fd()?;
-
             // get interface name
             let iface = cfg.iface();
 
-            // set promiscuous flag on interface
+            // create iface CString
             let iface = CString::new(iface.as_bytes() as &[u8]).unwrap();
+            
             // --- Linux specific interface handling
             #[cfg(target_os = "linux")]
             {
@@ -357,6 +356,15 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 }
             }
             // END Linux specific interface handling
+
+            // open raw socket (Linux)
+            #[cfg(target_os = "linux")]
+            let sockfd = open_raw_socket_fd()?;
+            // create and setup Berkely Packet Filter (FreeBSD)
+            #[cfg(target_os = "freebsd")]
+            let bpf_fd = bpf_open_device()?;
+            bpf_bind_device(bpf_fd, &iface);
+            bpf_setup_buf(bpf_fd);
 
             // print information
             println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
