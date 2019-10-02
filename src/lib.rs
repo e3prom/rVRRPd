@@ -39,7 +39,7 @@ use packets::VRRPpkt;
 mod os;
 use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
-// linux os support
+// operating system specific support
 #[cfg(target_os = "linux")]
 use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
 
@@ -181,7 +181,7 @@ impl VirtualRouter {
     ) -> io::Result<VirtualRouter> {
         // initialize ifindex
         let mut ifindex = -1;
-        
+
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
         {
@@ -326,7 +326,10 @@ fn setup_signal_handler() -> Arc<AtomicBool> {
 /// Library entry point for Virtual Router functions
 pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
     // initialize sockaddr and packet buffer
+    #[cfg(target_os = "linux")]
     let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
+
+    // initialize packet buffer
     let mut pkt_buf: [u8; 1024] = [0; 1024];
 
     // read operation mode
@@ -337,6 +340,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let shutdown = setup_signal_handler();
 
             // open raw socket
+            #[cfg(target_os = "linux")]
             let sockfd = open_raw_socket_fd()?;
 
             // get interface name
@@ -373,19 +377,22 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     std::process::exit(0);
                 }
 
-                // Block on receiving IP packets
-                match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
-                    Ok(len) => {
-                        // create and initialize pkg_hdr
-                        let mut pkt_hdr = PktHdr::new();
-                        // set inbound interface's ifindex (Linux only)
-                        #[cfg(target_os = "linux")]
-                        {
-                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                // Block on receiving IP packets (Linux)
+                #[cfg(target_os = "linux")]
+                {
+                    match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
+                        Ok(len) => {
+                            // create and initialize pkg_hdr
+                            let mut pkt_hdr = PktHdr::new();
+                            // set inbound interface's ifindex (Linux only)
+                            #[cfg(target_os = "linux")]
+                            {
+                                pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                            }
+                            filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
                         }
-                        filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                        Err(e) => return Err(e),
                     }
-                    Err(e) => return Err(e),
                 }
             }
         }
@@ -515,6 +522,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             }
 
             // open raw socket
+            #[cfg(target_os = "linux")]
             let sockfd = open_raw_socket_fd()?;
 
             // set vr's interface(s) in promiscuous mode
@@ -608,32 +616,40 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     std::process::exit(0);
                 }
 
-                // Block on receiving IP packets
-                match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
-                    Ok(len) => {
-                        // create and initialize pkg_hdr
-                        let mut pkt_hdr = PktHdr::new();
-                        // set inbound interface's ifindex (Linux only)
-                        #[cfg(target_os = "linux")]
-                        {
-                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
-                        }
-                        match verify_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len], &vrouters, &debug)
-                        {
-                            Some((ifindex, vrid, ipsrc, advert_prio)) => {
-                                handle_vrrp_advert(
-                                    &vrouters,
-                                    ifindex,
-                                    vrid,
-                                    ipsrc,
-                                    advert_prio,
-                                    &debug,
-                                );
+                // Block on receiving IP packets (Linux)
+                #[cfg(target_os = "linux")]
+                {
+                    match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
+                        Ok(len) => {
+                            // create and initialize pkg_hdr
+                            let mut pkt_hdr = PktHdr::new();
+                            // set inbound interface's ifindex (Linux only)
+                            #[cfg(target_os = "linux")]
+                            {
+                                pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
                             }
-                            _ => (),
+                            match verify_vrrp_pkt(
+                                sockfd,
+                                pkt_hdr,
+                                &pkt_buf[0..len],
+                                &vrouters,
+                                &debug,
+                            ) {
+                                Some((ifindex, vrid, ipsrc, advert_prio)) => {
+                                    handle_vrrp_advert(
+                                        &vrouters,
+                                        ifindex,
+                                        vrid,
+                                        ipsrc,
+                                        advert_prio,
+                                        &debug,
+                                    );
+                                }
+                                _ => (),
+                            }
                         }
+                        Err(e) => return Err(e),
                     }
-                    Err(e) => return Err(e),
                 }
             }
         }
