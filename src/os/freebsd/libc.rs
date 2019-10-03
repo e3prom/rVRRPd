@@ -7,17 +7,25 @@ use libc::{read, c_void};
 // read_bpf_buf() function
 //
 /// Receive IP Packet
-pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8] ) -> io::Result<usize> {
+pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<usize> {
     // declare len
     let len: isize;
 
     // read from BPF device (unsafe)
     unsafe {
-        let len = read(bpf_fd, buf.as_ptr() as *mut c_void, buf.len());
+        len = match read(bpf_fd, buf.as_ptr() as *mut c_void, buf_size) {
+            -1 => {
+                println!("DEBUG: error while reading BPF buffer on fd {}, buffer length {}", bpf_fd, buf.len());
+                return Err(io::Error::last_os_error());
+            }
+            len => len,
+        }
     } 
 
     // debug
-    println!("DEBUG Frame/Packet: {:?}", buf);
+    if len > 0 {  
+        println!("DEBUG: dump frame from BPF device: {:X?}", buf);
+    } 
 
     // return the length of read buffer
     Ok(len as usize)

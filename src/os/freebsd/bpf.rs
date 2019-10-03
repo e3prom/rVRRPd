@@ -11,9 +11,10 @@ use libc::{c_char, sockaddr, IF_NAMESIZE, c_ulong, c_uint};
 use std::ffi::{CString};
 
 // Ifreq redifinition
+#[repr(C)]
 struct Ifreq {
     ifr_name: [u8; IF_NAMESIZE],
-    ifru_addr: sockaddr,
+    // ifru_addr: sockaddr,
 }
 
 // BPF constants (until added to rust's libc)
@@ -43,9 +44,6 @@ const SIOCGIFADDR: c_ulong = 0xc0206921;
 pub fn bpf_open_device() -> io::Result<(i32)> {
     // find an available BPF device
     for i in 0..99 {
-        // print information
-        println!("Opening device /dev/bpf{}", i);
-
         // create bpf device name slice
         let bpf_fmtstr = format!("/dev/bpf{}", i);
         let bpf_dev = CString::new(bpf_fmtstr).unwrap();
@@ -58,12 +56,13 @@ pub fn bpf_open_device() -> io::Result<(i32)> {
         buf.clone_from_slice(bpf_dev_slice);
 
         // open BPF device
-        println!("Opening device /dev/bpf{}", i);
+        println!("DEBUG: opening device /dev/bpf{}", i);
         let res = unsafe {libc::open(&buf as *const i8, libc::O_RDWR)};
 
         // check returned value
         // if negative, an error occured, continue
         // if positive, return the file descriptor
+        //println!("DEBUG: open() for /dev/bpf{}, returned: {}", i, res);
         if res >= 0 {
             return Ok(res);
         }
@@ -93,40 +92,55 @@ pub fn bpf_bind_device(bpf_fd: i32, interface: &CString) -> io::Result<()> {
             let mut buf = [0u8; IF_NAMESIZE];
             buf.clone_from_slice(ifname_slice); 
             buf
-        },
-        ifru_addr: sockaddr {
-            sa_family: 0,
-            sa_data: [0; 14], 
-            sa_len: 0,
-        },
+        }
+        // ifru_addr: sockaddr {
+        //     sa_family: 0,
+        //     sa_data: [0; 14],
+        //     sa_len: 0,
+        // },
     };
 
     // ioctl
+    println!("DEBUG: binding BPF device with fd {} to interface {:?}", bpf_fd, interface);
     match unsafe { libc::ioctl(bpf_fd, BIOCSETIF, &ifbound) } {
-        r if r > 0 => Ok(()),
-        _ => Err(io::Error::last_os_error()),
+        r if r >= 0 => Ok(()),
+        e => {
+            println!("DEBUG: error while binding BPF device, fd {}, error no: {}", bpf_fd, e);
+            return Err(io::Error::last_os_error());
+        }
     }
 }
 
 // bpf_setup_buf() function
 //
 /// Setup BPF device buffer and features
-pub fn bpf_setup_buf(bpf_fd: i32) -> io::Result<()> {
-    // create and initialize buffer_length
-    let buf_len = 1;
+/// Return size of BPF buffer after setup
+pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
+    // initialize local buf_len with current buffer size
+    let mut buf_len = pkt_buf.len();
 
     // activa1e immediate mode (ioctl)
     match unsafe { libc::ioctl(bpf_fd, BIOCIMMEDIATE, &buf_len) } {
-        r if r < 0 => return Err(io::Error::last_os_error()),
-        _ => {}
-    }
+        e if e < 0 => {
+            println!("DEBUG: error while setting immediate mode on BPF device, fd {}, error no: {}", bpf_fd, e);
+            return Err(io::Error::last_os_error());
+        }
+        _ => {
+            println!("DEBUG: immediate mode set on BPF device, fd {}", bpf_fd);
+        }
+    };
 
     // set buffer length (ioctl)
-    match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len) } {
-        r if r < 0 => return Err(io::Error::last_os_error()),
-        _ => {}
+    match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
+        e if e < 0 => {
+            println!("DEBUG: error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+            return Err(io::Error::last_os_error());
+        }
+        _ => {
+            println!("DEBUG: buffer length set on BPF device, fd {}, len {} ", bpf_fd, pkt_buf.len());
+        }
     }
 
-    // return Ok(()) if everything went successful
-    Ok(())
+    // return Ok(buf_len) if everything went successful
+    Ok(buf_len)
 }

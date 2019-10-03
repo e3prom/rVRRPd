@@ -329,9 +329,6 @@ fn setup_signal_handler() -> Arc<AtomicBool> {
 ///
 /// Library entry point for Virtual Router functions
 pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
-    // initialize packet buffer
-    let mut pkt_buf: [u8; 1024] = [0; 1024];
-
     // read operation mode
     match cfg.mode {
         // sniffer mode
@@ -348,6 +345,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // --- Linux specific handling
             #[cfg(target_os = "linux")]
             {
+                // initialize packet buffer
+                let mut pkt_buf: [u8; 1024] = [0; 1024];
+
                 // open raw socket (Linux)
                 let sockfd = open_raw_socket_fd()?;
 
@@ -392,10 +392,13 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
             // --- FreeBSD specific handling
             #[cfg(target_os = "freebsd")] { 
+                // initialize packet buffer
+                let mut pkt_buf: [u8; 4096] = [0; 4096];
+
                 // create and setup Berkely Packet Filter (FreeBSD)
                 let bpf_fd = bpf_open_device()?;
                 bpf_bind_device(bpf_fd, &iface);
-                bpf_setup_buf(bpf_fd);
+                let buf_size = bpf_setup_buf(bpf_fd, &mut pkt_buf)?;
 
                 // print information
                 println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
@@ -410,15 +413,16 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     }
 
                     // Block on receiving IP packets (FreeBSD)
-                    match read_bpf_buf(bpf_fd, &mut pkt_buf) {
-                        Ok(len) => {
+                    match read_bpf_buf(bpf_fd, &mut pkt_buf, buf_size) {
+                        Ok(len) if len > 0 => {
                         //     // create and initialize pkg_hdr
                         //     let mut pkt_hdr = PktHdr::new();
                         //     // set inbound interface's ifindex (FreeBSD)
                         //     pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
                         //     filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
-                            println!("DEBUG: read buf length: {}", len);
-                        }
+                            println!("DEBUG: read {} bytes on BPF buffer", len);
+                        },
+                        Ok(_) => (),
                         Err(e) => return Err(e),
                     }
                 }
