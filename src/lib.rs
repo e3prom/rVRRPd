@@ -361,48 +361,72 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             #[cfg(target_os = "linux")]
             let sockfd = open_raw_socket_fd()?;
             // create and setup Berkely Packet Filter (FreeBSD)
-            #[cfg(target_os = "freebsd")]
-            let bpf_fd = bpf_open_device()?;
-            bpf_bind_device(bpf_fd, &iface);
-            bpf_setup_buf(bpf_fd);
+            #[cfg(target_os = "freebsd")] { 
+                let bpf_fd = bpf_open_device()?;
+                bpf_bind_device(bpf_fd, &iface);
+                bpf_setup_buf(bpf_fd);
+            } 
 
             // print information
             println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
 
-            // starts loop
-            loop {
-                // check if global shutdown variable is set
-                // if set, then call set_if_promiscuous() to remove promisc mode on interface
-                if shutdown.load(Ordering::Relaxed) {
-                    // --- Linux specific interface handling
-                    #[cfg(target_os = "linux")]
-                    {
-                        let _r =
-                            os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset);
+            // --- Linux specific handling
+            #[cfg(target_os = "linux")] {
+                // starts loop
+                loop {
+                    // check if global shutdown variable is set
+                    // if set, then call set_if_promiscuous() to remove promisc mode on interface
+                    if shutdown.load(Ordering::Relaxed) {
+                            let _r =
+                                os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Unset);
+                        
+                        println!("Exiting...");
+                        std::process::exit(0);
                     }
-                    // END Linux specific interface handling
-                    println!("Exiting...");
-                    std::process::exit(0);
-                }
 
-                // Block on receiving IP packets (Linux)
-                #[cfg(target_os = "linux")]
-                {
-                    match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
-                        Ok(len) => {
-                            // create and initialize pkg_hdr
-                            let mut pkt_hdr = PktHdr::new();
-                            // set inbound interface's ifindex (Linux only)
-                            #[cfg(target_os = "linux")]
-                            {
-                                pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                    // Block on receiving IP packets (Linux)
+                        match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
+                            Ok(len) => {
+                                // create and initialize pkg_hdr
+                                let mut pkt_hdr = PktHdr::new();
+                                // set inbound interface's ifindex (Linux only)
+                                    pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                                filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
                             }
-                            filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                            Err(e) => return Err(e),
                         }
-                        Err(e) => return Err(e),
                     }
-                }
-            }
+            } 
+            // END Linux specific handling
+
+            // --- FreeBSD specific handling
+            #[cfg(target_os = "freebsd")] {
+                // starts loop
+                loop {
+                    // check if global shutdown variable is set
+                    // if set, then call set_if_promiscuous() to remove promisc mode on interface
+                    if shutdown.load(Ordering::Relaxed) {
+                            let _r =
+                                os::freebsd::bpf::set_if_promiscuous(bpf_fd, &iface, PflagOp::Unset);
+                        
+                        println!("Exiting...");
+                        std::process::exit(0);
+                    }
+
+                    // Block on receiving IP packets (FreeBSD)
+                        match recv_ip_pkts(bpf_fd, &mut sockaddr, &mut pkt_buf) {
+                            Ok(len) => {
+                                // create and initialize pkg_hdr
+                                let mut pkt_hdr = PktHdr::new();
+                                // set inbound interface's ifindex (FreeBSD)
+                                 pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
+                                filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                            }
+                            Err(e) => return Err(e),
+                        }
+                    }
+            } 
+            // END FreeBSD specific handling
         }
         // virtual router modes
         1 | 2 => {
@@ -529,43 +553,42 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 }
             }
 
-            // open raw socket
-            #[cfg(target_os = "linux")]
-            let sockfd = open_raw_socket_fd()?;
+            // --- Linux specific handling
+            #[cfg(target_os = "linux")] {  
+                // open raw socket
+                let sockfd = open_raw_socket_fd()?;
 
-            // set vr's interface(s) in promiscuous mode
-            for vr in &vrouters {
-                // acquire read lock
-                let vr = vr.read().unwrap();
+                // set vr's interface(s) in promiscuous mode
+                for vr in &vrouters {
+                    // acquire read lock
+                    let vr = vr.read().unwrap();
 
-                // convert interface string
-                let iface = CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
+                    // convert interface string
+                    let iface = CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
 
-                // --- Linux specific interface handling
-                #[cfg(target_os = "linux")]
-                {
-                    match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
-                        Err(e) => return Err(e),
-                        _ => {}
-                    }
+                    
+                        match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                            Err(e) => return Err(e),
+                            _ => {}
+                        }
                 }
-                // END Linux specific interface handling
-            }
 
-            // print debugging information
-            print_debug(
-                &debug,
-                DEBUG_LEVEL_EXTENSIVE,
-                DEBUG_SRC_VR,
-                format!("created virtual-router vector - {:?}", vrouters),
-            );
+                // print debugging information
+                print_debug(
+                    &debug,
+                    DEBUG_LEVEL_EXTENSIVE,
+                    DEBUG_SRC_VR,
+                    format!("created virtual-router vector - {:?}", vrouters),
+                );
 
-            // create a pool of threads
-            let mut threads = ThreadPool::new(&vrouters, sockfd, &debug);
+                // create a pool of threads
+                let mut threads = ThreadPool::new(&vrouters, sockfd, &debug);
 
-            // send Startup event to worker threads
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            threads.startup(&vrouters, &debug);
+                // send Startup event to worker threads
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                threads.startup(&vrouters, &debug);
+            } 
+            // END Linux specific handling
 
             loop {
                 // check if global shutdown variable is set
@@ -619,7 +642,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         // END Linux specific interface handling
                     }
                     println!("Exiting...");
+
                     // Manually calling the threads pool desctructor
+                    #[cfg(target_os = "linux")] //tmp
                     threads.drop(&vrouters, &debug);
                     std::process::exit(0);
                 }
