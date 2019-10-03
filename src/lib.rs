@@ -42,9 +42,10 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 // operating system specific support
 #[cfg(target_os = "freebsd")]
 use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf};
+#[cfg(target_os = "freebsd")]
 use os::freebsd::libc::{read_bpf_buf};
 #[cfg(target_os = "linux")]
-use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
+ use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
 
 // finite state machine
 mod fsm;
@@ -678,6 +679,13 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 }
             }
             // END Linux specific handling
+
+            // --- FreeBSD specific handling
+            #[cfg(target_os = "freebsd")] {
+                // tmp
+                Ok(())
+            }
+            // END FreeBSD specific handling
         }
         _ => {
             println!("Unknown operation mode specified.");
