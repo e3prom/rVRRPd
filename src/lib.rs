@@ -42,6 +42,7 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 // operating system specific support
 #[cfg(target_os = "freebsd")]
 use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf};
+use os::freebsd::libc::{read_bpf_buf};
 #[cfg(target_os = "linux")]
 use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
 
@@ -327,10 +328,6 @@ fn setup_signal_handler() -> Arc<AtomicBool> {
 ///
 /// Library entry point for Virtual Router functions
 pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
-    // initialize sockaddr and packet buffer
-    #[cfg(target_os = "linux")]
-    let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
-
     // initialize packet buffer
     let mut pkt_buf: [u8; 1024] = [0; 1024];
 
@@ -353,10 +350,14 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // open raw socket (Linux)
                 let sockfd = open_raw_socket_fd()?;
 
+                // set interface in promiscuous mode
                 match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
                     Err(e) => return Err(e),
                     _ => {}
                 }
+
+                // initialize sockaddr and packet buffer
+                let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
 
                 // print information
                 println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
@@ -389,33 +390,33 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // END Linux specific handling
 
             // --- FreeBSD specific handling
-            #[cfg(target_os = "freebsd")]
-            {
+            #[cfg(target_os = "freebsd")] { 
                 // create and setup Berkely Packet Filter (FreeBSD)
                 let bpf_fd = bpf_open_device()?;
                 bpf_bind_device(bpf_fd, &iface);
                 bpf_setup_buf(bpf_fd);
+
+                // print information
+                println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
 
                 // starts loop
                 loop {
                     // check if global shutdown variable is set
                     // if set, then call set_if_promiscuous() to remove promisc mode on interface
                     if shutdown.load(Ordering::Relaxed) {
-                        let _r =
-                            os::freebsd::bpf::set_if_promiscuous(bpf_fd, &iface, PflagOp::Unset);
-
                         println!("Exiting...");
                         std::process::exit(0);
                     }
 
                     // Block on receiving IP packets (FreeBSD)
-                    match recv_ip_pkts(bpf_fd, &mut sockaddr, &mut pkt_buf) {
+                    match read_bpf_buf(bpf_fd, &mut pkt_buf) {
                         Ok(len) => {
-                            // create and initialize pkg_hdr
-                            let mut pkt_hdr = PktHdr::new();
-                            // set inbound interface's ifindex (FreeBSD)
-                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
-                            filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                        //     // create and initialize pkg_hdr
+                        //     let mut pkt_hdr = PktHdr::new();
+                        //     // set inbound interface's ifindex (FreeBSD)
+                        //     pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
+                        //     filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                            println!("DEBUG: read buf length: {}", len);
                         }
                         Err(e) => return Err(e),
                     }
@@ -554,6 +555,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // open raw socket
                 let sockfd = open_raw_socket_fd()?;
 
+                // initialize sockaddr and packet buffer
+                let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
+
                 // set vr's interface(s) in promiscuous mode
                 for vr in &vrouters {
                     // acquire read lock
@@ -634,7 +638,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         }
                         println!("Exiting...");
 
-                        // Manually calling the threads pool desctructor
+                        // Manually calling the threads pool destructor
                         threads.drop(&vrouters, &debug);
                         std::process::exit(0);
                     }
@@ -644,7 +648,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         Ok(len) => {
                             // create and initialize pkg_hdr
                             let mut pkt_hdr = PktHdr::new();
-                            // set inbound interface's ifindex (Linux only)
+                            // set inbound interface's ifindex (Linux)
                             #[cfg(target_os = "linux")]
                             {
                                 pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
