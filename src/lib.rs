@@ -557,6 +557,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // --- Linux specific handling
             #[cfg(target_os = "linux")]
             {
+                // initialize packet buffer
+                let mut pkt_buf: [u8; 1024] = [0; 1024];
+            
                 // open raw socket
                 let sockfd = open_raw_socket_fd()?;
 
