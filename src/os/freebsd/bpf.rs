@@ -10,13 +10,6 @@ use libc::{c_char, sockaddr, IF_NAMESIZE, c_ulong, c_uint};
 // ffi
 use std::ffi::{CString};
 
-// Ifreq redifinition
-#[repr(C)]
-struct Ifreq {
-    ifr_name: [u8; IF_NAMESIZE],
-    // ifru_addr: sockaddr,
-}
-
 // BPF constants (until added to rust's libc)
 // https://github.com/equal-l2/libc/blob/cf1a3e10fa95a33d8f987e29b8d91e0db91c9cb0/src/unix/bsd/mod.rs
 const BIOCGBLEN: c_ulong = 0x40044266;
@@ -37,6 +30,31 @@ const BIOCGSEESENT: c_ulong  = 0x40044276;
 const BIOCSSEESENT: c_ulong  = 0x80044277;
 const BIOCSDLT: c_ulong = 0x80044278;
 const SIOCGIFADDR: c_ulong = 0xc0206921;
+
+// Ifreq redifinition
+#[repr(C)]
+struct Ifreq {
+    ifr_name: [u8; IF_NAMESIZE],
+    // ifru_addr: sockaddr,
+}
+
+// BPF system structures
+// bpf_ts structure
+// https://github.com/freebsd/freebsd/blob/master/sys/net/bpf.h:202
+#[repr(C)]
+struct bpf_ts {
+    bt_sec: i64,
+    bt_frac: u64,
+}
+
+// bpf_xhdr structure
+#[repr(C)]
+pub struct bpf_xhdr {
+    bh_tstamp: bpf_ts,  // timestamp
+    bh_caplen: u32,     // length of captured pattern
+    bh_datalen: u32,    // length of packet
+    bh_hdrlen: u16,     // length of this structure + alignment padding
+}
 
 // bpf_open_device() function
 //
@@ -77,10 +95,6 @@ pub fn bpf_open_device() -> io::Result<(i32)> {
 //
 /// Bind BPF device to a physical interface 
 pub fn bpf_bind_device(bpf_fd: i32, interface: &CString) -> io::Result<()> {
-    // // create physical interface cstring
-    // let mut ifname = interface;
-    // let ifname = interface.push_str("\0");
-
     let ifname_slice = &mut [0u8; IF_NAMESIZE];
     for (i, b) in interface.as_bytes_with_nul().iter().enumerate() {
         ifname_slice[i] = *b; 

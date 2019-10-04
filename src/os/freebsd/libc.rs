@@ -20,12 +20,7 @@ pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<
             }
             len => len,
         }
-    } 
-
-    // debug
-    if len > 0 {  
-        println!("DEBUG: dump frame from BPF device: {:X?}", buf);
-    } 
+    }
 
     // return the length of read buffer
     Ok(len as usize)

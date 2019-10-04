@@ -41,7 +41,7 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
 // operating system specific support
 #[cfg(target_os = "freebsd")]
-use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf};
+use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf, bpf_xhdr};
 #[cfg(target_os = "freebsd")]
 use os::freebsd::libc::{read_bpf_buf};
 #[cfg(target_os = "linux")]
@@ -375,12 +375,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         std::process::exit(0);
                     }
 
-                    // Block on receiving IP packets (Linux)
+                    // Block on receiving IP packets
                     match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                         Ok(len) => {
                             // create and initialize pkt_hdr
                             let mut pkt_hdr = PktHdr::new();
-                            // set inbound interface's ifindex (Linux only)
+                            // set inbound interface's ifindex
                             pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
                             filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
                         }
@@ -400,6 +400,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 bpf_bind_device(bpf_fd, &iface);
                 let buf_size = bpf_setup_buf(bpf_fd, &mut pkt_buf)?;
 
+                // size of BPF header
+                let bpf_hdrsize = mem::size_of::<bpf_xhdr>();
+
                 // print information
                 println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
 
@@ -412,15 +415,17 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         std::process::exit(0);
                     }
 
-                    // Block on receiving IP packets (FreeBSD)
+                    // Block on receiving IP packets
                     match read_bpf_buf(bpf_fd, &mut pkt_buf, buf_size) {
                         Ok(len) if len > 0 => {
                             // create and initialize pkt_hdr
                             let mut pkt_hdr = PktHdr::new();
-                            // // set inbound interface's ifindex
-                            // pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
+
                             println!("DEBUG: read {} bytes on BPF buffer", len);
-                            filter_vrrp_pkt(bpf_fd, pkt_hdr, &pkt_buf[0..len]);
+                            println!("DEBUG: skipping {} bytes header", bpf_hdrsize);
+
+                            // on FreeBSD we must skip length's of bpf_xhdr struct.
+                            filter_vrrp_pkt(bpf_fd, pkt_hdr, &pkt_buf[bpf_hdrsize..len]);
                         },
                         Ok(_) => (),
                         Err(e) => return Err(e),
@@ -983,6 +988,9 @@ fn handle_vrrp_advert(
 // filter_vrrp_pkt() function
 /// Filter VRRPv2 packets for sniffing mode
 fn filter_vrrp_pkt(fd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
+    // tmp debug
+    println!("DEBUG: BPF frame: {:X?}", packet);
+
     // ignore packets that are way too short (plus auth. data. field)
     if packet.len() < (mem::size_of::<VRRPpkt>() + 8) {
         return;
