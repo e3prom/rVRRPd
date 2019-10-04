@@ -378,7 +378,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     // Block on receiving IP packets (Linux)
                     match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                         Ok(len) => {
-                            // create and initialize pkg_hdr
+                            // create and initialize pkt_hdr
                             let mut pkt_hdr = PktHdr::new();
                             // set inbound interface's ifindex (Linux only)
                             pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
@@ -415,12 +415,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     // Block on receiving IP packets (FreeBSD)
                     match read_bpf_buf(bpf_fd, &mut pkt_buf, buf_size) {
                         Ok(len) if len > 0 => {
-                        //     // create and initialize pkg_hdr
-                        //     let mut pkt_hdr = PktHdr::new();
-                        //     // set inbound interface's ifindex (FreeBSD)
-                        //     pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
-                        //     filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                            // create and initialize pkt_hdr
+                            let mut pkt_hdr = PktHdr::new();
+                            // // set inbound interface's ifindex
+                            // pkt_hdr.in_ifidx = sockaddr.sll_ifindex; // TODO
                             println!("DEBUG: read {} bytes on BPF buffer", len);
+                            filter_vrrp_pkt(bpf_fd, pkt_hdr, &pkt_buf[0..len]);
                         },
                         Ok(_) => (),
                         Err(e) => return Err(e),
@@ -982,7 +982,7 @@ fn handle_vrrp_advert(
 
 // filter_vrrp_pkt() function
 /// Filter VRRPv2 packets for sniffing mode
-fn filter_vrrp_pkt(sockfd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
+fn filter_vrrp_pkt(fd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
     // ignore packets that are way too short (plus auth. data. field)
     if packet.len() < (mem::size_of::<VRRPpkt>() + 8) {
         return;
@@ -1053,12 +1053,12 @@ fn filter_vrrp_pkt(sockfd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
     }
 
     // call show_vrrp_pkt() to handle VRRPv2 packets
-    show_vrrp_pkt(sockfd, &vrrp_pkt, ipaddrs, authdata);
+    show_vrrp_pkt(fd, &vrrp_pkt, ipaddrs, authdata);
 }
 
 // show_vrrp_pkt() function
 /// Display VRRPv2 packets
-fn show_vrrp_pkt(_sockfd: i32, vrrp_pkt: &VRRPpkt, ipaddrs: &[u8], _authdata: &[u8]) {
+fn show_vrrp_pkt(_fd: i32, vrrp_pkt: &VRRPpkt, ipaddrs: &[u8], _authdata: &[u8]) {
     // prints some fields
     println!("VRRPv2 Packet:");
     println!(" Version/Type: {:#2X}", vrrp_pkt.version());
