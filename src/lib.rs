@@ -988,35 +988,38 @@ fn handle_vrrp_advert(
 // filter_vrrp_pkt() function
 /// Filter VRRPv2 packets for sniffing mode
 fn filter_vrrp_pkt(fd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
-    // tmp debug
-    println!("DEBUG: BPF frame: {:X?}", packet);
+    // // tmp debug
+    // println!("DEBUG: BPF frame: {:X?}", packet);
 
-    // ignore packets that are way too short (plus auth. data. field)
-    if packet.len() < (mem::size_of::<VRRPpkt>() + 8) {
-        return;
-    }
+    // // ignore packets that are way too short (plus auth. data. field)
+    // if packet.len() < (mem::size_of::<VRRPpkt>() + 8) {
+    //     return;
+    // }
 
     // read packet
     let vrrp_pkt: VRRPpkt = unsafe { ptr::read(packet.as_ptr() as *const _) };
 
-    // filter VRRP packets (IP Proto 112)
-    if *vrrp_pkt.ipproto() != IP_UPPER_PROTO_VRRP {
-        return;
-    }
+    // tmp debug
+    println!("DEBUG: VRRP frame: {:?}", vrrp_pkt);
 
-    // verify the IP TTL is 255 (per RFC3768 7.1)
-    if *vrrp_pkt.ipttl() != IP_TTL_VRRP_MINTTL {
-        println!(
-            "VRRP message received with invalid TTL {:#X}.",
-            vrrp_pkt.ipttl()
-        );
-    }
+    // // filter VRRP packets (IP Proto 112)
+    // if *vrrp_pkt.ipproto() != IP_UPPER_PROTO_VRRP {
+    //     return;
+    // }
 
-    // perform VRRP sanity checks
-    // if VRRP version is not 2 and type is not advertisement (p/x 0b00100001)
-    if *vrrp_pkt.version() != VRRP_V2_VER_TYPE_AUTHMSG {
-        return;
-    }
+    // // verify the IP TTL is 255 (per RFC3768 7.1)
+    // if *vrrp_pkt.ipttl() != IP_TTL_VRRP_MINTTL {
+    //     println!(
+    //         "VRRP message received with invalid TTL {:#X}.",
+    //         vrrp_pkt.ipttl()
+    //     );
+    // }
+
+    // // perform VRRP sanity checks
+    // // if VRRP version is not 2 and type is not advertisement (p/x 0b00100001)
+    // if *vrrp_pkt.version() != VRRP_V2_VER_TYPE_AUTHMSG {
+    //     return;
+    // }
 
     // compute the number of bytes to read for the IP addresses
     let ip_bcnt = (vrrp_pkt.s_addrcount(packet.len()) * 4) as usize;

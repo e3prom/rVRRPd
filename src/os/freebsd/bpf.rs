@@ -133,7 +133,7 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
     // initialize local buf_len with current buffer size
     let mut buf_len = pkt_buf.len();
 
-    // activa1e immediate mode (ioctl)
+    // activate immediate mode (ioctl)
     match unsafe { libc::ioctl(bpf_fd, BIOCIMMEDIATE, &buf_len) } {
         e if e < 0 => {
             println!("DEBUG: error while setting immediate mode on BPF device, fd {}, error no: {}", bpf_fd, e);
@@ -144,16 +144,17 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         }
     };
 
-    // set buffer length (ioctl)
+    // get buffer length (ioctl)
+    // actually ignoring returned value
     match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
         e if e < 0 => {
-            println!("DEBUG: error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+            println!("DEBUG: error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
             return Err(io::Error::last_os_error());
         }
-        _ => {
-            println!("DEBUG: buffer length set on BPF device, fd {}, len {} ", bpf_fd, pkt_buf.len());
+        l => {
+            println!("DEBUG: required buffer length for BPF device, fd {}, is: {} bytes", bpf_fd, l);
         }
-    }
+    };
 
     // return Ok(buf_len) if everything went successful
     Ok(buf_len)
