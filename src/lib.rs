@@ -41,7 +41,7 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
 // operating system specific support
 #[cfg(target_os = "freebsd")]
-use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf, bpf_xhdr};
+use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf, bpf_xhdr, bpf_set_promisc};
 #[cfg(target_os = "freebsd")]
 use os::freebsd::libc::{read_bpf_buf};
 #[cfg(target_os = "linux")]
@@ -399,6 +399,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 let bpf_fd = bpf_open_device()?;
                 let buf_size = bpf_setup_buf(bpf_fd, &mut pkt_buf)?;
                 bpf_bind_device(bpf_fd, &iface);
+                bpf_set_promisc(bpf_fd);
 
                 // size of BPF header
                 let bpf_hdrsize = mem::size_of::<bpf_xhdr>();

@@ -133,6 +133,31 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
     // initialize local buf_len with current buffer size
     let mut buf_len = pkt_buf.len();
 
+    if buf_len == 0 { 
+        // get buffer length (ioctl)
+        // actually ignoring returned value
+        match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
+            e if e < 0 => {
+                println!("DEBUG: error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+                return Err(io::Error::last_os_error());
+            }
+            s => {
+                println!("DEBUG: required buffer length for BPF device, fd {}, is: {} bytes", bpf_fd, s);
+            }
+        };
+    } else {   
+        // set buffer length (ioctl)
+        match unsafe { libc::ioctl(bpf_fd, BIOCSBLEN, &buf_len)} {
+            e if e < 0 => {
+                println!("DEBUG: error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+                return Err(io::Error::last_os_error());
+            }
+            _ => {
+                println!("DEBUG: buffer length for BPF device, fd {} set", bpf_fd);
+            }
+        };
+    } 
+
     // activate immediate mode (ioctl)
     match unsafe { libc::ioctl(bpf_fd, BIOCIMMEDIATE, &buf_len) } {
         e if e < 0 => {
@@ -144,30 +169,23 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         }
     };
 
-    // set buffer length (ioctl)
-    let _b = match unsafe { libc::ioctl(bpf_fd, BIOCSBLEN, &buf_len)} {
-        e if e < 0 => {
-            println!("DEBUG: error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
-            return Err(io::Error::last_os_error());
-        }
-        s => {
-            println!("DEBUG: buffer length for BPF device, fd {}, set to: {} bytes", bpf_fd, s);
-            s as usize
-        }
-    };
-
-    // get buffer length (ioctl)
-    // actually ignoring returned value
-    match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
-        e if e < 0 => {
-            println!("DEBUG: error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
-            return Err(io::Error::last_os_error());
-        }
-        s => {
-            println!("DEBUG: required buffer length for BPF device, fd {}, is: {} bytes", bpf_fd, s);
-        }
-    };
-
     // return Ok(buf_len) if everything went successful
     Ok(buf_len)
 }
+
+// bpf_set_promisc() function
+//
+/// Set interface bind to BPF's fd in promiscuous mode
+pub fn bpf_set_promisc(bpf_fd: i32) -> io::Result<()> {
+    // set interface in promiscuous mode
+    match unsafe { libc::ioctl(bpf_fd, BIOCPROMISC.into(), 0) } {
+        e if e < 0 => {
+            println!("DEBUG: error while setting promiscuous mode on BPF device, fd {}, error no: {}", bpf_fd, e);
+            return Err(io::Error::last_os_error());
+        }
+        _ => {
+            println!("DEBUG: promiscuous mode set on BPF device, fd {}", bpf_fd);
+            Ok(())
+        }
+    }
+} 
