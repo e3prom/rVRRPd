@@ -144,6 +144,18 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         }
     };
 
+    // set buffer length (ioctl)
+    let _b = match unsafe { libc::ioctl(bpf_fd, BIOCSBLEN, &buf_len)} {
+        e if e < 0 => {
+            println!("DEBUG: error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+            return Err(io::Error::last_os_error());
+        }
+        s => {
+            println!("DEBUG: buffer length for BPF device, fd {}, set to: {} bytes", bpf_fd, s);
+            s as usize
+        }
+    };
+
     // get buffer length (ioctl)
     // actually ignoring returned value
     match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
@@ -151,8 +163,8 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
             println!("DEBUG: error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
             return Err(io::Error::last_os_error());
         }
-        l => {
-            println!("DEBUG: required buffer length for BPF device, fd {}, is: {} bytes", bpf_fd, l);
+        s => {
+            println!("DEBUG: required buffer length for BPF device, fd {}, is: {} bytes", bpf_fd, s);
         }
     };
 

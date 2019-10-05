@@ -397,8 +397,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                 // create and setup Berkely Packet Filter (FreeBSD)
                 let bpf_fd = bpf_open_device()?;
-                bpf_bind_device(bpf_fd, &iface);
                 let buf_size = bpf_setup_buf(bpf_fd, &mut pkt_buf)?;
+                bpf_bind_device(bpf_fd, &iface);
 
                 // size of BPF header
                 let bpf_hdrsize = mem::size_of::<bpf_xhdr>();
