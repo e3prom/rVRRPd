@@ -656,16 +656,13 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         std::process::exit(0);
                     }
 
-                    // Block on receiving IP packets (Linux)
+                    // Block on receiving IP packets
                     match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
                         Ok(len) => {
                             // create and initialize pkg_hdr
                             let mut pkt_hdr = PktHdr::new();
-                            // set inbound interface's ifindex (Linux)
-                            #[cfg(target_os = "linux")]
-                            {
-                                pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
-                            }
+                            // set inbound interface's ifindex)
+                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
                             match verify_vrrp_pkt(
                                 sockfd,
                                 pkt_hdr,
