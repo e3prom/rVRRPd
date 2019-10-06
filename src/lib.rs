@@ -89,6 +89,7 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_os = "freebsd")]
 use std::convert::TryInto;
 
 /// Library Config Structure
