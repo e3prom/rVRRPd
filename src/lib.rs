@@ -41,11 +41,13 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
 // operating system specific support
 #[cfg(target_os = "freebsd")]
-use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf, bpf_xhdr, bpf_set_promisc, bpf_wordalign};
+use os::freebsd::bpf::{
+    bpf_bind_device, bpf_open_device, bpf_set_promisc, bpf_setup_buf, bpf_wordalign, bpf_xhdr,
+};
 #[cfg(target_os = "freebsd")]
-use os::freebsd::libc::{read_bpf_buf};
+use os::freebsd::libc::read_bpf_buf;
 #[cfg(target_os = "linux")]
- use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
+use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts};
 
 // finite state machine
 mod fsm;
@@ -82,6 +84,8 @@ mod debug;
 use debug::{print_debug, Verbose};
 
 // std
+#[cfg(target_os = "freebsd")]
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::fs::File;
 use std::io;
@@ -89,8 +93,6 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(target_os = "freebsd")]
-use std::convert::TryInto;
 
 /// Library Config Structure
 ///
@@ -393,7 +395,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // END Linux specific handling
 
             // --- FreeBSD specific handling
-            #[cfg(target_os = "freebsd")] { 
+            #[cfg(target_os = "freebsd")]
+            {
                 // initialize packet buffer
                 let mut bpf_buf: [u8; 4096] = [0; 4096];
 
@@ -441,17 +444,28 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     // start frame pointer
                                     let frame_ptr = bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize);
                                     // cast an array of u8 from the above raw pointer
-                                    let frame = std::slice::from_raw_parts(frame_ptr, bpf_pkt.bh_caplen as usize);
+                                    let frame = std::slice::from_raw_parts(
+                                        frame_ptr,
+                                        bpf_pkt.bh_caplen as usize,
+                                    );
                                     //frame = frame as *const _ as *const u8;
 
                                     // call to filter_vrrp_pkt() with the unpacked frame
-                                    filter_vrrp_pkt(bpf_fd, &pkt_hdr, &frame[0..bpf_pkt.bh_caplen as usize]);
+                                    filter_vrrp_pkt(
+                                        bpf_fd,
+                                        &pkt_hdr,
+                                        &frame[0..bpf_pkt.bh_caplen as usize],
+                                    );
 
                                     // advance the pointer to the next ethernet frame
-                                    ptr = ptr.offset(bpf_wordalign((bpf_pkt.bh_hdrlen as u32 + bpf_pkt.bh_caplen).try_into().unwrap()));
+                                    ptr = ptr.offset(bpf_wordalign(
+                                        (bpf_pkt.bh_hdrlen as u32 + bpf_pkt.bh_caplen)
+                                            .try_into()
+                                            .unwrap(),
+                                    ));
                                 }
-                            }  
-                        },
+                            }
+                        }
                         Ok(_) => (),
                         Err(e) => return Err(e),
                     }
@@ -589,7 +603,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             {
                 // initialize packet buffer
                 let mut pkt_buf: [u8; 1024] = [0; 1024];
-            
+
                 // open raw socket
                 let sockfd = open_raw_socket_fd()?;
 
@@ -715,7 +729,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // END Linux specific handling
 
             // --- FreeBSD specific handling
-            #[cfg(target_os = "freebsd")] {
+            #[cfg(target_os = "freebsd")]
+            {
                 // tmp
                 Ok(())
             }
