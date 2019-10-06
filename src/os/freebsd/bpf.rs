@@ -23,12 +23,7 @@ const BIOCGSTATS: c_ulong = 0x4008426f;
 const BIOCIMMEDIATE: c_ulong = 0x80044270;
 const BIOCVERSION: c_ulong = 0x40044271;
 const BIOCGRSIG: c_ulong = 0x40044272;
-const BIOCSRSIG: c_ulong = 0x80044273;
-const BIOCGHDRCMPLT: c_ulong = 0x40044274;
-const BIOCSHDRCMPLT: c_ulong = 0x80044275;
-const BIOCGSEESENT: c_ulong  = 0x40044276;
-const BIOCSSEESENT: c_ulong  = 0x80044277;
-const BIOCSDLT: c_ulong = 0x80044278;
+
 const SIOCGIFADDR: c_ulong = 0xc0206921;
 const BPF_ALIGNMENT: c_int = 8;
 
