@@ -7,7 +7,7 @@ use libc::{read, c_void};
 // read_bpf_buf() function
 //
 /// Receive IP Packet
-pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<usize> {
+pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<isize> {
     // declare len
     let len: isize;
 
@@ -23,5 +23,5 @@ pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<
     }
 
     // return the length of read buffer
-    Ok(len as usize)
+    Ok(len)
 }

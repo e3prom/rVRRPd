@@ -41,7 +41,7 @@ use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
 // operating system specific support
 #[cfg(target_os = "freebsd")]
-use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf, bpf_xhdr, bpf_set_promisc};
+use os::freebsd::bpf::{bpf_bind_device, bpf_open_device, bpf_setup_buf, bpf_xhdr, bpf_set_promisc, bpf_wordalign};
 #[cfg(target_os = "freebsd")]
 use os::freebsd::libc::{read_bpf_buf};
 #[cfg(target_os = "linux")]
@@ -89,6 +89,7 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::convert::TryInto;
 
 /// Library Config Structure
 ///
@@ -382,7 +383,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             let mut pkt_hdr = PktHdr::new();
                             // set inbound interface's ifindex
                             pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
-                            filter_vrrp_pkt(sockfd, pkt_hdr, &pkt_buf[0..len]);
+                            filter_vrrp_pkt(sockfd, &pkt_hdr, &pkt_buf[0..len]);
                         }
                         Err(e) => return Err(e),
                     }
@@ -393,15 +394,15 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // --- FreeBSD specific handling
             #[cfg(target_os = "freebsd")] { 
                 // initialize packet buffer
-                let mut pkt_buf: [u8; 4096] = [0; 4096];
+                let mut bpf_buf: [u8; 4096] = [0; 4096];
 
                 // create and setup Berkely Packet Filter (FreeBSD)
                 let bpf_fd = bpf_open_device()?;
-                let buf_size = bpf_setup_buf(bpf_fd, &mut pkt_buf)?;
+                let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf)?;
                 bpf_bind_device(bpf_fd, &iface);
                 bpf_set_promisc(bpf_fd);
 
-                // size of BPF header
+                // DEBUG: size of BPF header
                 let bpf_hdrsize = mem::size_of::<bpf_xhdr>();
 
                 // print information
@@ -417,7 +418,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     }
 
                     // Block on receiving IP packets
-                    match read_bpf_buf(bpf_fd, &mut pkt_buf, buf_size) {
+                    match read_bpf_buf(bpf_fd, &mut bpf_buf, buf_size) {
                         Ok(len) if len > 0 => {
                             // create and initialize pkt_hdr
                             let mut pkt_hdr = PktHdr::new();
@@ -425,8 +426,30 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             println!("DEBUG: read {} bytes on BPF buffer", len);
                             println!("DEBUG: skipping {} bytes header", bpf_hdrsize);
 
-                            // on FreeBSD we must skip length's of bpf_xhdr struct.
-                            filter_vrrp_pkt(bpf_fd, pkt_hdr, &pkt_buf[bpf_hdrsize..len]);
+                            // unpack BPF frames
+                            unsafe {
+                                // initialize raw pointers
+                                let mut ptr = &bpf_buf as *const _;
+                                let bpf_buf_ptr = &bpf_buf as *const u8;
+
+                                // while the distance between the BPF buffer and the ptr is not bigger than the number of bytes read
+                                while ptr < (bpf_buf_ptr.offset(len as isize)) {
+                                    // read the BPF packets buffer
+                                    let bpf_pkt: bpf_xhdr = ptr::read(bpf_buf.as_ptr() as *const _);
+
+                                    // start frame pointer
+                                    let frame_ptr = bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize);
+                                    // cast an array of u8 from the above raw pointer
+                                    let frame = std::slice::from_raw_parts(frame_ptr, bpf_pkt.bh_caplen as usize);
+                                    //frame = frame as *const _ as *const u8;
+
+                                    // call to filter_vrrp_pkt() with the unpacked frame
+                                    filter_vrrp_pkt(bpf_fd, &pkt_hdr, &frame[0..bpf_pkt.bh_caplen as usize]);
+
+                                    // advance the pointer to the next ethernet frame
+                                    ptr = ptr.offset(bpf_wordalign((bpf_pkt.bh_hdrlen as u32 + bpf_pkt.bh_caplen).try_into().unwrap()));
+                                }
+                            }  
                         },
                         Ok(_) => (),
                         Err(e) => return Err(e),
@@ -666,7 +689,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
                             match verify_vrrp_pkt(
                                 sockfd,
-                                pkt_hdr,
+                                &pkt_hdr,
                                 &pkt_buf[0..len],
                                 &vrouters,
                                 &debug,
@@ -708,7 +731,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 /// Verify VRRPv2 ADVERTISEMENT packets (as per RFC3768 7.1)
 fn verify_vrrp_pkt(
     _sockfd: i32,
-    pkt_hdr: PktHdr,
+    pkt_hdr: &PktHdr,
     packet: &[u8],
     vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
     debug: &Verbose,
@@ -985,7 +1008,7 @@ fn handle_vrrp_advert(
 
 // filter_vrrp_pkt() function
 /// Filter VRRPv2 packets for sniffing mode
-fn filter_vrrp_pkt(fd: i32, _pkt_hdr: PktHdr, packet: &[u8]) {
+fn filter_vrrp_pkt(fd: i32, _pkt_hdr: &PktHdr, packet: &[u8]) {
     // // tmp debug
     // println!("DEBUG: BPF frame: {:X?}", packet);
 

@@ -5,7 +5,7 @@ use std::io;
 use std::convert::TryInto;
 
 // libc
-use libc::{c_char, sockaddr, IF_NAMESIZE, c_ulong, c_uint};
+use libc::{c_char, sockaddr, IF_NAMESIZE, c_ulong, c_uint, c_int};
 
 // ffi
 use std::ffi::{CString};
@@ -30,6 +30,7 @@ const BIOCGSEESENT: c_ulong  = 0x40044276;
 const BIOCSSEESENT: c_ulong  = 0x80044277;
 const BIOCSDLT: c_ulong = 0x80044278;
 const SIOCGIFADDR: c_ulong = 0xc0206921;
+const BPF_ALIGNMENT: c_int = 8;
 
 // Ifreq redifinition
 #[repr(C)]
@@ -42,18 +43,18 @@ struct Ifreq {
 // bpf_ts structure
 // https://github.com/freebsd/freebsd/blob/master/sys/net/bpf.h:202
 #[repr(C)]
-struct bpf_ts {
-    bt_sec: i64,
-    bt_frac: u64,
+pub struct bpf_ts {
+    pub bt_sec: i64,
+    pub bt_frac: u64,
 }
 
 // bpf_xhdr structure
 #[repr(C)]
 pub struct bpf_xhdr {
-    bh_tstamp: bpf_ts,  // timestamp
-    bh_caplen: u32,     // length of captured pattern
-    bh_datalen: u32,    // length of packet
-    bh_hdrlen: u16,     // length of this structure + alignment padding
+    pub bh_tstamp: bpf_ts,  // timestamp
+    pub bh_caplen: u32,     // length of captured pattern
+    pub bh_datalen: u32,    // length of packet
+    pub bh_hdrlen: u16,     // length of this structure + alignment padding
 }
 
 // bpf_open_device() function
@@ -170,7 +171,7 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
     };
 
     // return Ok(buf_len) if everything went successful
-    Ok(buf_len)
+    Ok(buf_len as usize)
 }
 
 // bpf_set_promisc() function
@@ -189,3 +190,13 @@ pub fn bpf_set_promisc(bpf_fd: i32) -> io::Result<()> {
         }
     }
 } 
+
+// bpf_wordalign() function
+//
+/// Taken from pnet's source/src/bindings/bpf.rs
+pub fn bpf_wordalign(s: isize) -> isize {
+    let bpf_alignement = BPF_ALIGNMENT as isize;
+    let one = 1;
+
+    (s + (bpf_alignement - one)) & !(bpf_alignement - one)
+}
