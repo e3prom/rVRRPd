@@ -9,7 +9,7 @@
 
 # Features
  * Aimed to be Portable, Fast and **Secure**
- * Supports Intel IA-64 and ARMv8 Processors
+ * Supports multiple operating-systems and processors architectures
  * Multi-threaded operation (1 thread per VRRP group/interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/) formats
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
@@ -24,12 +24,12 @@
  * Support MAC-based Virtual LAN interface (`macvlan`)
 
 # Development
-This project is still in **_development_** stage, and at this time, only supports the Linux operating system. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be fully interoperable with standard-compliant network equipments.
+This project is still in **_development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments.
 
 The development roadmap for the upcoming `0.2.0` release can be found on its [dedicated project page](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Dependencies
- * A Linux 64-bits kernel (_only Linux is supported at this time_).
+ * A Linux or FreeBSD 64-bits operating system
  * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
  * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
  * At least one Ethernet interface(s), see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
@@ -51,7 +51,7 @@ $ cargo build --release
     Finished release [optimized] target(s) in 9.63s
 ```
 
-Then install the `rvrrpd` executable on your system path by entering `make install`.
+Then install the `rvrrpd` executable on your system by entering `make install`.
 
 Before running the VRRPv2 daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
 

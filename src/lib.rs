@@ -189,7 +189,7 @@ impl VirtualRouter {
         vif_name: String,
     ) -> io::Result<VirtualRouter> {
         // initialize ifindex
-        let mut ifindex = -1;
+        let ifindex;
 
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
@@ -425,37 +425,43 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             // create and initialize pkt_hdr
                             let mut pkt_hdr = PktHdr::new();
 
-                                // initialize raw pointers
-                                let mut ptr = &bpf_buf as *const _;
-                                let bpf_buf_ptr = &bpf_buf as *const u8;
+                            // initialize raw pointers
+                            let mut ptr = &bpf_buf as *const _;
+                            let bpf_buf_ptr = &bpf_buf as *const u8;
 
-                                // while the distance between the BPF buffer and the ptr is not bigger than the number of bytes read
-                                while ptr < (unsafe { bpf_buf_ptr.offset(len as isize) }) {
-                                    // read the BPF packets buffer
-                                    let bpf_pkt: bpf_xhdr = unsafe {ptr::read(bpf_buf.as_ptr() as *const _) };
+                            // while the distance between the BPF buffer and the ptr is not bigger than the number of bytes read
+                            while ptr < (unsafe { bpf_buf_ptr.offset(len as isize) }) {
+                                // read the BPF packets buffer
+                                let bpf_pkt: bpf_xhdr =
+                                    unsafe { ptr::read(bpf_buf.as_ptr() as *const _) };
 
-                                    // start frame pointer
-                                    let frame_ptr = unsafe {bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize) };
-                                    // cast an array of u8 from the above raw pointer
-                                    let frame = unsafe { std::slice::from_raw_parts(
+                                // start frame pointer
+                                let frame_ptr =
+                                    unsafe { bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize) };
+                                // cast an array of u8 from the above raw pointer
+                                let frame = unsafe {
+                                    std::slice::from_raw_parts(
                                         frame_ptr,
                                         bpf_pkt.bh_caplen as usize,
-                                    )};
+                                    )
+                                };
 
-                                    // call to filter_vrrp_pkt() with the unpacked frame
-                                    filter_vrrp_pkt(
-                                        bpf_fd,
-                                        &pkt_hdr,
-                                        &frame[0..bpf_pkt.bh_caplen as usize],
-                                    );
+                                // call to filter_vrrp_pkt() with the unpacked frame
+                                filter_vrrp_pkt(
+                                    bpf_fd,
+                                    &pkt_hdr,
+                                    &frame[0..bpf_pkt.bh_caplen as usize],
+                                );
 
-                                    // advance the pointer to the next ethernet frame
-                                    ptr = unsafe {ptr.offset(bpf_wordalign(
+                                // advance the pointer to the next ethernet frame
+                                ptr = unsafe {
+                                    ptr.offset(bpf_wordalign(
                                         (bpf_pkt.bh_hdrlen as u32 + bpf_pkt.bh_caplen)
                                             .try_into()
                                             .unwrap(),
-                                    ))};
-                                }
+                                    ))
+                                };
+                            }
                         }
                         Ok(_) => (),
                         Err(e) => return Err(e),
