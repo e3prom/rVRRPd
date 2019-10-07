@@ -189,7 +189,7 @@ impl VirtualRouter {
         vif_name: String,
     ) -> io::Result<VirtualRouter> {
         // initialize ifindex
-        let ifindex;
+        let mut ifindex = -1;
 
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
