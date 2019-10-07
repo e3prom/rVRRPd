@@ -209,7 +209,8 @@ impl VirtualRouter {
         let mut v4masks = Vec::new();
 
         // if the operating system is Linux
-        #[cfg(target_os = "linux")] { 
+        #[cfg(target_os = "linux")]
+        {
             let _r = os::linux::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
 
             // make sure there is a least one ip/mask pair, otherwise return an error
@@ -223,7 +224,7 @@ impl VirtualRouter {
                     "no ip address configured on vr's interface",
                 ));
             }
-        } 
+        }
 
         // print debugging information
         print_debug(
@@ -751,7 +752,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     // set interface in promiscuous mode
                     match bpf_set_promisc(bpf_fd) {
                         Err(e) => return Err(e),
-                        _ => {},
+                        _ => {}
                     }
                 }
 
@@ -814,13 +815,20 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     &pkt_hdr,
                                     &frame[0..bpf_pkt.bh_caplen as usize],
                                     &vrouters,
-                                    &debug
+                                    &debug,
                                 ) {
                                     Some((ifindex, vrid, ipsrc, advert_prio)) => {
-                                        handle_vrrp_advert(&vrouters, ifindex, vrid, ipsrc, advert_prio, &debug);
+                                        handle_vrrp_advert(
+                                            &vrouters,
+                                            ifindex,
+                                            vrid,
+                                            ipsrc,
+                                            advert_prio,
+                                            &debug,
+                                        );
                                     }
-                                    _ => (), 
-                                } 
+                                    _ => (),
+                                }
 
                                 // advance the pointer to the next ethernet frame
                                 ptr = unsafe {
