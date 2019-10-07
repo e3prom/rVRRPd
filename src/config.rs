@@ -157,7 +157,7 @@ impl VRConfig {
                 "rfc2338-simple" => AUTH_TYPE_SIMPLE,
                 "p0-t8-sha256" => AUTH_TYPE_P0,
                 "p1-b8-shake256" => AUTH_TYPE_P1,
-                _ => panic!("error(config): authentication type {} no supported", s),
+                _ => panic!("error(config): authentication type {} is not supported", s),
             },
             None => 0,
         }
