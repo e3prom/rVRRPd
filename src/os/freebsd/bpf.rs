@@ -23,7 +23,6 @@ const BIOCGSTATS: c_ulong = 0x4008426f;
 const BIOCIMMEDIATE: c_ulong = 0x80044270;
 const BIOCVERSION: c_ulong = 0x40044271;
 const BIOCGRSIG: c_ulong = 0x40044272;
-
 const SIOCGIFADDR: c_ulong = 0xc0206921;
 const BPF_ALIGNMENT: c_int = 8;
 
@@ -54,7 +53,7 @@ pub struct bpf_xhdr {
 
 // bpf_open_device() function
 //
-/// Open BPF device and return file descriptor if successful
+/// Open a BPF device and return the file descriptor if successful
 pub fn bpf_open_device() -> io::Result<(i32)> {
     // find an available BPF device
     for i in 0..99 {
@@ -76,14 +75,13 @@ pub fn bpf_open_device() -> io::Result<(i32)> {
         // check returned value
         // if negative, an error occured, continue
         // if positive, return the file descriptor
-        //println!("DEBUG: open() for /dev/bpf{}, returned: {}", i, res);
         if res >= 0 {
             return Ok(res);
         }
     }
 
     // if all BPF devices are exhausted
-    println!("Error, cannot find an available BPF device");
+    println!("cannot find an available BPF device");
     return Err(io::Error::last_os_error());
 }
 
@@ -115,7 +113,7 @@ pub fn bpf_bind_device(bpf_fd: i32, interface: &CString) -> io::Result<()> {
     match unsafe { libc::ioctl(bpf_fd, BIOCSETIF, &ifbound) } {
         r if r >= 0 => Ok(()),
         e => {
-            println!("DEBUG: error while binding BPF device, fd {}, error no: {}", bpf_fd, e);
+            println!("error while binding BPF device, fd {}, error no: {}", bpf_fd, e);
             return Err(io::Error::last_os_error());
         }
     }
@@ -134,7 +132,7 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         // actually ignoring returned value
         match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
             e if e < 0 => {
-                println!("DEBUG: error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+                println!("error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
                 return Err(io::Error::last_os_error());
             }
             s => {
@@ -145,7 +143,7 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         // set buffer length (ioctl)
         match unsafe { libc::ioctl(bpf_fd, BIOCSBLEN, &buf_len)} {
             e if e < 0 => {
-                println!("DEBUG: error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+                println!("error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
                 return Err(io::Error::last_os_error());
             }
             _ => {
@@ -157,7 +155,7 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
     // activate immediate mode (ioctl)
     match unsafe { libc::ioctl(bpf_fd, BIOCIMMEDIATE, &buf_len) } {
         e if e < 0 => {
-            println!("DEBUG: error while setting immediate mode on BPF device, fd {}, error no: {}", bpf_fd, e);
+            println!("error while setting immediate mode on BPF device, fd {}, error no: {}", bpf_fd, e);
             return Err(io::Error::last_os_error());
         }
         _ => {
@@ -171,12 +169,12 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
 
 // bpf_set_promisc() function
 //
-/// Set interface bind to BPF's fd in promiscuous mode
+/// Set interface bound to the BPF's fd in promiscuous mode
 pub fn bpf_set_promisc(bpf_fd: i32) -> io::Result<()> {
     // set interface in promiscuous mode
     match unsafe { libc::ioctl(bpf_fd, BIOCPROMISC.into(), 0) } {
         e if e < 0 => {
-            println!("DEBUG: error while setting promiscuous mode on BPF device, fd {}, error no: {}", bpf_fd, e);
+            println!("error while setting promiscuous mode on BPF device, fd {}, error no: {}", bpf_fd, e);
             return Err(io::Error::last_os_error());
         }
         _ => {
@@ -188,7 +186,8 @@ pub fn bpf_set_promisc(bpf_fd: i32) -> io::Result<()> {
 
 // bpf_wordalign() function
 //
-/// Taken from pnet's source/src/bindings/bpf.rs
+/// Align the BPF buffer to the next frame given capured size
+/// Reference: pnet's source/src/bindings/bpf.rs
 pub fn bpf_wordalign(s: isize) -> isize {
     let bpf_alignement = BPF_ALIGNMENT as isize;
     let one = 1;

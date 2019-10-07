@@ -398,16 +398,13 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             #[cfg(target_os = "freebsd")]
             {
                 // initialize packet buffer
-                let mut bpf_buf: [u8; 4096] = [0; 4096];
+                let mut bpf_buf: [u8; 118] = [0; 118];
 
-                // create and setup Berkely Packet Filter (FreeBSD)
+                // create and setup the Berkeley Packet Filter (FreeBSD)
                 let bpf_fd = bpf_open_device()?;
                 let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf)?;
                 bpf_bind_device(bpf_fd, &iface);
                 bpf_set_promisc(bpf_fd);
-
-                // DEBUG: size of BPF header
-                let bpf_hdrsize = mem::size_of::<bpf_xhdr>();
 
                 // print information
                 println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
@@ -427,9 +424,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             // create and initialize pkt_hdr
                             let mut pkt_hdr = PktHdr::new();
 
-                            println!("DEBUG: read {} bytes on BPF buffer", len);
-                            println!("DEBUG: skipping {} bytes header", bpf_hdrsize);
-
                             // unpack BPF frames
                             unsafe {
                                 // initialize raw pointers
@@ -448,7 +442,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                         frame_ptr,
                                         bpf_pkt.bh_caplen as usize,
                                     );
-                                    //frame = frame as *const _ as *const u8;
 
                                     // call to filter_vrrp_pkt() with the unpacked frame
                                     filter_vrrp_pkt(

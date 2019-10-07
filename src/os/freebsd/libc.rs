@@ -15,7 +15,7 @@ pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<
     unsafe {
         len = match read(bpf_fd, buf.as_ptr() as *mut c_void, buf_size) {
             -1 => {
-                println!("DEBUG: error while reading BPF buffer on fd {}, buffer length {}", bpf_fd, buf.len());
+                println!("error while reading BPF buffer on fd {}, buffer length {}", bpf_fd, buf.len());
                 return Err(io::Error::last_os_error());
             }
             len => len,
