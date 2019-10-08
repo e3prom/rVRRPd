@@ -25,10 +25,7 @@ pub struct ThreadPool {
 impl ThreadPool {
     // new() method
     // Create a new Thread Pool
-    pub fn new(
-        vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
-        debug: &Verbose,
-    ) -> ThreadPool {
+    pub fn new(vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) -> ThreadPool {
         // verify the vector is not empty and doesn't exceed 1024 virtual routers
         assert!(vrouters.len() > 0 && vrouters.len() < 1024);
 

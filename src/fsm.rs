@@ -179,7 +179,7 @@ impl Parameters {
     // fd_set() method
     pub fn fd_set(&mut self, fd: i32) {
         self.fd = fd;
-    } 
+    }
 }
 
 /// Internal Protocol States "Enumerator"

@@ -210,21 +210,21 @@ impl VirtualRouter {
         let mut v4masks = Vec::new();
 
         // build interface IPv4 addresses list
-        #[cfg(any(target_os="linux", target_os="freebsd"))]
+        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
         {
             let _r = os::multi::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
         }
-            // make sure there is a least one ip/mask pair, otherwise return an error
-            if v4addrs.is_empty() || v4masks.is_empty() {
-                println!(
-                    "error(vr): at least one IPv4 address must be available on interface {}",
-                    ifname
-                );
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "no ip address configured on vr's interface",
-                ));
-            }
+        // make sure there is a least one ip/mask pair, otherwise return an error
+        if v4addrs.is_empty() || v4masks.is_empty() {
+            println!(
+                "error(vr): at least one IPv4 address must be available on interface {}",
+                ifname
+            );
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "no ip address configured on vr's interface",
+            ));
+        }
 
         // print debugging information
         print_debug(
@@ -280,7 +280,7 @@ impl VirtualRouter {
                 iftype,
                 vif_name,
                 0,
-                fd
+                fd,
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
@@ -789,7 +789,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     thread::spawn(move || {
                         loop {
                             // read BPF buffer and block until filled
-                            match read_bpf_buf(bpf_fd, &mut bpf_buf, 118) { // warning: hard-coded buffer size
+                            match read_bpf_buf(bpf_fd, &mut bpf_buf, 118) {
+                                // warning: hard-coded buffer size
                                 Ok(len) if len > 0 => {
                                     // acquire read lock
                                     println!("DEBUG: acquiring vr read lock on listener thread");
@@ -810,8 +811,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                             unsafe { ptr::read(bpf_buf.as_ptr() as *const _) };
 
                                         // start frame pointer
-                                        let frame_ptr =
-                                            unsafe { bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize) };
+                                        let frame_ptr = unsafe {
+                                            bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize)
+                                        };
                                         // cast an array of u8 from the above raw pointer
                                         let frame = unsafe {
                                             std::slice::from_raw_parts(
@@ -857,7 +859,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         }
                     });
                 }
-                loop { 
+                loop {
                     // check if global shutdown variable is set
                     // if set, then call set_if_promiscuous() to remove promisc mode on interface
                     if shutdown.load(Ordering::Relaxed) {
@@ -867,7 +869,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         threads.drop(&vrouters, &debug);
                         std::process::exit(0);
                     }
-                } 
+                }
                 return Ok(());
             }
             // END FreeBSD specific handling
