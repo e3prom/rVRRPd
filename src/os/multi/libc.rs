@@ -1,7 +1,6 @@
 //! Standard C Library Support (multi-os)
 
-// std, libc
-use libc::{read, c_void};
+// std
 use std::ffi::{CStr};
 use std::io;
 use std::net::{IpAddr, IpAddr::V4, Ipv4Addr, Ipv6Addr};

@@ -93,6 +93,7 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_os = "freebsd")]
 use std::thread;
 
 /// Library Config Structure
@@ -189,11 +190,9 @@ impl VirtualRouter {
         vif_name: String,
         fd: i32,
     ) -> io::Result<VirtualRouter> {
-        // initialize ifindex
-        let mut ifindex = -1;
-
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
+        let ifindex;
         {
             // get ifindex from interface name
             ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
@@ -202,6 +201,11 @@ impl VirtualRouter {
             };
         }
         // END Linux specific interface handling
+
+        // --- FreeBSD specific interface handling
+        #[cfg(target_os = "freebsd")]
+        let mut ifindex = -1;
+        // END FreeBSD specific interface handling
 
         // create new IPv4 addresses vector
         let mut v4addrs = Vec::new();
@@ -588,7 +592,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     vr.netdrv(),
                     vr.iftype(),
                     vr.vifname(),
-                    -1, // not applicable to Linux
+                    -1,
                 ) {
                     Ok(vr) => {
                         let vr = RwLock::new(vr);
@@ -612,12 +616,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                 // set vr's interface(s) in promiscuous mode
                 for vr in &vrouters {
-                    // acquire read lock
-                    let vro = vr.read().unwrap();
+                    // acquire write lock
+                    let mut vr = vr.write().unwrap();
 
                     // convert interface string
                     let iface =
-                        CString::new(vro.parameters.interface().as_bytes() as &[u8]).unwrap();
+                        CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
 
                     match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
                         Err(e) => return Err(e),
@@ -625,7 +629,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     }
 
                     // store raw socket file descriptor
-                    let mut vr = vr.write().unwrap();
                     vr.parameters.fd_set(sockfd);
                 }
 
