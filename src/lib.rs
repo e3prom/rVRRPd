@@ -93,6 +93,7 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
 
 /// Library Config Structure
 ///
@@ -186,6 +187,7 @@ impl VirtualRouter {
         netdrv: NetDrivers,
         iftype: IfTypes,
         vif_name: String,
+        fd: i32,
     ) -> io::Result<VirtualRouter> {
         // initialize ifindex
         let mut ifindex = -1;
@@ -223,9 +225,6 @@ impl VirtualRouter {
                     "no ip address configured on vr's interface",
                 ));
             }
-
-        // TODO - FreeBSD
-        // Add local addresses/masks to the above vectors
 
         // print debugging information
         print_debug(
@@ -281,12 +280,12 @@ impl VirtualRouter {
                 iftype,
                 vif_name,
                 0,
+                fd
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
             // initialize the flags to 0x1 (down flag set)
             flags: fsm::Flags::new(0x1),
-            // initialize the protocols
         })
     }
     // is_owner_vip() method
@@ -589,6 +588,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     vr.netdrv(),
                     vr.iftype(),
                     vr.vifname(),
+                    -1, // not applicable to Linux
                 ) {
                     Ok(vr) => {
                         let vr = RwLock::new(vr);
@@ -613,16 +613,20 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // set vr's interface(s) in promiscuous mode
                 for vr in &vrouters {
                     // acquire read lock
-                    let vr = vr.read().unwrap();
+                    let vro = vr.read().unwrap();
 
                     // convert interface string
                     let iface =
-                        CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
+                        CString::new(vro.parameters.interface().as_bytes() as &[u8]).unwrap();
 
                     match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
                         Err(e) => return Err(e),
                         _ => {}
                     }
+
+                    // store raw socket file descriptor
+                    let mut vr = vr.write().unwrap();
+                    vr.parameters.fd_set(sockfd);
                 }
 
                 // print debugging information
@@ -634,7 +638,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 );
 
                 // create a pool of threads
-                let mut threads = ThreadPool::new(&vrouters, sockfd, &debug);
+                let mut threads = ThreadPool::new(&vrouters, &debug);
 
                 // send Startup event to worker threads
                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -734,27 +738,25 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // initialize BPF buffer
                 let mut bpf_buf: [u8; 118] = [0; 118];
 
-                // create and setup the Berkeley Packet Filter (FreeBSD)
-                let bpf_fd = bpf_open_device()?;
-                let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf)?;
-
                 // set vr's interface(s) in promiscuous mode
                 for vr in &vrouters {
-                    // acquire read lock
-                    let vr = vr.read().unwrap();
+                    // acquire write lock
+                    let mut vr = vr.write().unwrap();
 
                     // convert interface string
                     let iface =
                         CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
 
+                    // create and setup the Berkeley Packet Filter (FreeBSD)
+                    let bpf_fd = bpf_open_device()?;
+                    let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf)?;
                     // bind interface to BPF device
                     bpf_bind_device(bpf_fd, &iface)?;
-
                     // set interface in promiscuous mode
-                    match bpf_set_promisc(bpf_fd) {
-                        Err(e) => return Err(e),
-                        _ => {}
-                    }
+                    bpf_set_promisc(bpf_fd)?;
+
+                    // store BPF file descriptor
+                    vr.parameters.fd_set(bpf_fd);
                 }
 
                 // print debugging information
@@ -766,13 +768,96 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 );
 
                 // create a pool of threads
-                let mut threads = ThreadPool::new(&vrouters, bpf_fd, &debug);
+                let mut threads = ThreadPool::new(&vrouters, &debug);
 
                 // send Startup event to worker threads
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 threads.startup(&vrouters, &debug);
 
-                loop {
+                // start a BPF listener thread per virtual router
+                for vr in &vrouters {
+                    // get vr's bpf file descriptor
+                    let vro = &vr.read().unwrap();
+                    let bpf_fd = vro.parameters.fd();
+
+                    // re-create vrouters for this vr only
+                    let mut vrouters: Vec<Arc<RwLock<VirtualRouter>>> = Vec::new();
+                    vrouters.push(vr.clone());
+                    let vr = Arc::clone(&vr);
+
+                    // spawn listener threads
+                    thread::spawn(move || {
+                        loop {
+                            // read BPF buffer and block until filled
+                            match read_bpf_buf(bpf_fd, &mut bpf_buf, 118) { // warning: hard-coded buffer size
+                                Ok(len) if len > 0 => {
+                                    // acquire read lock
+                                    println!("DEBUG: acquiring vr read lock on listener thread");
+                                    let vr = vr.read().unwrap();
+                                    println!("DEBUG: acquired vr read lock on listener thread");
+
+                                    // create and initialize pkt_hdr
+                                    let mut pkt_hdr = PktHdr::new();
+
+                                    // initialize raw pointers
+                                    let mut ptr = &bpf_buf as *const _;
+                                    let bpf_buf_ptr = &bpf_buf as *const u8;
+
+                                    // while the distance between the BPF buffer and the ptr is not bigger than the number of bytes read
+                                    while ptr < (unsafe { bpf_buf_ptr.offset(len as isize) }) {
+                                        // read the BPF packets buffer
+                                        let bpf_pkt: bpf_xhdr =
+                                            unsafe { ptr::read(bpf_buf.as_ptr() as *const _) };
+
+                                        // start frame pointer
+                                        let frame_ptr =
+                                            unsafe { bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize) };
+                                        // cast an array of u8 from the above raw pointer
+                                        let frame = unsafe {
+                                            std::slice::from_raw_parts(
+                                                frame_ptr,
+                                                bpf_pkt.bh_caplen as usize,
+                                            )
+                                        };
+
+                                        // call to verify_vrrp_pkt() with the unpacked frame
+                                        match verify_vrrp_pkt(
+                                            vr.parameters.fd(),
+                                            &pkt_hdr,
+                                            &frame[0..bpf_pkt.bh_caplen as usize],
+                                            &vrouters,
+                                            &debug,
+                                        ) {
+                                            Some((ifindex, vrid, ipsrc, advert_prio)) => {
+                                                handle_vrrp_advert(
+                                                    &vrouters,
+                                                    ifindex,
+                                                    vrid,
+                                                    ipsrc,
+                                                    advert_prio,
+                                                    &debug,
+                                                );
+                                            }
+                                            _ => (),
+                                        }
+
+                                        // advance the pointer to the next ethernet frame
+                                        ptr = unsafe {
+                                            ptr.offset(bpf_wordalign(
+                                                (bpf_pkt.bh_hdrlen as u32 + bpf_pkt.bh_caplen)
+                                                    .try_into()
+                                                    .unwrap(),
+                                            ))
+                                        };
+                                    }
+                                }
+                                Ok(_) => (),
+                                Err(e) => (),
+                            }
+                        }
+                    });
+                }
+                loop { 
                     // check if global shutdown variable is set
                     // if set, then call set_if_promiscuous() to remove promisc mode on interface
                     if shutdown.load(Ordering::Relaxed) {
@@ -782,69 +867,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         threads.drop(&vrouters, &debug);
                         std::process::exit(0);
                     }
-
-                    // read BPF buffer and block until filled
-                    match read_bpf_buf(bpf_fd, &mut bpf_buf, buf_size) {
-                        Ok(len) if len > 0 => {
-                            // create and initialize pkt_hdr
-                            let mut pkt_hdr = PktHdr::new();
-
-                            // initialize raw pointers
-                            let mut ptr = &bpf_buf as *const _;
-                            let bpf_buf_ptr = &bpf_buf as *const u8;
-
-                            // while the distance between the BPF buffer and the ptr is not bigger than the number of bytes read
-                            while ptr < (unsafe { bpf_buf_ptr.offset(len as isize) }) {
-                                // read the BPF packets buffer
-                                let bpf_pkt: bpf_xhdr =
-                                    unsafe { ptr::read(bpf_buf.as_ptr() as *const _) };
-
-                                // start frame pointer
-                                let frame_ptr =
-                                    unsafe { bpf_buf_ptr.offset(bpf_pkt.bh_hdrlen as isize) };
-                                // cast an array of u8 from the above raw pointer
-                                let frame = unsafe {
-                                    std::slice::from_raw_parts(
-                                        frame_ptr,
-                                        bpf_pkt.bh_caplen as usize,
-                                    )
-                                };
-
-                                // call to verify_vrrp_pkt() with the unpacked frame
-                                match verify_vrrp_pkt(
-                                    bpf_fd,
-                                    &pkt_hdr,
-                                    &frame[0..bpf_pkt.bh_caplen as usize],
-                                    &vrouters,
-                                    &debug,
-                                ) {
-                                    Some((ifindex, vrid, ipsrc, advert_prio)) => {
-                                        handle_vrrp_advert(
-                                            &vrouters,
-                                            ifindex,
-                                            vrid,
-                                            ipsrc,
-                                            advert_prio,
-                                            &debug,
-                                        );
-                                    }
-                                    _ => (),
-                                }
-
-                                // advance the pointer to the next ethernet frame
-                                ptr = unsafe {
-                                    ptr.offset(bpf_wordalign(
-                                        (bpf_pkt.bh_hdrlen as u32 + bpf_pkt.bh_caplen)
-                                            .try_into()
-                                            .unwrap(),
-                                    ))
-                                };
-                            }
-                        }
-                        Ok(_) => (),
-                        Err(e) => return Err(e),
-                    }
-                }
+                } 
+                return Ok(());
             }
             // END FreeBSD specific handling
         }

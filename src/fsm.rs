@@ -45,6 +45,7 @@ pub struct Parameters {
     iftype: IfTypes,    // Interfaces type
     vif_name: String,   // Virtual interface name (or physical when saved)
     vif_idx: i32,       // Virtual interface ifindex
+    fd: i32,            // Raw socket or BPF file descriptor
 }
 
 /// Parameters Type Implementation
@@ -71,6 +72,7 @@ impl Parameters {
         iftype: IfTypes,
         vif_name: String,
         vif_idx: i32,
+        fd: i32,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -95,6 +97,7 @@ impl Parameters {
             iftype,
             vif_name,
             vif_idx,
+            fd,
         }
     }
     // vrid() getter
@@ -169,6 +172,14 @@ impl Parameters {
     pub fn vif_idx(&self) -> i32 {
         self.vif_idx
     }
+    // fd() getter
+    pub fn fd(&self) -> i32 {
+        self.fd
+    }
+    // fd_set() method
+    pub fn fd_set(&mut self, fd: i32) {
+        self.fd = fd;
+    } 
 }
 
 /// Internal Protocol States "Enumerator"

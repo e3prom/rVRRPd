@@ -27,7 +27,6 @@ impl ThreadPool {
     // Create a new Thread Pool
     pub fn new(
         vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
-        sockfd: i32,
         debug: &Verbose,
     ) -> ThreadPool {
         // verify the vector is not empty and doesn't exceed 1024 virtual routers
@@ -38,8 +37,10 @@ impl ThreadPool {
 
         // creating individual workers for every virtual routers
         for (id, vr) in vrouters.iter().enumerate() {
+            // acquire read lock on vr
+            let vro = vr.read().unwrap();
             // create new worker
-            workers.push(Worker::new(id, Arc::clone(&vr), sockfd, debug));
+            workers.push(Worker::new(id, Arc::clone(&vr), vro.parameters.fd(), debug));
         }
 
         ThreadPool { workers }

@@ -55,7 +55,23 @@ pub struct bpf_xhdr {
 //
 /// Open a BPF device and return the file descriptor if successful
 pub fn bpf_open_device() -> io::Result<(i32)> {
-    // find an available BPF device
+    // try /dev/bpf
+    let bpf_dev = CString::new("/dev/bpf").unwrap();
+    let bpf_dev_slice = &mut [0i8; 10];
+    for (i, b) in bpf_dev.as_bytes_with_nul().iter().enumerate() {
+        bpf_dev_slice[i] = (*b).try_into().unwrap();
+    }
+    let mut buf = [0i8; 10];
+    buf.clone_from_slice(bpf_dev_slice);
+
+    // open /dev/bpf device
+    println!("DEBUG: opening /dev/bpf device");
+    let res = unsafe {libc::open(&buf as *const i8, libc::O_RDWR)};
+    if res >= 0 {
+        return Ok(res);
+    }
+
+    // if above failed, try /dev/bpfX devices
     for i in 0..99 {
         // create bpf device name slice
         let bpf_fmtstr = format!("/dev/bpf{}", i);
@@ -68,7 +84,7 @@ pub fn bpf_open_device() -> io::Result<(i32)> {
         let mut buf = [0i8; 11];
         buf.clone_from_slice(bpf_dev_slice);
 
-        // open BPF device
+        // open bpf device
         println!("DEBUG: opening device /dev/bpf{}", i);
         let res = unsafe {libc::open(&buf as *const i8, libc::O_RDWR)};
 
@@ -125,7 +141,7 @@ pub fn bpf_bind_device(bpf_fd: i32, interface: &CString) -> io::Result<()> {
 /// Return size of BPF buffer after setup
 pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
     // initialize local buf_len with current buffer size
-    let mut buf_len = pkt_buf.len();
+    let buf_len = pkt_buf.len();
 
     if buf_len == 0 { 
         // get buffer length (ioctl)
