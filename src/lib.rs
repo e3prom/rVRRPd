@@ -191,7 +191,7 @@ impl VirtualRouter {
         fd: i32,
     ) -> io::Result<VirtualRouter> {
         // initialize ifindex
-        let ifindex;
+        let ifindex: i32;
 
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
