@@ -190,9 +190,12 @@ impl VirtualRouter {
         vif_name: String,
         fd: i32,
     ) -> io::Result<VirtualRouter> {
+        // initialize ifindex
+        let ifindex;
+
         // --- Linux specific interface handling
-        #[cfg(target_os = "linux")] { 
-            let ifindex;
+        #[cfg(target_os = "linux")]
+        {
             {
                 // get ifindex from interface name
                 ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
@@ -200,7 +203,7 @@ impl VirtualRouter {
                     Err(e) => return Err(e),
                 };
             }
-        } 
+        }
         // END Linux specific interface handling
 
         // --- FreeBSD specific interface handling
