@@ -191,15 +191,16 @@ impl VirtualRouter {
         fd: i32,
     ) -> io::Result<VirtualRouter> {
         // --- Linux specific interface handling
-        #[cfg(target_os = "linux")]
-        let ifindex;
-        {
-            // get ifindex from interface name
-            ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
-                Ok(i) => i as i32,
-                Err(e) => return Err(e),
-            };
-        }
+        #[cfg(target_os = "linux")] { 
+            let ifindex;
+            {
+                // get ifindex from interface name
+                ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
+                    Ok(i) => i as i32,
+                    Err(e) => return Err(e),
+                };
+            }
+        } 
         // END Linux specific interface handling
 
         // --- FreeBSD specific interface handling
