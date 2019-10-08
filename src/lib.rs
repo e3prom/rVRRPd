@@ -208,13 +208,9 @@ impl VirtualRouter {
         let mut v4masks = Vec::new();
 
         // build interface IPv4 addresses list
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os="linux", target_os="freebsd"))]
         {
-            let _r = os::linux::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
-        }
-        #[cfg(target_os = "freebsd")]
-        {
-            let _r = os::freebsd::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
+            let _r = os::multi::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
         }
             // make sure there is a least one ip/mask pair, otherwise return an error
             if v4addrs.is_empty() || v4masks.is_empty() {
