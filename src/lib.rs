@@ -8,7 +8,6 @@ use libc::{c_void, recvfrom, sockaddr, sockaddr_ll, socklen_t};
 
 // foreign-types
 #[macro_use]
-#[cfg(target_os = "linux")]
 extern crate foreign_types;
 
 // itertools
@@ -205,14 +204,18 @@ impl VirtualRouter {
         // create new IPv4 addresses vector
         let mut v4addrs = Vec::new();
 
-        // create new IPv4 netmasks vecto
+        // create new IPv4 netmasks vector
         let mut v4masks = Vec::new();
 
-        // if the operating system is Linux
+        // build interface IPv4 addresses list
         #[cfg(target_os = "linux")]
         {
             let _r = os::linux::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
-
+        }
+        #[cfg(target_os = "freebsd")]
+        {
+            let _r = os::freebsd::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
+        }
             // make sure there is a least one ip/mask pair, otherwise return an error
             if v4addrs.is_empty() || v4masks.is_empty() {
                 println!(
@@ -224,7 +227,9 @@ impl VirtualRouter {
                     "no ip address configured on vr's interface",
                 ));
             }
-        }
+
+        // TODO - FreeBSD
+        // Add local addresses/masks to the above vectors
 
         // print debugging information
         print_debug(
