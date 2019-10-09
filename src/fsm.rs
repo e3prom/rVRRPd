@@ -264,7 +264,7 @@ pub fn fsm_run(
     tx: &Arc<Mutex<mpsc::Sender<Event>>>,
     rx: &Arc<Mutex<mpsc::Receiver<Event>>>,
     vr: &Arc<RwLock<VirtualRouter>>,
-    sockfd: i32,
+    fd: i32,
     debug: &Verbose,
 ) {
     // print debugging information
@@ -412,7 +412,7 @@ pub fn fsm_run(
                                                 vr.parameters.interface = vif_name;
                                                 // save vif interface mac
                                                 vr.parameters.ifmac =
-                                                    get_mac_addresses(sockfd, &vr, debug);
+                                                    get_mac_addresses(fd, &vr, debug);
                                             }
                                             // if it failed for some reasons, do not change vr's interface
                                             None => (),
@@ -420,9 +420,9 @@ pub fn fsm_run(
                                     }
                                     _ => {
                                         // save vr's interface mac (old)
-                                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                                        vr.parameters.ifmac = get_mac_addresses(fd, &vr, debug);
                                         // set virtual router's MAC address
-                                        set_mac_addresses(sockfd, &vr, vmac, debug);
+                                        set_mac_addresses(fd, &vr, vmac, debug);
                                     }
                                 }
                             }
@@ -430,7 +430,7 @@ pub fn fsm_run(
 
                             // send an ADVERTISEMENT message
                             // and panic on error
-                            packets::send_advertisement(sockfd, &vr, &debug).unwrap();
+                            packets::send_advertisement(fd, &vr, &debug).unwrap();
 
                             // send gratuitious ARP requests
                             let arp_sockfd = open_raw_socket_arp().unwrap();
@@ -565,7 +565,7 @@ pub fn fsm_run(
                                         // change current vr's interface to the virtual interface
                                         vr.parameters.interface = vif_name;
                                         // save vif interface mac
-                                        vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                                        vr.parameters.ifmac = get_mac_addresses(fd, &vr, debug);
                                     }
                                     // if it failed for some reasons, do not change vr's interface
                                     None => (),
@@ -573,9 +573,9 @@ pub fn fsm_run(
                             }
                             _ => {
                                 // save vr's interface mac (old)
-                                vr.parameters.ifmac = get_mac_addresses(sockfd, &vr, debug);
+                                vr.parameters.ifmac = get_mac_addresses(fd, &vr, debug);
                                 // set virtual router's MAC address
-                                set_mac_addresses(sockfd, &vr, vmac, debug);
+                                set_mac_addresses(fd, &vr, vmac, debug);
                             }
                         }
                         // END Linux specific interface type handling
@@ -586,15 +586,15 @@ pub fn fsm_run(
                         match vr.parameters.netdrv {
                             NetDrivers::ioctl => {
                                 // set IP addresses (including VIP) on the vr's interface
-                                set_ip_addresses(sockfd, &vr, Operation::Add, debug);
+                                set_ip_addresses(fd, &vr, Operation::Add, debug);
                                 // set routes
-                                set_ip_routes(sockfd, &vr, Operation::Add, debug);
+                                set_ip_routes(fd, &vr, Operation::Add, debug);
                             }
                             NetDrivers::libnl => {
                                 // add vip on vr's interface
-                                set_ip_addresses(sockfd, &vr, Operation::Add, debug);
+                                set_ip_addresses(fd, &vr, Operation::Add, debug);
                                 // set routes
-                                set_ip_routes(sockfd, &vr, Operation::Add, debug);
+                                set_ip_routes(fd, &vr, Operation::Add, debug);
                             }
                         }
                         // END Linux specific interface type handling
@@ -606,7 +606,7 @@ pub fn fsm_run(
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint;
                         // send ADVERTISEMENT
-                        packets::send_advertisement(sockfd, &vr, debug).unwrap();
+                        packets::send_advertisement(fd, &vr, debug).unwrap();
                         // print information
                         print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Master",
@@ -639,7 +639,7 @@ pub fn fsm_run(
                     // event: Advertisement timer expired in timer thread
                     Event::GenAdvert => {
                         // send ADVERTISEMENT message
-                        packets::send_advertisement(sockfd, &vr, debug).unwrap();
+                        packets::send_advertisement(fd, &vr, debug).unwrap();
                         // reset the advertisement timer to advertisement interval
                         vr.timers.advert = vr.parameters.adverint;
                         continue;
@@ -649,7 +649,7 @@ pub fn fsm_run(
                         // if priority is zero
                         if prio == 0 {
                             // send an ADVERTISEMENT message
-                            packets::send_advertisement(sockfd, &vr, debug).unwrap();
+                            packets::send_advertisement(fd, &vr, debug).unwrap();
                             // reset the advertisement timer to advertisement interval
                             vr.timers.advert = vr.parameters.adverint;
                             // state doesn't change
@@ -693,23 +693,23 @@ pub fn fsm_run(
                                         // restore master interface name
                                         vr.parameters.interface = vr.parameters.vif_name.clone();
                                         // remove added routes
-                                        set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                        set_ip_routes(fd, &vr, Operation::Rem, debug);
                                     }
                                     _ => {
                                         // restore interface's MAC address
-                                        set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
+                                        set_mac_addresses(fd, &vr, vr.parameters.ifmac, debug);
                                         match vr.parameters.netdrv {
                                             NetDrivers::ioctl => {
                                                 // restore primary IP
                                                 #[cfg(target_os = "linux")]
                                                 set_ip_addresses(
-                                                    sockfd,
+                                                    fd,
                                                     &vr,
                                                     Operation::Rem,
                                                     debug,
                                                 );
                                                 // re-set routes
-                                                set_ip_routes(sockfd, &vr, Operation::Add, debug);
+                                                set_ip_routes(fd, &vr, Operation::Add, debug);
                                             }
                                             NetDrivers::libnl => {
                                                 // delete vip
@@ -756,7 +756,7 @@ pub fn fsm_run(
                         vr.timers.advert = 0;
                         // send ADVERTISEMENT with priority equal 0
                         vr.parameters.prio = 0;
-                        packets::send_advertisement(sockfd, &vr, debug).unwrap();
+                        packets::send_advertisement(fd, &vr, debug).unwrap();
 
                         // -- Linux specific interface tyoe handling
                         #[cfg(target_os = "linux")]
@@ -769,24 +769,24 @@ pub fn fsm_run(
                                 // restore master interface name
                                 vr.parameters.interface = vr.parameters.vif_name.clone();
                                 // remove routes
-                                set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                set_ip_routes(fd, &vr, Operation::Rem, debug);
                             }
                             _ => {
                                 // restore interface's MAC address
-                                set_mac_addresses(sockfd, &vr, vr.parameters.ifmac, debug);
+                                set_mac_addresses(fd, &vr, vr.parameters.ifmac, debug);
                                 // restore primary or delete vip on vr's interface
                                 match vr.parameters.netdrv {
                                     NetDrivers::ioctl => {
                                         // restore primary IP
-                                        set_ip_addresses(sockfd, &vr, Operation::Rem, debug);
+                                        set_ip_addresses(fd, &vr, Operation::Rem, debug);
                                         // remove routes
-                                        set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                        set_ip_routes(fd, &vr, Operation::Rem, debug);
                                     }
                                     NetDrivers::libnl => {
                                         // delete vip
                                         delete_ip_addresses(&vr, debug);
                                         // remove added routes
-                                        set_ip_routes(sockfd, &vr, Operation::Rem, debug);
+                                        set_ip_routes(fd, &vr, Operation::Rem, debug);
                                     }
                                 }
                             }
@@ -864,7 +864,7 @@ fn is_primary_higher(primary: &[u8; 4], local: &[u8; 4]) -> bool {
 // set_ip_addresses() function
 /// set or clear IPv4 addresses on a virtual-router interface
 fn set_ip_addresses(
-    sockfd: i32,
+    fd: i32,
     vr: &RwLockWriteGuard<VirtualRouter>,
     op: Operation,
     debug: &Verbose,
@@ -933,7 +933,7 @@ fn set_ip_addresses(
         match vr.parameters.netdrv {
             NetDrivers::ioctl => {
                 if let Err(e) =
-                    os::linux::netdev::set_ip_address(sockfd, &ifname, addrs[idx], netmasks[idx])
+                    os::linux::netdev::set_ip_address(fd, &ifname, addrs[idx], netmasks[idx])
                 {
                     eprintln!(
                         "error(ip): error while assigning IP address on interface {:?}: {}",
@@ -1040,7 +1040,7 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
 // get_mac_addresses() function
 /// get Ethernet MAC address from vr's interface
 fn get_mac_addresses(
-    sockfd: i32,
+    fd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     debug: &Verbose,
 ) -> [u8; 6] {
@@ -1052,7 +1052,7 @@ fn get_mac_addresses(
     {
         {
             // get mac address of interface
-            match os::linux::netdev::get_mac_addr(sockfd, &ifname, debug) {
+            match os::linux::netdev::get_mac_addr(fd, &ifname, debug) {
                 Ok(mac) => mac,
                 Err(e) => {
                     eprintln!(
@@ -1076,7 +1076,7 @@ fn get_mac_addresses(
 // set_mac_addresses() function
 /// Set Ethernet MAC address on vr's interface
 fn set_mac_addresses(
-    sockfd: i32,
+    fd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     mac: [u8; 6],
     debug: &Verbose,
@@ -1088,7 +1088,7 @@ fn set_mac_addresses(
     #[cfg(target_os = "linux")]
     {
         // set mac address
-        match os::linux::netdev::set_mac_addr(sockfd, &ifname, mac, debug) {
+        match os::linux::netdev::set_mac_addr(fd, &ifname, mac, debug) {
             Err(e) => eprintln!("error(mac): error while setting mac address: {}", e),
             _ => {}
         }
@@ -1099,7 +1099,7 @@ fn set_mac_addresses(
 // set_ip_routes() function
 /// set or unset IPv4 routes on virtual-router interfaces
 fn set_ip_routes(
-    sockfd: i32,
+    fd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     op: Operation,
     debug: &Verbose,
@@ -1132,7 +1132,7 @@ fn set_ip_routes(
                             ),
                             );
                             if let Err(e) = os::linux::netdev::set_ip_route(
-                                sockfd,
+                                fd,
                                 &vr.parameters.interface,
                                 st.route(),
                                 st.mask(),
@@ -1160,7 +1160,7 @@ fn set_ip_routes(
                             ),
                             );
                             if let Err(e) = os::linux::libnl::set_ip_route(
-                                sockfd,
+                                fd,
                                 &vr.parameters.interface,
                                 st.route(),
                                 st.mask(),

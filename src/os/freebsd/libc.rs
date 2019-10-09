@@ -1,7 +1,7 @@
 // FreeBSD standard C library support
 
 // std, libc
-use libc::{read, c_void};
+use libc::{read, write, c_void};
 use std::io;
 use std::mem;
 
@@ -41,18 +41,26 @@ pub fn raw_sendto(
         sa_data: [0; 14], // data
     };
 
+    // unsafe {
+    //     // unsafe call to sendto()
+    //     match libc::sendto(
+    //         fd,
+    //         &mut frame[..] as *mut _ as *const c_void,
+    //         mem::size_of_val(&frame[..]),
+    //         0,
+    //         &sa,
+    //         mem::size_of_val(&sa) as u32,
+    //     ) {
+    //         -1 => Err(io::Error::last_os_error()),
+    //         _ => Ok(()),
+    //     }
+    // }
+
     unsafe {
-        // unsafe call to sendto()
-        match libc::sendto(
-            fd,
-            &mut frame[..] as *mut _ as *const c_void,
-            mem::size_of_val(&frame[..]),
-            0,
-            &sa,
-            mem::size_of_val(&sa) as u32,
-        ) {
+        // unsafe call to write()
+        match write(fd, &mut frame[..] as *mut _ as *const c_void, mem::size_of_val(&frame[..])) {
             -1 => Err(io::Error::last_os_error()),
             _ => Ok(()),
-        }
-    }
+        } 
+    } 
 }

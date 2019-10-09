@@ -188,7 +188,7 @@ impl VRRPpkt {
 // send_advertisement() function
 /// Send a VRRP ADVERTISEMENT message
 pub fn send_advertisement(
-    sockfd: i32,
+    fd: i32,
     vr: &RwLockWriteGuard<'_, VirtualRouter>,
     debug: &Verbose,
 ) -> io::Result<()> {
@@ -303,7 +303,7 @@ pub fn send_advertisement(
 
     // sending raw ethernet frame
     let ifindex = vr.parameters.ifindex();
-    let res = raw_sendto(sockfd, ifindex, &mut frame);
+    let res = raw_sendto(fd, ifindex, &mut frame);
 
     // return above call result
     return res;

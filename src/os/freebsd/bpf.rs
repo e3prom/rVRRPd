@@ -23,6 +23,12 @@ const BIOCGSTATS: c_ulong = 0x4008426f;
 const BIOCIMMEDIATE: c_ulong = 0x80044270;
 const BIOCVERSION: c_ulong = 0x40044271;
 const BIOCGRSIG: c_ulong = 0x40044272;
+const BIOCSRSIG: c_ulong = 0x80044273;
+const BIOCGHDRCMPLT: c_ulong = 0x40044274;
+const BIOCSHDRCMPLT: c_ulong = 0x80044275;
+const BIOCGSEESENT: c_ulong  = 0x40044276;
+const BIOCSSEESENT: c_ulong  = 0x80044277;
+const BIOCSDLT: c_ulong = 0x80044278;
 const SIOCGIFADDR: c_ulong = 0xc0206921;
 const BPF_ALIGNMENT: c_int = 8;
 
@@ -176,6 +182,18 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         }
         _ => {
             println!("DEBUG: immediate mode set on BPF device, fd {}", bpf_fd);
+        }
+    };
+
+    // set the header complete flag to 1
+    let flag = 1;
+    match unsafe { libc::ioctl(bpf_fd, BIOCSHDRCMPLT, &flag) } {
+        e if e < 0 => {
+            println!("error while setting header complete flag on BPF device, fd {}, error no: {}", bpf_fd, e);
+            return Err(io::Error::last_os_error());
+        }
+        _ => {
+            println!("DEBUG: header complete flag set on BPF device, fd {}", bpf_fd);
         }
     };
 
