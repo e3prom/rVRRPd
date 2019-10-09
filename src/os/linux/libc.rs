@@ -6,7 +6,6 @@ use libc::{socket, AF_PACKET, SOCK_RAW};
 use std::ffi::CString;
 use std::io;
 use std::mem;
-use std::sync::RwLockWriteGuard;
 
 // open_raw_socket_fd() function
 /// Open a raw AF_PACKET socket for IPv4
@@ -67,11 +66,7 @@ pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
 
 // raw_sendto() function
 /// Send RAW frame/packet
-pub fn raw_sendto(
-    sockfd: i32,
-    ifindex: i32,
-    frame: &mut Vec<u8>,
-) -> io::Result<()> {
+pub fn raw_sendto(sockfd: i32, ifindex: i32, frame: &mut Vec<u8>) -> io::Result<()> {
     // sockaddr_ll (man 7 packet)
     let mut sa = libc::sockaddr_ll {
         sll_family: libc::AF_PACKET as u16,

@@ -20,14 +20,13 @@ use crate::auth::gen_auth_data;
 use crate::debug::{print_debug, Verbose};
 
 // operating system specific
-#[cfg(target_os = "linux")]
-use crate::os::linux::libc::{raw_sendto};
 #[cfg(target_os = "freebsd")]
-use crate::os::freebsd::libc::{raw_sendto};
+use crate::os::freebsd::libc::raw_sendto;
+#[cfg(target_os = "linux")]
+use crate::os::linux::libc::raw_sendto;
 
 // std
 use std::io;
-use std::mem;
 
 /// Raw VRRPv2 Packet Format Structure
 /// This is the fixed size portion of a possibly VRRPv2 packet
