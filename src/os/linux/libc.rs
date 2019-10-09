@@ -67,7 +67,7 @@ pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
 
 // raw_sendto() function
 /// Send RAW frame/packet
-fn raw_sendto(
+pub fn raw_sendto(
     sockfd: i32,
     ifindex: i32,
     frame: &mut Vec<u8>,
@@ -88,7 +88,7 @@ fn raw_sendto(
         let ptr_sockaddr = mem::transmute::<*mut libc::sockaddr_ll, *mut libc::sockaddr>(&mut sa);
         match libc::sendto(
             sockfd,
-            &mut frame[..] as *mut _ as *const libc::c_void,
+            &mut frame[..] as *mut _ as *const c_void,
             mem::size_of_val(&frame[..]),
             0,
             ptr_sockaddr,
