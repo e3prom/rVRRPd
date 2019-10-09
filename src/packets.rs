@@ -19,6 +19,12 @@ use crate::auth::gen_auth_data;
 // debugging
 use crate::debug::{print_debug, Verbose};
 
+// operating system specific
+#[cfg(target_os = "linux")]
+use crate::os::linux::libc::{raw_sendto};
+#[cfg(target_os = "freebsd")]
+use crate::os::freebsd::libc::{raw_sendto};
+
 // std
 use std::io;
 use std::mem;
@@ -296,17 +302,9 @@ pub fn send_advertisement(
     frame[IP_FRAME_OFFSET + 2] = frame_size.to_be() as u8;
     frame[IP_FRAME_OFFSET + 2 + 1] = frame_size as u8;
 
-    // sending raw ethernet frame (linux)
-    #[cfg(target_os = "linux")]
-    let res = lnx_raw_sendto(sockfd, vr, &mut frame);
-
-    // sending raw ethernet frame (freebsd)
-    #[cfg(target_os = "freebsd")]
-    let res = fbsd_raw_sendto(sockfd, vr, &mut frame);
-
-    // // sending raw ethernet frame (openbsd)
-    // #[cfg(target_os = "openbsd")]
-    // let res = obsd_raweth_sendto(sockfd, vr, &mut frame);
+    // sending raw ethernet frame
+    let ifindex = vr.parameters.ifindex();
+    let res = raw_sendto(sockfd, ifindex, &mut frame);
 
     // return above call result
     return res;
@@ -316,54 +314,4 @@ pub fn send_advertisement(
 /// transform type T as slice of u8
 unsafe fn as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
-}
-
-// lnx_raw_sendto() function (linux)
-// send raw ethernet frame
-#[cfg(target_os = "linux")]
-fn lnx_raw_sendto(
-    sockfd: i32,
-    vr: &RwLockWriteGuard<VirtualRouter>,
-    frame: &mut Vec<u8>,
-) -> io::Result<()> {
-    // sockaddr_ll (man 7 packet)
-    let mut sa = libc::sockaddr_ll {
-        sll_family: libc::AF_PACKET as u16,
-        sll_protocol: ETHER_P_IP.to_be(),
-        sll_ifindex: vr.parameters.ifindex(),
-        sll_hatype: 0,
-        sll_pkttype: 0,
-        sll_halen: 0,
-        sll_addr: [0; 8],
-    };
-
-    unsafe {
-        // unsafe call to sendto()
-        let ptr_sockaddr = mem::transmute::<*mut libc::sockaddr_ll, *mut libc::sockaddr>(&mut sa);
-        match libc::sendto(
-            sockfd,
-            &mut frame[..] as *mut _ as *const libc::c_void,
-            mem::size_of_val(&frame[..]),
-            0,
-            ptr_sockaddr,
-            mem::size_of_val(&sa) as u32,
-        ) {
-            -1 => Err(io::Error::last_os_error()),
-            _ => Ok(()),
-        }
-    }
-}
-
-// fbsd_raw_sendto( function (freebsd)
-// send raw ethernet frame using BPF?
-//
-// see https://www.vankuik.nl/2012-02-09_Writing_ethernet_packets_on_OS_X_and_BSD
-#[cfg(target_os = "freebsd")]
-fn fbsd_raw_sendto(
-    sockfd: i32,
-    vr: &RwLockWriteGuard<VirtualRouter>,
-    frame: &mut Vec<u8>,
-) -> io::Result<()> {
-    // TODO
-    Ok(())
 }

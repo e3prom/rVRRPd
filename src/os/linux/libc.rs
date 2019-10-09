@@ -5,6 +5,8 @@ use crate::*;
 use libc::{socket, AF_PACKET, SOCK_RAW};
 use std::ffi::CString;
 use std::io;
+use std::mem;
+use std::sync::RwLockWriteGuard;
 
 // open_raw_socket_fd() function
 /// Open a raw AF_PACKET socket for IPv4
@@ -59,6 +61,41 @@ pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
             Err(io::Error::last_os_error())
         } else {
             Ok(r)
+        }
+    }
+}
+
+// raw_sendto() function
+/// Send RAW frame/packet
+fn raw_sendto(
+    sockfd: i32,
+    ifindex: i32,
+    frame: &mut Vec<u8>,
+) -> io::Result<()> {
+    // sockaddr_ll (man 7 packet)
+    let mut sa = libc::sockaddr_ll {
+        sll_family: libc::AF_PACKET as u16,
+        sll_protocol: ETHER_P_IP.to_be(),
+        sll_ifindex: ifindex,
+        sll_hatype: 0,
+        sll_pkttype: 0,
+        sll_halen: 0,
+        sll_addr: [0; 8],
+    };
+
+    unsafe {
+        // unsafe call to sendto()
+        let ptr_sockaddr = mem::transmute::<*mut libc::sockaddr_ll, *mut libc::sockaddr>(&mut sa);
+        match libc::sendto(
+            sockfd,
+            &mut frame[..] as *mut _ as *const libc::c_void,
+            mem::size_of_val(&frame[..]),
+            0,
+            ptr_sockaddr,
+            mem::size_of_val(&sa) as u32,
+        ) {
+            -1 => Err(io::Error::last_os_error()),
+            _ => Ok(()),
         }
     }
 }
