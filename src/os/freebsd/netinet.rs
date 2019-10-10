@@ -1,7 +1,7 @@
 //! FreeBSD network support
 
 // libc
-use libc::{IF_NAMESIZE, c_int, c_short, c_void, sockaddr, ioctl, AF_INET};
+use libc::{IF_NAMESIZE, c_int, c_short, c_uchar, c_void, sockaddr, ioctl, AF_INET};
 
 // std
 use std::io;
@@ -36,9 +36,9 @@ struct ifreq_buffer {
 
 // int_sockaddr alias
 struct int_sockaddr {
+    sa_len: c_uchar,
     sa_family: u8,
     sa_data: [u8; 14],
-    sa_len: c_int,
 } 
 
 // set_ip_address() function
@@ -89,7 +89,7 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
             sa_len: 0,
         },
         ifru_broadaddr: int_sockaddr {
-            sa_family: 0,
+            sa_family: AF_INET as u8,
             sa_data: [0u8; 14],
             sa_len: 0,
         },
