@@ -10,16 +10,13 @@ use std::ffi::CString;
 // FreeBSD constants
 use crate::os::freebsd::constants::*;
 
-// Trait
-use std::convert::TryInto;
-
 // IfReq Structure
 #[repr(C)]
 struct IfReq {
     ifr_name: [u8; IF_NAMESIZE],    // interface name
-    ifru_addr: sockaddr,            // address
-    ifru_dstaddr: sockaddr,         // remote ptp endpoint
-    ifru_broadaddr: sockaddr,       // broadcast address
+    ifru_addr: int_sockaddr,        // address
+    ifru_dstaddr: int_sockaddr,     // remote ptp endpoint
+    ifru_broadaddr: int_sockaddr,   // broadcast address
     ifru_buffer: ifreq_buffer,      // user supplied buffer with length
     ifru_flags: [c_short; 2],       // flags (high,low)
     ifru_index: c_short,            // interface index
@@ -37,6 +34,13 @@ struct ifreq_buffer {
     buffer: *const c_void,
 } 
 
+// int_sockaddr alias
+struct int_sockaddr {
+    sa_family: u8,
+    sa_data: [u8; 14],
+    sa_len: c_int,
+} 
+
 // set_ip_address() function
 /// Set IPv4 Address on given interface
 pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) -> io::Result<()> {
@@ -52,15 +56,15 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
     }
 
     // create IP address slice
-    let ip_addr_slice = &mut [0i8; 14];
+    let ip_addr_slice = &mut [0u8; 14];
     for (i, b) in ip.iter().enumerate() {
-        ip_addr_slice[i] = (*b).try_into().unwrap();
+        ip_addr_slice[i] = *b;
     }
 
     // create IP netmask slice
-    let ip_netmask_slice = &mut [0i8; 14];
+    let ip_netmask_slice = &mut [0u8; 14];
     for (i, b) in netmask.iter().enumerate() {
-        ip_netmask_slice[i] = (*b).try_into().unwrap();
+        ip_netmask_slice[i] = *b;
     }
 
     // construct IfReq structure
@@ -70,23 +74,23 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
             buf.clone_from_slice(ifname_slice); 
             buf
         },
-        ifru_addr: sockaddr {
+        ifru_addr: int_sockaddr {
             sa_family: AF_INET as u8,
             sa_data: {
-                let mut data = [0i8; 14];
+                let mut data = [0u8; 14];
                 data.clone_from_slice(ip_addr_slice);
                 data
             },
             sa_len: 0,
         },
-        ifru_dstaddr: sockaddr {
+        ifru_dstaddr: int_sockaddr {
             sa_family: 0,
-            sa_data: [0i8; 14],
+            sa_data: [0u8; 14],
             sa_len: 0,
         },
-        ifru_broadaddr: sockaddr {
+        ifru_broadaddr: int_sockaddr {
             sa_family: 0,
-            sa_data: [0i8; 14],
+            sa_data: [0u8; 14],
             sa_len: 0,
         },
         ifru_buffer: ifreq_buffer {
