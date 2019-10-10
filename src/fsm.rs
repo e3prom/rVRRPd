@@ -968,6 +968,20 @@ fn set_ip_addresses(
         }
     }
     // END Linux specific interface type handling
+
+    // FreeBSD specific interface type handling
+    #[cfg(target_os = "freebsd")] {
+        print_debug(debug, DEBUG_LEVEL_HIGH, DEBUG_SRC_IP, format!("setting ip addresss on interface {:?}, fd {}", ifname, fd));
+        if let Err(e) = os::freebsd::netinet::set_ip_address(
+            fd,
+            &ifname,
+            addrs[idx],
+            netmasks[idx]  
+        ) {
+            eprintln!("error(ip): error while setting IP address on interface {:?}: {}", ifname, e);
+        } 
+    } 
+    // END FreeBSD specific interface type handling
 }
 
 // delete_ip_addresses() function
@@ -1067,8 +1081,9 @@ fn get_mac_addresses(
     // END Linux specific interface type handling
 
     // --- FreeBSD specific interface tyoe handling
-    #[cfg(target_os = "freebsd")]
-    // TODO
+    #[cfg(target_os = "freebsd")] 
+    // return all zero MAC address as BPF is filling it automatically
+    // and we are not required to maintain the address in memory (yet)
     [0, 0, 0, 0, 0, 0]
     // END FreeBSD specific interface type handling
 }

@@ -1,4 +1,4 @@
-// FreeBSD standard C library support
+//! FreeBSD standard C library support
 
 // std, libc
 use libc::{read, write, c_void};

@@ -5,38 +5,18 @@ use std::io;
 use std::convert::TryInto;
 
 // libc
-use libc::{IF_NAMESIZE, c_ulong, c_uint, c_int};
+use libc::{IF_NAMESIZE};
 
 // ffi
 use std::ffi::{CString};
 
-// BPF constants (until added to rust's libc)
-// https://github.com/equal-l2/libc/blob/cf1a3e10fa95a33d8f987e29b8d91e0db91c9cb0/src/unix/bsd/mod.rs
-const BIOCGBLEN: c_ulong = 0x40044266;
-const BIOCSBLEN: c_ulong = 0xc0044266;
-const BIOCFLUSH: c_uint = 0x20004268;
-const BIOCPROMISC: c_uint = 0x20004269;
-const BIOCGDLT: c_ulong = 0x4004426a;
-const BIOCGETIF: c_ulong = 0x4020426b;
-const BIOCSETIF: c_ulong = 0x8020426c;
-const BIOCGSTATS: c_ulong = 0x4008426f;
-const BIOCIMMEDIATE: c_ulong = 0x80044270;
-const BIOCVERSION: c_ulong = 0x40044271;
-const BIOCGRSIG: c_ulong = 0x40044272;
-const BIOCSRSIG: c_ulong = 0x80044273;
-const BIOCGHDRCMPLT: c_ulong = 0x40044274;
-const BIOCSHDRCMPLT: c_ulong = 0x80044275;
-const BIOCGSEESENT: c_ulong  = 0x40044276;
-const BIOCSSEESENT: c_ulong  = 0x80044277;
-const BIOCSDLT: c_ulong = 0x80044278;
-const SIOCGIFADDR: c_ulong = 0xc0206921;
-const BPF_ALIGNMENT: c_int = 8;
+// FreeBSD constants
+use crate::os::freebsd::constants::*;
 
-// Ifreq redifinition
+// Ifreq redifinition (stripped)
 #[repr(C)]
-struct Ifreq {
+struct IfreqS {
     ifr_name: [u8; IF_NAMESIZE],
-    // ifru_addr: sockaddr,
 }
 
 // BPF system structures
@@ -117,17 +97,12 @@ pub fn bpf_bind_device(bpf_fd: i32, interface: &CString) -> io::Result<()> {
     }
 
     // create Ifreq structure
-    let ifbound = Ifreq {
+    let ifbound = IfreqS {
         ifr_name: {
             let mut buf = [0u8; IF_NAMESIZE];
             buf.clone_from_slice(ifname_slice); 
             buf
         }
-        // ifru_addr: sockaddr {
-        //     sa_family: 0,
-        //     sa_data: [0; 14],
-        //     sa_len: 0,
-        // },
     };
 
     // ioctl
