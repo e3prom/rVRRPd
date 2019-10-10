@@ -45,7 +45,7 @@ struct int_sockaddr {
 
 // set_ip_address() function
 /// Set IPv4 Address on given interface
-pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) -> io::Result<()> {
+pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) -> io::Result<()> {
     // create a slice of mutable reference to array of 16 u8
     let ifname_slice = &mut [0u8; 16];
     // for every bytes/character in name of type Cstring, insert it into the above slice.
@@ -110,6 +110,12 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
         ifru_media: 0,
         ifru_data: 0,
         ifru_cap: [0i32; 2],
+    };
+
+    // open new socket for below ioctl
+    let fd = match unsafe { libc::socket(libc::PF_INET, libc::SOCK_DGRAM, 0) } {
+        -1 => return Err(io::Error::last_os_error()),
+        fd => fd,
     };
 
     // see man 4 netintro
