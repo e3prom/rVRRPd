@@ -1,7 +1,7 @@
 //! FreeBSD network support
 
 // libc
-use libc::{IF_NAMESIZE, c_ulong, c_uint, c_int, c_short, c_void, sockaddr, ioctl};
+use libc::{IF_NAMESIZE, c_int, c_short, c_void, sockaddr, ioctl, AF_INET};
 
 // std
 use std::io;
@@ -9,6 +9,9 @@ use std::ffi::CString;
 
 // FreeBSD constants
 use crate::os::freebsd::constants::*;
+
+// Trait
+use std::convert::TryInto;
 
 // IfReq Structure
 #[repr(C)]
@@ -49,15 +52,15 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
     }
 
     // create IP address slice
-    let ip_addr_slice = &mut [0u8; 14];
+    let ip_addr_slice = &mut [0i8; 14];
     for (i, b) in ip.iter().enumerate() {
-        ip_addr_slice[i] = *b;
+        ip_addr_slice[i] = (*b).try_into().unwrap();
     }
 
     // create IP netmask slice
-    let ip_netmask_slice = &mut [0u8; 14];
+    let ip_netmask_slice = &mut [0i8; 14];
     for (i, b) in netmask.iter().enumerate() {
-        ip_netmask_slice[i] = *b;
+        ip_netmask_slice[i] = (*b).try_into().unwrap();
     }
 
     // construct IfReq structure
@@ -68,8 +71,12 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
             buf
         },
         ifru_addr: sockaddr {
-            sa_family: 0,
-            sa_data: [0i8; 14],
+            sa_family: AF_INET as u8,
+            sa_data: {
+                let mut data = [0i8; 14];
+                data.clone_from_slice(ip_addr_slice);
+                data
+            },
             sa_len: 0,
         },
         ifru_dstaddr: sockaddr {
