@@ -39,8 +39,8 @@ struct ifreq_buffer {
 #[repr(C)]
 struct int_sockaddr {
     sa_len: c_uchar,
-    sa_family: u8,
-    sa_data: [u8; 14],
+    sa_family: c_uchar,
+    sa_data: [c_uchar; 14],
 } 
 
 // set_ip_address() function
@@ -83,7 +83,7 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
                 data.clone_from_slice(ip_addr_slice);
                 data
             },
-            sa_len: 0,
+            sa_len: 16,
         },
         ifru_dstaddr: int_sockaddr {
             sa_family: 0,
@@ -91,7 +91,7 @@ pub fn set_ip_address(fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) 
             sa_len: 0,
         },
         ifru_broadaddr: int_sockaddr {
-            sa_family: AF_INET as u8,
+            sa_family: 0,
             sa_data: [0u8; 14],
             sa_len: 0,
         },
