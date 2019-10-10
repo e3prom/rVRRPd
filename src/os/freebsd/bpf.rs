@@ -5,7 +5,7 @@ use std::io;
 use std::convert::TryInto;
 
 // libc
-use libc::{c_char, sockaddr, IF_NAMESIZE, c_ulong, c_uint, c_int};
+use libc::{IF_NAMESIZE, c_ulong, c_uint, c_int};
 
 // ffi
 use std::ffi::{CString};
@@ -82,7 +82,7 @@ pub fn bpf_open_device() -> io::Result<(i32)> {
         // create bpf device name slice
         let bpf_fmtstr = format!("/dev/bpf{}", i);
         let bpf_dev = CString::new(bpf_fmtstr).unwrap();
-        let mut bpf_dev_slice = &mut [0i8; 11];
+        let bpf_dev_slice = &mut [0i8; 11];
         for (i, b) in bpf_dev.as_bytes_with_nul().iter().enumerate() {
             bpf_dev_slice[i] = (*b).try_into().unwrap();
         }
@@ -185,15 +185,15 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8]) -> io::Result<(usize)> {
         }
     };
 
-    // set the header complete flag to 1
+    // set the header complete flag to one
     let flag = 1;
     match unsafe { libc::ioctl(bpf_fd, BIOCSHDRCMPLT, &flag) } {
         e if e < 0 => {
-            println!("error while setting header complete flag on BPF device, fd {}, error no: {}", bpf_fd, e);
+            println!("error while setting ({}) header complete flag on BPF device, fd {}, error no: {}", flag, bpf_fd, e);
             return Err(io::Error::last_os_error());
         }
         _ => {
-            println!("DEBUG: header complete flag set on BPF device, fd {}", bpf_fd);
+            println!("DEBUG: header complete flag set to {} on BPF device, fd {}", flag, bpf_fd);
         }
     };
 

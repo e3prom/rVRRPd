@@ -121,7 +121,7 @@ impl VRRPpkt {
         // dst multicast MAC address for 224.0.0.18
         let dst_mac = ETHER_VRRP_V2_DST_MAC;
         // generate source MAC address from VID
-        let mut src_mac = ETHER_VRRP_V2_SRC_MAC;
+        let mut src_mac = ETHER_VRRP_V2_SRC_MAC; 
         src_mac[5] = vr.parameters.vrid();
         // ipv4 ethertype
         let ethertype = ETHER_P_IP.to_be();

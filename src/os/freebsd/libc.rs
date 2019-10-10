@@ -31,36 +31,18 @@ pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<
 /// Send RAW frame/packet
 pub fn raw_sendto(
     fd: i32,
-    ifindex: i32,
+    _ifindex: i32,
     frame: &mut Vec<u8>,
 ) -> io::Result<()> {
-    // sockaddr
-    let mut sa = libc::sockaddr {
-        sa_len: 0, // total length
-        sa_family: 0, // address family
-        sa_data: [0; 14], // data
-    };
-
-    // unsafe {
-    //     // unsafe call to sendto()
-    //     match libc::sendto(
-    //         fd,
-    //         &mut frame[..] as *mut _ as *const c_void,
-    //         mem::size_of_val(&frame[..]),
-    //         0,
-    //         &sa,
-    //         mem::size_of_val(&sa) as u32,
-    //     ) {
-    //         -1 => Err(io::Error::last_os_error()),
-    //         _ => Ok(()),
-    //     }
-    // }
-
+    println!("DEBUG: calling write() on fd {}", fd);
     unsafe {
         // unsafe call to write()
         match write(fd, &mut frame[..] as *mut _ as *const c_void, mem::size_of_val(&frame[..])) {
             -1 => Err(io::Error::last_os_error()),
-            _ => Ok(()),
-        } 
-    } 
+            _ => {
+                println!("DEBUG: VRRP frame successfully sent on BPF device, fd {}", fd);
+                Ok(())
+            }
+        }
+    }
 }
