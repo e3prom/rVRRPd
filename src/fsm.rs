@@ -549,7 +549,7 @@ pub fn fsm_run(
                         let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                         vmac[5] = vr.parameters.vrid();
 
-                        // --- Linux specific interface tyoe handling
+                        // --- Linux specific interface type handling
                         #[cfg(target_os = "linux")]
                         // setup MAC address or virtual interface
                         match vr.parameters.iftype {
@@ -580,7 +580,7 @@ pub fn fsm_run(
                         }
                         // END Linux specific interface type handling
 
-                        // --- Linux specific interface tyoe handling
+                        // --- Linux specific interface type handling
                         #[cfg(target_os = "linux")]
                         // set VIP according to network driver in use
                         match vr.parameters.netdrv {
@@ -598,6 +598,11 @@ pub fn fsm_run(
                             }
                         }
                         // END Linux specific interface type handling
+
+                        // --- FreeBSD specific interface tyoe handling
+                        #[cfg(target_os = "freebsd")] 
+                        set_ip_addresses(fd, &vr, Operation::Add, debug);
+                        // END FreeBSD specific interface tyoe handling
 
                         // send gratuitious ARP requests
                         let arp_sockfd = open_raw_socket_arp().unwrap();
@@ -976,11 +981,11 @@ fn set_ip_addresses(
             fd,
             &ifname,
             addrs[idx],
-            netmasks[idx]  
+            netmasks[idx]
         ) {
             eprintln!("error(ip): error while setting IP address on interface {:?}: {}", ifname, e);
-        } 
-    } 
+        }
+    }
     // END FreeBSD specific interface type handling
 }
 
