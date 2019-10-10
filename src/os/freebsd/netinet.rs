@@ -29,12 +29,14 @@ struct IfReq {
 }
 
 // ifreq_buffer Structure
+#[repr(C)]
 struct ifreq_buffer {
     length: c_int,
     buffer: *const c_void,
 } 
 
 // int_sockaddr alias
+#[repr(C)]
 struct int_sockaddr {
     sa_len: c_uchar,
     sa_family: u8,
