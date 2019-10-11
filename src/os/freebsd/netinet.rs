@@ -11,23 +11,24 @@ use std::ffi::CString;
 use crate::os::freebsd::constants::*;
 
 
-// IfReq Structure
-// man 4 netintro
-struct IfReq {
-    ifr_name: [u8; IF_NAMESIZE],    // interface name
-    ifru_addr: int_sockaddr,        // address
-    ifru_dstaddr: int_sockaddr,     // remote ptp endpoint
-    ifru_broadaddr: int_sockaddr,   // broadcast address
-    //ifru_buffer: ifreq_buffer,    // user supplied buffer with length (fbsd 12.0)
-    ifru_flags: [c_short; 2],       // flags (high,low)
-    ifru_index: c_short,            // interface index
-    ifru_metric: c_int,             // metric
-    ifru_mtu: c_int,                // maximum transmission unit
-    ifru_phys: c_int,               // physical wire
-    ifru_media: c_int,              // physical media
-    ifru_data: c_int,               // interface data (replaced caddr_t with c_int)
-    ifru_cap: [c_int; 2],           // capabilities (requested/current)
-}
+// // IfReq Structure
+// // man 4 netintro
+// #[repr(C)]
+// struct IfReq {
+//     ifr_name: [u8; IF_NAMESIZE],    // interface name
+//     ifru_addr: int_sockaddr,        // address
+//     ifru_dstaddr: int_sockaddr,     // remote ptp endpoint
+//     ifru_broadaddr: int_sockaddr,   // broadcast address
+//     //ifru_buffer: ifreq_buffer,    // user supplied buffer with length (fbsd 12.0)
+//     ifru_flags: [c_short; 2],       // flags (high,low)
+//     ifru_index: c_short,            // interface index
+//     ifru_metric: c_int,             // metric
+//     ifru_mtu: c_int,                // maximum transmission unit
+//     ifru_phys: c_int,               // physical wire
+//     ifru_media: c_int,              // physical media
+//     ifru_data: c_int,               // interface data (replaced caddr_t with c_int)
+//     ifru_cap: [c_int; 2],           // capabilities (requested/current)
+// }
 
 // ifreq_buffer Structure
 #[repr(C)]
@@ -40,19 +41,19 @@ struct ifreq_buffer {
 #[repr(C)]
 struct IfAliasReq {
     ifr_name: [u8; IF_NAMESIZE],    // interface name
-    ifra_addr: int_sockaddr,        // IPv4 address
-    ifra_broadaddr: int_sockaddr,   // destination address
-    ifra_mask: int_sockaddr,        // netmask
+    ifra_addr: int_sockaddr_in,        // IPv4 address
+    ifra_broadaddr: int_sockaddr_in,   // destination address
+    ifra_mask: int_sockaddr_in,        // netmask
     ifra_vhid: c_int,
 }
 
 // int_sockaddr alias
 #[repr(C)]
-struct int_sockaddr {
-    sa_len: c_uchar,
-    sa_family: c_uchar,
-    _pad: u16,
-    sa_data: [c_uchar; 14],
+struct int_sockaddr_in {
+    sin_len: c_uchar,
+    sin_family: c_uchar,
+    sin_port: c_short,
+    sin_addr: [c_uchar; 14],
 } 
 
 // set_ip_address() function
@@ -133,27 +134,27 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
             buf.clone_from_slice(ifname_slice);
             buf
         },
-        ifra_addr: int_sockaddr {
-            sa_len: 16,
-            sa_family: AF_INET as u8,
-            _pad: 0,
-            sa_data: {
+        ifra_addr: int_sockaddr_in {
+            sin_len: 16,
+            sin_family: AF_INET as u8,
+            sin_port: 0,
+            sin_addr: {
                 let mut data = [0u8; 14];
                 data.clone_from_slice(ip_addr_slice);
                 data
             }
         },
-        ifra_broadaddr: int_sockaddr {
-            sa_len: 0,
-            sa_family: 0,
-            _pad: 0,
-            sa_data: [0u8; 14],
+        ifra_broadaddr: int_sockaddr_in {
+            sin_len: 0,
+            sin_family: 0,
+            sin_port: 0,
+            sin_addr: [0u8; 14],
         },
-        ifra_mask: int_sockaddr {
-            sa_len: 16,
-            sa_family: AF_INET as u8,
-            _pad: 0,
-            sa_data: {
+        ifra_mask: int_sockaddr_in {
+            sin_len: 16,
+            sin_family: AF_INET as u8,
+            sin_port: 0,
+            sin_addr: {
                 let mut data = [0u8; 14];
                 data.clone_from_slice(ip_netmask_slice);
                 data
