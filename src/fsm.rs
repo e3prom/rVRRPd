@@ -725,6 +725,15 @@ pub fn fsm_run(
                                 }
                                 // END Linux specific interface type handling
 
+                                // -- FreeBSD specific interface type handling
+                                #[cfg(target_os = "freebsd")] {
+                                    // we don't have to re-set the mac address here
+                                    // delete the VIP
+                                    delete_ip_addresses(fd, &vr, debug);
+                                }
+                                // END FreeBSD specific interface type handling
+                                
+
                                 // print information
                                 print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                                     "VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Backup",
@@ -797,6 +806,14 @@ pub fn fsm_run(
                             }
                         }
                         // END Linux specific interface type handling
+
+                        // -- FreeBSD specific interface type handling
+                        #[cfg(target_os = "freebsd")] {
+                            // we don't have to re-set the mac address here
+                            // delete the VIP
+                            delete_ip_addresses(fd, &vr, debug);
+                        }
+                        // END FreeBSD specific interface type handling
 
                         // transition to Down state
                         States::Down
