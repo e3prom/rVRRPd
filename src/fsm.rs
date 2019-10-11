@@ -432,9 +432,9 @@ pub fn fsm_run(
                             // and panic on error
                             packets::send_advertisement(fd, &vr, &debug).unwrap();
 
-                            
                             // --- Linux specific ARP handling
-                            #[cfg(target_os = "linux")] {
+                            #[cfg(target_os = "linux")]
+                            {
                                 // send gratuitious ARP requests
                                 let arp_sockfd = open_raw_socket_arp().unwrap();
                                 broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
@@ -442,7 +442,8 @@ pub fn fsm_run(
                             // END Linux specific ARP handling
 
                             // --- FreeBSD specific ARP handling
-                            #[cfg(target_os = "freebsd")] {
+                            #[cfg(target_os = "freebsd")]
+                            {
                                 // reuse BPF file descriptor
                                 broadcast_gratuitious_arp(fd, &vr).unwrap();
                             }
@@ -612,7 +613,8 @@ pub fn fsm_run(
                         // END Linux specific interface type handling
 
                         // --- Linux specific ARP handling
-                        #[cfg(target_os = "linux")] {
+                        #[cfg(target_os = "linux")]
+                        {
                             // send gratuitious ARP requests
                             let arp_sockfd = open_raw_socket_arp().unwrap();
                             broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
@@ -620,7 +622,8 @@ pub fn fsm_run(
                         // END Linux specific ARP handling
 
                         // --- FreeBSD specific interface tyoe handling
-                        #[cfg(target_os = "freebsd")] {
+                        #[cfg(target_os = "freebsd")]
+                        {
                             // set VIP
                             set_ip_addresses(fd, &vr, Operation::Add, debug);
                             // reuse BPF file descriptor

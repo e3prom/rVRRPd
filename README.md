@@ -8,11 +8,12 @@
 [rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a programming language known for its inherent portability, memory-safety and speed.
 
 # Features
- * Aimed to be Portable, Fast and **Secure**
+ * Aimed to be Fast, Portable and **Secure**
  * Supports multiple operating-systems and processors architectures
  * Multi-threaded operation (1 thread per VRRP group/interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/) formats
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
+   * Tested interoperable with Cisco IOS and Cisco IOS-XR
  * Authentication Support
    * Password Authentication (Type-1) based on [`RFC2338`](https://tools.ietf.org/html/rfc2338)
    * Proprietary P0 HMAC (based on SHA256 truncated to 8 bytes)
@@ -21,23 +22,24 @@
    * Sniffer mode (`-m0`)
    * Virtual Router in foreground mode (`-m1`)
    * Virtual Router in daemon mode (`-m2`)
- * Support MAC-based Virtual LAN interface (`macvlan`)
+ * Support MAC-based Virtual LAN interface (`macvlan`) (Linux)
+ * Support Berkeley Packet Filter (`BPF`) (FreeBSD)
 
 # Development
-This project is still in **_development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments.
+This project is still in **_development_** stage, and at this time, only supports Linux and the FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
 
 The development roadmap for the upcoming `0.2.0` release can be found on its [dedicated project page](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Dependencies
- * A Linux or FreeBSD 64-bits operating system
+ * A Linux or FreeBSD (Experimental) 64-bits operating system.
  * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
  * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
  * At least one Ethernet interface(s), see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
  * Root privileges, required to access raw sockets, configure interfaces and to add kernel routes.
- * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface.
+ * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux only).
 
 # Build and run
-To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Debian and derivatives.
+To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Linux Debian and derivatives.
 
 To quickly build the daemon executable, use the `make` or `cargo build --release` command:
 ```console
@@ -51,7 +53,7 @@ $ cargo build --release
     Finished release [optimized] target(s) in 9.63s
 ```
 
-Then install the `rvrrpd` executable on your system by entering `make install`.
+Then install the `rvrrpd` executable on your system by entering the `make install` command.
 
 Before running the VRRPv2 daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
 
@@ -98,7 +100,7 @@ The above configuration do the following:
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.
 
-Finally run the binary executable `main` you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
+Finally run the binary executable you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
 ```bash
 $ sudo rvrrpd -m1 -c conf/rvrrpd.conf
 Starting rVRRPd
