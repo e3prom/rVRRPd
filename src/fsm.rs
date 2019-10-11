@@ -432,9 +432,21 @@ pub fn fsm_run(
                             // and panic on error
                             packets::send_advertisement(fd, &vr, &debug).unwrap();
 
-                            // send gratuitious ARP requests
-                            let arp_sockfd = open_raw_socket_arp().unwrap();
-                            broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                            
+                            // --- Linux specific ARP handling
+                            #[cfg(target_os = "linux")] {
+                                // send gratuitious ARP requests
+                                let arp_sockfd = open_raw_socket_arp().unwrap();
+                                broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                            }
+                            // END Linux specific ARP handling
+
+                            // --- FreeBSD specific ARP handling
+                            #[cfg(target_os = "freebsd")] {
+                                // reuse BPF file descriptor
+                                broadcast_gratuitious_arp(fd, &vr).unwrap();
+                            }
+                            // END FreeBSD specific ARP handling
 
                             // set advertisement interval
                             vr.timers.advert = vr.parameters.adverint;
@@ -599,14 +611,22 @@ pub fn fsm_run(
                         }
                         // END Linux specific interface type handling
 
-                        // --- FreeBSD specific interface tyoe handling
-                        #[cfg(target_os = "freebsd")]
-                        set_ip_addresses(fd, &vr, Operation::Add, debug);
-                        // END FreeBSD specific interface tyoe handling
+                        // --- Linux specific ARP handling
+                        #[cfg(target_os = "linux")] {
+                            // send gratuitious ARP requests
+                            let arp_sockfd = open_raw_socket_arp().unwrap();
+                            broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                        }
+                        // END Linux specific ARP handling
 
-                        // send gratuitious ARP requests
-                        let arp_sockfd = open_raw_socket_arp().unwrap();
-                        broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                        // --- FreeBSD specific interface tyoe handling
+                        #[cfg(target_os = "freebsd")] {
+                            // set VIP
+                            set_ip_addresses(fd, &vr, Operation::Add, debug);
+                            // reuse BPF file descriptor
+                            broadcast_gratuitious_arp(fd, &vr).unwrap();
+                        }
+                        // END FreeBSD specific interface tyoe handling
 
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint;

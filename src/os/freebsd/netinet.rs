@@ -107,7 +107,6 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4],
         fd => fd,
     };
 
-
     // match given operation on IP address
     // see man 4 netintro
     match op {
