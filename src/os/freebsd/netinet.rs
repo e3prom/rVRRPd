@@ -10,6 +10,10 @@ use std::ffi::CString;
 // FreeBSD constants
 use crate::os::freebsd::constants::*;
 
+// operating systems drivers
+use crate::os::drivers::Operation;
+
+
 // ifreq_buffer Structure
 #[repr(C)]
 struct ifreq_buffer {
@@ -38,7 +42,7 @@ struct int_sockaddr_in {
 
 // set_ip_address() function
 /// Set IPv4 Address on given interface
-pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4]) -> io::Result<()> {
+pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4], op: Operation) -> io::Result<()> {
     // create a slice of mutable reference to array of 16 u8
     let ifname_slice = &mut [0u8; 16];
     // for every bytes/character in name of type Cstring, insert it into the above slice.
@@ -103,12 +107,25 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
         fd => fd,
     };
 
+
+    // match given operation on IP address
     // see man 4 netintro
-    // ioctl - set interface's IP address
-    let res = unsafe { ioctl(fd, SIOCAIFADDR, &mut ifaddr) };
-    if res < 0 {
-        return Err(io::Error::last_os_error());
+    match op {
+        Operation::Add => { 
+            // ioctl - set interface's IP address
+            let res = unsafe { ioctl(fd, SIOCAIFADDR, &mut ifaddr) };
+            if res < 0 {
+                return Err(io::Error::last_os_error());
+            }
+        },
+        Operation::Rem => {
+            // ioctl - remove interface's IP address
+            let res = unsafe { ioctl(fd, SIOCDIFADDR,&mut ifaddr) };
+            if res < 0 {
+                return Err(io::Error::last_os_error());
+            }
+        }
     }
-    
+
     Ok(())
 } 

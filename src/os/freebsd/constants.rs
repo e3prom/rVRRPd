@@ -23,6 +23,7 @@ pub const BIOCSSEESENT: c_ulong  = 0x80044277;
 pub const BIOCSDLT: c_ulong = 0x80044278;
 pub const SIOCGIFADDR: c_ulong = 0xc0206921;
 pub const SIOCAIFADDR: c_ulong = 0x8040691a;
+pub const SIOCDIFADDR: c_ulong = 0x80206919;
 pub const SIOCGIFCONF: c_ulong = 0xc0106924;
 pub const SIOCGIFFLAGS: c_ulong = 0xc0206911;
 pub const SIOCSIFFLAGS: c_ulong = 0x80206910;

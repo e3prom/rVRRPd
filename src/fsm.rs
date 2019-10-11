@@ -718,7 +718,7 @@ pub fn fsm_run(
                                             }
                                             NetDrivers::libnl => {
                                                 // delete vip
-                                                delete_ip_addresses(&vr, debug);
+                                                delete_ip_addresses(fd, &vr, debug);
                                             }
                                         }
                                     }
@@ -789,7 +789,7 @@ pub fn fsm_run(
                                     }
                                     NetDrivers::libnl => {
                                         // delete vip
-                                        delete_ip_addresses(&vr, debug);
+                                        delete_ip_addresses(fd, &vr, debug);
                                         // remove added routes
                                         set_ip_routes(fd, &vr, Operation::Rem, debug);
                                     }
@@ -981,7 +981,8 @@ fn set_ip_addresses(
             fd,
             &ifname,
             addrs[idx],
-            netmasks[idx]
+            netmasks[idx],
+            Operation::Add
         ) {
             eprintln!("error(ip): error while setting IP address on interface {:?}: {}", ifname, e);
         }
@@ -991,7 +992,7 @@ fn set_ip_addresses(
 
 // delete_ip_addresses() function
 /// delete an ip address on a virtual-router interface
-fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &Verbose) {
+fn delete_ip_addresses(fd: i32, vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &Verbose) {
     // create netmasks vector
     let mut netmasks: Vec<[u8; 4]> = Vec::new();
 
@@ -1054,6 +1055,21 @@ fn delete_ip_addresses(vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &
         }
     }
     // END Linux specific interface type handling
+
+    // FreeBSD specific interface type handling
+    #[cfg(target_os = "freebsd")] {
+        print_debug(debug, DEBUG_LEVEL_HIGH, DEBUG_SRC_IP, format!("setting ip addresss on interface {:?}, fd {}", ifname, fd));
+        if let Err(e) = os::freebsd::netinet::set_ip_address(
+            fd,
+            &ifname,
+            vr.parameters.vip,
+            netmasks[0],
+            Operation::Rem
+        ) {
+            eprintln!("error(ip): error while setting IP address on interface {:?}: {}", ifname, e);
+        }
+    }
+    // END FreeBSD specific interface type handling
 }
 
 // get_mac_addresses() function
