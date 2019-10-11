@@ -41,8 +41,9 @@ struct ifreq_buffer {
 struct IfAliasReq {
     ifr_name: [u8; IF_NAMESIZE],    // interface name
     ifra_addr: int_sockaddr,        // IPv4 address
-    ifra_dstaddr: int_sockaddr,     // destination address
+    ifra_broadaddr: int_sockaddr,   // destination address
     ifra_mask: int_sockaddr,        // netmask
+    ifra_vhid: c_int,
 }
 
 // int_sockaddr alias
@@ -142,7 +143,7 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
                 data
             }
         },
-        ifra_dstaddr: int_sockaddr {
+        ifra_broadaddr: int_sockaddr {
             sa_len: 0,
             sa_family: 0,
             _pad: 0,
@@ -157,7 +158,8 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
                 data.clone_from_slice(ip_netmask_slice);
                 data
             }
-        }
+        },
+        ifra_vhid: 0,
     };
 
     // open new socket for below ioctl
