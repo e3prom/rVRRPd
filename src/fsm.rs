@@ -600,7 +600,7 @@ pub fn fsm_run(
                         // END Linux specific interface type handling
 
                         // --- FreeBSD specific interface tyoe handling
-                        #[cfg(target_os = "freebsd")] 
+                        #[cfg(target_os = "freebsd")]
                         set_ip_addresses(fd, &vr, Operation::Add, debug);
                         // END FreeBSD specific interface tyoe handling
 
@@ -707,12 +707,7 @@ pub fn fsm_run(
                                             NetDrivers::ioctl => {
                                                 // restore primary IP
                                                 #[cfg(target_os = "linux")]
-                                                set_ip_addresses(
-                                                    fd,
-                                                    &vr,
-                                                    Operation::Rem,
-                                                    debug,
-                                                );
+                                                set_ip_addresses(fd, &vr, Operation::Rem, debug);
                                                 // re-set routes
                                                 set_ip_routes(fd, &vr, Operation::Add, debug);
                                             }
@@ -726,13 +721,13 @@ pub fn fsm_run(
                                 // END Linux specific interface type handling
 
                                 // -- FreeBSD specific interface type handling
-                                #[cfg(target_os = "freebsd")] {
+                                #[cfg(target_os = "freebsd")]
+                                {
                                     // we don't have to re-set the mac address here
                                     // delete the VIP
                                     delete_ip_addresses(fd, &vr, debug);
                                 }
                                 // END FreeBSD specific interface type handling
-                                
 
                                 // print information
                                 print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
@@ -808,7 +803,8 @@ pub fn fsm_run(
                         // END Linux specific interface type handling
 
                         // -- FreeBSD specific interface type handling
-                        #[cfg(target_os = "freebsd")] {
+                        #[cfg(target_os = "freebsd")]
+                        {
                             // we don't have to re-set the mac address here
                             // delete the VIP
                             delete_ip_addresses(fd, &vr, debug);
@@ -885,12 +881,7 @@ fn is_primary_higher(primary: &[u8; 4], local: &[u8; 4]) -> bool {
 
 // set_ip_addresses() function
 /// set or clear IPv4 addresses on a virtual-router interface
-fn set_ip_addresses(
-    fd: i32,
-    vr: &RwLockWriteGuard<VirtualRouter>,
-    op: Operation,
-    debug: &Verbose,
-) {
+fn set_ip_addresses(fd: i32, vr: &RwLockWriteGuard<VirtualRouter>, op: Operation, debug: &Verbose) {
     // create addr and netmask vector
     let mut addrs: Vec<[u8; 4]> = Vec::new();
     let mut netmasks: Vec<[u8; 4]> = Vec::new();
@@ -992,16 +983,25 @@ fn set_ip_addresses(
     // END Linux specific interface type handling
 
     // FreeBSD specific interface type handling
-    #[cfg(target_os = "freebsd")] {
-        print_debug(debug, DEBUG_LEVEL_HIGH, DEBUG_SRC_IP, format!("setting ip addresss on interface {:?}, fd {}", ifname, fd));
+    #[cfg(target_os = "freebsd")]
+    {
+        print_debug(
+            debug,
+            DEBUG_LEVEL_HIGH,
+            DEBUG_SRC_IP,
+            format!("setting ip addresss on interface {:?}, fd {}", ifname, fd),
+        );
         if let Err(e) = os::freebsd::netinet::set_ip_address(
             fd,
             &ifname,
             addrs[idx],
             netmasks[idx],
-            Operation::Add
+            Operation::Add,
         ) {
-            eprintln!("error(ip): error while setting IP address on interface {:?}: {}", ifname, e);
+            eprintln!(
+                "error(ip): error while setting IP address on interface {:?}: {}",
+                ifname, e
+            );
         }
     }
     // END FreeBSD specific interface type handling
@@ -1042,6 +1042,8 @@ fn delete_ip_addresses(fd: i32, vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
     {
+        // workaround compilation warning
+        let _fd = fd;
         // delete virtual ip address according to the network driver in use
         match vr.parameters.netdrv {
             NetDrivers::libnl => {
@@ -1074,16 +1076,25 @@ fn delete_ip_addresses(fd: i32, vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     // END Linux specific interface type handling
 
     // FreeBSD specific interface type handling
-    #[cfg(target_os = "freebsd")] {
-        print_debug(debug, DEBUG_LEVEL_HIGH, DEBUG_SRC_IP, format!("setting ip addresss on interface {:?}, fd {}", ifname, fd));
+    #[cfg(target_os = "freebsd")]
+    {
+        print_debug(
+            debug,
+            DEBUG_LEVEL_HIGH,
+            DEBUG_SRC_IP,
+            format!("setting ip addresss on interface {:?}, fd {}", ifname, fd),
+        );
         if let Err(e) = os::freebsd::netinet::set_ip_address(
             fd,
             &ifname,
             vr.parameters.vip,
             netmasks[0],
-            Operation::Rem
+            Operation::Rem,
         ) {
-            eprintln!("error(ip): error while setting IP address on interface {:?}: {}", ifname, e);
+            eprintln!(
+                "error(ip): error while setting IP address on interface {:?}: {}",
+                ifname, e
+            );
         }
     }
     // END FreeBSD specific interface type handling
@@ -1119,7 +1130,7 @@ fn get_mac_addresses(
     // END Linux specific interface type handling
 
     // --- FreeBSD specific interface tyoe handling
-    #[cfg(target_os = "freebsd")] 
+    #[cfg(target_os = "freebsd")]
     // return all zero MAC address as BPF is filling it automatically
     // and we are not required to maintain the address in memory (yet)
     [0, 0, 0, 0, 0, 0]

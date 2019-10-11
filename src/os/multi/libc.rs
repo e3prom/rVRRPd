@@ -1,7 +1,7 @@
 //! Standard C Library Support (multi-os)
 
 // std
-use std::ffi::{CStr};
+use std::ffi::CStr;
 use std::io;
 use std::net::{IpAddr, IpAddr::V4, Ipv4Addr, Ipv6Addr};
 use std::ptr;
