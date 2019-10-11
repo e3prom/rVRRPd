@@ -53,7 +53,7 @@ struct int_sockaddr_in {
     sin_len: c_uchar,
     sin_family: c_uchar,
     sin_port: c_short,
-    sin_addr: [c_uchar; 14],
+    sin_addr: [c_uchar; 12],
 } 
 
 // set_ip_address() function
@@ -139,7 +139,7 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
             sin_family: AF_INET as u8,
             sin_port: 0,
             sin_addr: {
-                let mut data = [0u8; 14];
+                let mut data = [0u8; 12];
                 data.clone_from_slice(ip_addr_slice);
                 data
             }
@@ -148,14 +148,14 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
             sin_len: 0,
             sin_family: 0,
             sin_port: 0,
-            sin_addr: [0u8; 14],
+            sin_addr: [0u8; 12],
         },
         ifra_mask: int_sockaddr_in {
             sin_len: 16,
             sin_family: AF_INET as u8,
             sin_port: 0,
             sin_addr: {
-                let mut data = [0u8; 14];
+                let mut data = [0u8; 12];
                 data.clone_from_slice(ip_netmask_slice);
                 data
             }
