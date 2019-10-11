@@ -15,7 +15,7 @@ use std::io;
 use std::mem;
 
 // libc
-use libc::{c_void, sendto, sockaddr};
+use libc::{c_void, write};
 
 /// Address Resolution Protocol (ARP) Structure
 #[repr(C)]
@@ -53,7 +53,7 @@ pub fn open_raw_socket_arp() -> io::Result<i32> {
 // broadcast_gratuitious_arp() function
 /// Broadcast Gratuitious ARP requests
 pub fn broadcast_gratuitious_arp(
-    sockfd: i32,
+    fd: i32,
     vr: &RwLockWriteGuard<'_, VirtualRouter>,
 ) -> io::Result<()> {
     // build gratuitious ARP request
@@ -77,32 +77,15 @@ pub fn broadcast_gratuitious_arp(
     arpframe.src_mac[5] = vr.parameters.vrid();
     arpframe.sender_hw_addr[5] = vr.parameters.vrid();
 
-    // TODO -- find how to construct ARP frame
-
-    // let mut sa = sockaddr {
-    //     sa_family: AF_PACKET as u16,
-    //     sa_protocol: ETHER_P_ARP.to_be(),
-    //     sa_ifindex: vr.parameters.ifindex(),
-    //     sa_hatype: 0,
-    //     sa_pkttype: 0,
-    //     sa_halen: 0,
-    //     sa_addr: [0; 8],
-    // };
-
-    // unsafe {
-    //     let ptr_sockaddr = mem::transmute::<*mut sockaddr, *mut sockaddr>(&mut sa);
-    //     match sendto(
-    //         sockfd,
-    //         &mut arpframe as *mut _ as *const c_void,
-    //         mem::size_of_val(&arpframe),
-    //         0,
-    //         ptr_sockaddr,
-    //         mem::size_of_val(&sa) as u32,
-    //     ) {
-    //         -1 => Err(io::Error::last_os_error()),
-    //         _ => Ok(()),
-    //     }
-    // }
-
-    Ok(())
+    println!("DEBUG: calling write() on fd {}", fd);
+    unsafe {
+        // unsafe call to write()
+        match write(fd, &mut arpframe as *mut _ as *const c_void, mem::size_of_val(&arpframe)) {
+            -1 => Err(io::Error::last_os_error()),
+            _ => {
+                println!("DEBUG: VRRP frame successfully sent on BPF device, fd {}", fd);
+                Ok(())
+            }
+        }
+    }
 }

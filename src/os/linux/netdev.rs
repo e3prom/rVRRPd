@@ -5,7 +5,7 @@ use crate::*;
 // std, libc, ffi
 use libc::{
     c_short, c_uchar, c_ulong, c_ushort, ioctl, AF_INET, ARPHRD_ETHER, ETH_ALEN, IFF_PROMISC,
-    IFF_RUNNING, IFF_UP, IF_NAMESIZE, RTF_UP,
+    IFF_RUNNING, IFF_UP, IF_NAMESIZE, RTF_UP
 };
 use std::ffi::CString;
 use std::io;

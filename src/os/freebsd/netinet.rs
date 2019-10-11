@@ -1,7 +1,7 @@
 //! FreeBSD network support
 
 // libc
-use libc::{IF_NAMESIZE, c_int, c_short, c_uchar, c_void, sockaddr, ioctl, AF_INET};
+use libc::{IF_NAMESIZE, c_int, c_short, c_uchar, c_void, ioctl, AF_INET};
 
 // std
 use std::io;
