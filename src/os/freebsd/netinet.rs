@@ -10,9 +10,9 @@ use std::ffi::CString;
 // FreeBSD constants
 use crate::os::freebsd::constants::*;
 
+
 // IfReq Structure
 // man 4 netintro
-#[repr(C)]
 struct IfReq {
     ifr_name: [u8; IF_NAMESIZE],    // interface name
     ifru_addr: int_sockaddr,        // address
@@ -35,6 +35,15 @@ struct ifreq_buffer {
     length: c_int,
     buffer: *const c_void,
 } 
+
+// IfAliasReq Structure
+#[repr(C)]
+struct IfAliasReq {
+    ifr_name: [u8; IF_NAMESIZE],    // interface name
+    ifra_addr: int_sockaddr,        // IPv4 address
+    ifra_dstaddr: int_sockaddr,     // destination address
+    ifra_mask: int_sockaddr,        // netmask
+}
 
 // int_sockaddr alias
 #[repr(C)]
@@ -71,14 +80,59 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
         ip_netmask_slice[i] = *b;
     }
 
-    // construct IfReq structure
-    let mut ifaddr = IfReq {
+    // // construct IfReq structure
+    // let mut ifaddr = IfReq {
+    //     ifr_name: {
+    //         let mut buf = [0u8; IF_NAMESIZE];
+    //         buf.clone_from_slice(ifname_slice);
+    //         buf
+    //     },
+    //     ifru_addr: int_sockaddr {
+    //         sa_len: 16,
+    //         sa_family: AF_INET as u8,
+    //         _pad: 0,
+    //         sa_data: {
+    //             let mut data = [0u8; 14];
+    //             data.clone_from_slice(ip_addr_slice);
+    //             data
+    //         }
+    //     },
+    //     ifru_dstaddr: int_sockaddr {
+    //         sa_len: 0,
+    //         sa_family: 0,
+    //         _pad: 0,
+    //         sa_data: [0u8; 14],
+    //     },
+    //     ifru_broadaddr: int_sockaddr {
+    //         sa_len: 0,
+    //         sa_family: 0,
+    //         _pad: 0,
+    //         sa_data: [0u8; 14],
+    //     },
+    //     // ifru_buffer: ifreq_buffer {
+    //     //     length: 0,
+    //     //     buffer: {
+    //     //         let buf = [0u8; 64];
+    //     //         &buf as *const _ as *const c_void
+    //     //     }
+    //     // },
+    //     ifru_flags: [0i16; 2],
+    //     ifru_index: 0,
+    //     ifru_metric: 0,
+    //     ifru_mtu: 1500,
+    //     ifru_phys: 0,
+    //     ifru_media: 0,
+    //     ifru_data: 0,
+    //     ifru_cap: [0i32; 2],
+    // };
+
+    let mut ifaddr = IfAliasReq {
         ifr_name: {
             let mut buf = [0u8; IF_NAMESIZE];
-            buf.clone_from_slice(ifname_slice); 
+            buf.clone_from_slice(ifname_slice);
             buf
         },
-        ifru_addr: int_sockaddr {
+        ifra_addr: int_sockaddr {
             sa_len: 16,
             sa_family: AF_INET as u8,
             _pad: 0,
@@ -88,43 +142,13 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
                 data
             }
         },
-        ifru_dstaddr: int_sockaddr {
+        ifra_dstaddr: int_sockaddr {
             sa_len: 0,
             sa_family: 0,
             _pad: 0,
             sa_data: [0u8; 14],
         },
-        ifru_broadaddr: int_sockaddr {
-            sa_len: 0,  
-            sa_family: 0,
-            _pad: 0,
-            sa_data: [0u8; 14],
-        },
-        // ifru_buffer: ifreq_buffer {
-        //     length: 0,
-        //     buffer: {
-        //         let buf = [0u8; 64]; 
-        //         &buf as *const _ as *const c_void
-        //     } 
-        // },
-        ifru_flags: [0i16; 2],
-        ifru_index: 0,
-        ifru_metric: 0,
-        ifru_mtu: 1500,
-        ifru_phys: 0,
-        ifru_media: 0,
-        ifru_data: 0,
-        ifru_cap: [0i32; 2],
-    };
-
-    // construct IfReq structure
-    let mut ifnetmask = IfReq {
-        ifr_name: {
-            let mut buf = [0u8; IF_NAMESIZE];
-            buf.clone_from_slice(ifname_slice); 
-            buf
-        },
-        ifru_addr: int_sockaddr {
+        ifra_mask: int_sockaddr {
             sa_len: 16,
             sa_family: AF_INET as u8,
             _pad: 0,
@@ -133,34 +157,7 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
                 data.clone_from_slice(ip_netmask_slice);
                 data
             }
-        },
-        ifru_dstaddr: int_sockaddr {
-            sa_len: 0,
-            sa_family: 0,
-            _pad: 0,
-            sa_data: [0u8; 14],
-        },
-        ifru_broadaddr: int_sockaddr {
-            sa_len: 0,  
-            sa_family: 0,
-            _pad: 0,
-            sa_data: [0u8; 14],
-        },
-        // ifru_buffer: ifreq_buffer {
-        //     length: 0,
-        //     buffer: {
-        //         let buf = [0u8; 64]; 
-        //         &buf as *const _ as *const c_void
-        //     } 
-        // },
-        ifru_flags: [0i16; 2],
-        ifru_index: 0,
-        ifru_metric: 0,
-        ifru_mtu: 1500,
-        ifru_phys: 0,
-        ifru_media: 0,
-        ifru_data: 0,
-        ifru_cap: [0i32; 2],
+        }
     };
 
     // open new socket for below ioctl
@@ -176,11 +173,11 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4])
         return Err(io::Error::last_os_error());
     }
 
-    // ioctl - set interface's netmask
-    let res = unsafe { ioctl(fd, SIOCSIFNETMASK, &mut ifnetmask) };
-    if res < 0 {
-        return Err(io::Error::last_os_error());
-    }
+    // // ioctl - set interface's netmask
+    // let res = unsafe { ioctl(fd, SIOCSIFNETMASK, &mut ifnetmask) };
+    // if res < 0 {
+    //     return Err(io::Error::last_os_error());
+    // }
     
     Ok(())
 } 
