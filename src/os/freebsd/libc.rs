@@ -1,4 +1,5 @@
 //! FreeBSD standard C library support
+use crate::*;
 
 // std, libc
 use libc::{read, write, c_void};
@@ -16,7 +17,7 @@ pub fn read_bpf_buf(bpf_fd: i32, buf: &mut [u8], buf_size: usize) -> io::Result<
     unsafe {
         len = match read(bpf_fd, buf.as_ptr() as *mut c_void, buf_size) {
             -1 => {
-                println!("error while reading BPF buffer on fd {}, buffer length {}", bpf_fd, buf.len());
+                eprintln!("error while reading BPF buffer on fd {}, buffer length {}", bpf_fd, buf.len());
                 return Err(io::Error::last_os_error());
             }
             len => len,
@@ -33,6 +34,7 @@ pub fn raw_sendto(
     fd: i32,
     _ifindex: i32,
     frame: &mut Vec<u8>,
+    debug: &Verbose
 ) -> io::Result<()> {
     println!("DEBUG: calling write() on fd {}", fd);
     unsafe {
@@ -40,7 +42,9 @@ pub fn raw_sendto(
         match write(fd, &mut frame[..] as *mut _ as *const c_void, mem::size_of_val(&frame[..])) {
             -1 => Err(io::Error::last_os_error()),
             _ => {
-                println!("DEBUG: VRRP frame successfully sent on BPF device, fd {}", fd);
+                print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
+                    format!("VRRPv2 frame successfully sent on BPF device, fd {}", fd)
+                );
                 Ok(())
             }
         }

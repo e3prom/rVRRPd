@@ -303,7 +303,7 @@ pub fn send_advertisement(
 
     // sending raw ethernet frame
     let ifindex = vr.parameters.ifindex();
-    let res = raw_sendto(fd, ifindex, &mut frame);
+    let res = raw_sendto(fd, ifindex, &mut frame, &debug);
 
     // return above call result
     return res;

@@ -357,6 +357,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // create iface CString
             let iface = CString::new(iface.as_bytes() as &[u8]).unwrap();
 
+            // initialize a dummy debug
+            let debug: Verbose = Verbose::new(0, 0, 0);
+
             // --- Linux specific handling
             #[cfg(target_os = "linux")]
             {
@@ -412,10 +415,10 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 let mut bpf_buf: [u8; 118] = [0; 118];
 
                 // create and setup the Berkeley Packet Filter (FreeBSD)
-                let bpf_fd = bpf_open_device()?;
-                let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf)?;
-                bpf_bind_device(bpf_fd, &iface)?;
-                bpf_set_promisc(bpf_fd)?;
+                let bpf_fd = bpf_open_device(&debug)?;
+                let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf, &debug)?;
+                bpf_bind_device(bpf_fd, &iface, &debug)?;
+                bpf_set_promisc(bpf_fd, &debug)?;
 
                 // print information
                 println!("Listening for VRRPv2 packets on {}\n", cfg.iface());
@@ -755,12 +758,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
 
                     // create and setup the Berkeley Packet Filter (FreeBSD)
-                    let bpf_fd = bpf_open_device()?;
-                    let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf)?;
+                    let bpf_fd = bpf_open_device(&debug)?;
+                    let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf, &debug)?;
                     // bind interface to BPF device
-                    bpf_bind_device(bpf_fd, &iface)?;
+                    bpf_bind_device(bpf_fd, &iface, &debug)?;
                     // set interface in promiscuous mode
-                    bpf_set_promisc(bpf_fd)?;
+                    bpf_set_promisc(bpf_fd, &debug)?;
 
                     // store BPF file descriptor
                     vr.parameters.fd_set(bpf_fd);

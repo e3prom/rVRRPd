@@ -1,5 +1,6 @@
 //! FreeBSD Address Resolution Protocol (ARP) module
 //! This module provides ARP related functions.
+use crate::*;
 
 // constants
 use crate::constants::*;
@@ -55,6 +56,7 @@ pub fn open_raw_socket_arp() -> io::Result<i32> {
 pub fn broadcast_gratuitious_arp(
     fd: i32,
     vr: &RwLockWriteGuard<'_, VirtualRouter>,
+    debug: &Verbose
 ) -> io::Result<()> {
     // build gratuitious ARP request
     let mut arpframe = ARPframe {
@@ -77,13 +79,14 @@ pub fn broadcast_gratuitious_arp(
     arpframe.src_mac[5] = vr.parameters.vrid();
     arpframe.sender_hw_addr[5] = vr.parameters.vrid();
 
-    println!("DEBUG: calling write() on fd {}", fd);
     unsafe {
         // unsafe call to write()
         match write(fd, &mut arpframe as *mut _ as *const c_void, mem::size_of_val(&arpframe)) {
             -1 => Err(io::Error::last_os_error()),
             _ => {
-                println!("DEBUG: VRRP frame successfully sent on BPF device, fd {}", fd);
+                print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
+                    format!("VRRPv2 frame successfully sent on BPF device, fd {}", fd)
+                );
                 Ok(())
             }
         }

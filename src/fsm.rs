@@ -445,7 +445,7 @@ pub fn fsm_run(
                             #[cfg(target_os = "freebsd")]
                             {
                                 // reuse BPF file descriptor
-                                broadcast_gratuitious_arp(fd, &vr).unwrap();
+                                broadcast_gratuitious_arp(fd, &vr, &debug).unwrap();
                             }
                             // END FreeBSD specific ARP handling
 
@@ -617,7 +617,7 @@ pub fn fsm_run(
                         {
                             // send gratuitious ARP requests
                             let arp_sockfd = open_raw_socket_arp().unwrap();
-                            broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                            broadcast_gratuitious_arp(arp_sockfd, &vr, &debug).unwrap();
                         }
                         // END Linux specific ARP handling
 
@@ -627,7 +627,7 @@ pub fn fsm_run(
                             // set VIP
                             set_ip_addresses(fd, &vr, Operation::Add, debug);
                             // reuse BPF file descriptor
-                            broadcast_gratuitious_arp(fd, &vr).unwrap();
+                            broadcast_gratuitious_arp(fd, &vr, &debug).unwrap();
                         }
                         // END FreeBSD specific interface tyoe handling
 
