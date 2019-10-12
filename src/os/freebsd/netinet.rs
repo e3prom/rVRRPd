@@ -1,7 +1,7 @@
 //! FreeBSD network support
 
 // libc
-use libc::{IF_NAMESIZE, c_int, c_short, c_uchar, c_void, ioctl, AF_INET};
+use libc::{IF_NAMESIZE, c_int, c_short, c_uchar, ioctl, AF_INET};
 
 // std
 use std::io;
@@ -12,14 +12,6 @@ use crate::os::freebsd::constants::*;
 
 // operating systems drivers
 use crate::os::drivers::Operation;
-
-
-// ifreq_buffer Structure
-#[repr(C)]
-struct ifreq_buffer {
-    length: c_int,
-    buffer: *const c_void,
-} 
 
 // IfAliasReq Structure
 #[repr(C)]

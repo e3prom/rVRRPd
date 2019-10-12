@@ -1,6 +1,7 @@
 //! FreeBSD Operating System support
 
 // FreeBSD constants
+#[allow(dead_code)]
 pub mod constants;
 
 // FreeBSD standard C library support

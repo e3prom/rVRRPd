@@ -17,6 +17,7 @@ pub enum IfTypes {
 }
 
 // pflag operation Enumerator
+#[cfg(target_os = "linux")]
 pub enum PflagOp {
     Set,
     Unset,

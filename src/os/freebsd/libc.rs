@@ -36,7 +36,6 @@ pub fn raw_sendto(
     frame: &mut Vec<u8>,
     debug: &Verbose
 ) -> io::Result<()> {
-    println!("DEBUG: calling write() on fd {}", fd);
     unsafe {
         // unsafe call to write()
         match write(fd, &mut frame[..] as *mut _ as *const c_void, mem::size_of_val(&frame[..])) {

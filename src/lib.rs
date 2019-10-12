@@ -28,6 +28,7 @@ use daemonize::Daemonize;
 extern crate chrono;
 
 // generic constants
+#[allow(dead_code)]
 mod constants;
 use constants::*;
 
@@ -37,7 +38,10 @@ use packets::VRRPpkt;
 
 // operating systems support
 mod os;
+#[cfg(target_os = "linux")]
 use os::drivers::{IfTypes, NetDrivers, PflagOp};
+#[cfg(target_os = "freebsd")]
+use os::drivers::{IfTypes, NetDrivers};
 
 // operating system specific support
 #[cfg(target_os = "freebsd")]
@@ -72,6 +76,7 @@ mod config;
 use config::decode_config;
 
 // protocols
+#[allow(dead_code)] // not supported on freebsd yet
 mod protocols;
 use protocols::{Protocols, Static};
 
@@ -190,25 +195,20 @@ impl VirtualRouter {
         vif_name: String,
         fd: i32,
     ) -> io::Result<VirtualRouter> {
-        // initialize ifindex
-        let ifindex: i32;
-
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
         {
-            {
-                // get ifindex from interface name
-                ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
-                    Ok(i) => i as i32,
-                    Err(e) => return Err(e),
-                };
-            }
+            // get ifindex from interface name
+            let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
+                Ok(i) => i as i32,
+                Err(e) => return Err(e),
+            };
         }
         // END Linux specific interface handling
 
         // --- FreeBSD specific interface handling
         #[cfg(target_os = "freebsd")]
-        let mut ifindex = -1;
+        let ifindex = -1;
         // END FreeBSD specific interface handling
 
         // create new IPv4 addresses vector
@@ -436,7 +436,10 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     match read_bpf_buf(bpf_fd, &mut bpf_buf, buf_size) {
                         Ok(len) if len > 0 => {
                             // create and initialize pkt_hdr
+                            #[cfg(target_os = "linux")]
                             let mut pkt_hdr = PktHdr::new();
+                            #[cfg(target_os = "freebsd")]
+                            let pkt_hdr = PktHdr::new();
 
                             // initialize raw pointers
                             let mut ptr = &bpf_buf as *const _;
@@ -759,7 +762,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                     // create and setup the Berkeley Packet Filter (FreeBSD)
                     let bpf_fd = bpf_open_device(&debug)?;
-                    let buf_size = bpf_setup_buf(bpf_fd, &mut bpf_buf, &debug)?;
+                    bpf_setup_buf(bpf_fd, &mut bpf_buf, &debug)?;
                     // bind interface to BPF device
                     bpf_bind_device(bpf_fd, &iface, &debug)?;
                     // set interface in promiscuous mode
@@ -808,7 +811,10 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     println!("DEBUG: acquired vr read lock on listener thread");
 
                                     // create and initialize pkt_hdr
+                                    #[cfg(target_os = "linux")]
                                     let mut pkt_hdr = PktHdr::new();
+                                    #[cfg(target_os = "freebsd")]
+                                    let pkt_hdr = PktHdr::new();
 
                                     // initialize raw pointers
                                     let mut ptr = &bpf_buf as *const _;
@@ -864,7 +870,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     }
                                 }
                                 Ok(_) => (),
-                                Err(e) => (),
+                                Err(_e) => (),
                             }
                         }
                     });
@@ -880,7 +886,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         std::process::exit(0);
                     }
                 }
-                return Ok(());
             }
             // END FreeBSD specific handling
         }

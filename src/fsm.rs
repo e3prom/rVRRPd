@@ -16,7 +16,7 @@ use crate::os::drivers::Operation;
 
 // address resolution protocol
 #[cfg(target_os = "freebsd")]
-use os::freebsd::arp::{broadcast_gratuitious_arp, open_raw_socket_arp};
+use os::freebsd::arp::{broadcast_gratuitious_arp};
 #[cfg(target_os = "linux")]
 use os::linux::arp::{broadcast_gratuitious_arp, open_raw_socket_arp};
 
@@ -161,14 +161,17 @@ impl Parameters {
         &self.notification
     }
     // iftype() getter
+    #[cfg(target_os = "linux")]
     pub fn iftype(&self) -> &IfTypes {
         &self.iftype
     }
     // vif_name() getter
+    #[cfg(target_os = "linux")]
     pub fn vif_name(&self) -> String {
         self.vif_name.clone()
     }
     // vif_idx() getter
+    #[cfg(target_os = "linux")]
     pub fn vif_idx(&self) -> i32 {
         self.vif_idx
     }
@@ -956,15 +959,15 @@ fn set_ip_addresses(fd: i32, vr: &RwLockWriteGuard<VirtualRouter>, op: Operation
         ),
     );
 
-    // set ifindex on physical or macvlan interface
-    let ifindex = match vr.parameters.iftype {
-        IfTypes::macvlan => vr.parameters.vif_idx,
-        _ => vr.parameters.ifindex,
-    };
-
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
     {
+        let ifindex = match vr.parameters.iftype {
+            IfTypes::macvlan => vr.parameters.vif_idx,
+            _ => vr.parameters.ifindex,
+        };
+
+        // set ifindex on physical or macvlan interface
         // set virtual ip address according to the network driver in use
         match vr.parameters.netdrv {
             NetDrivers::ioctl => {
@@ -1125,18 +1128,17 @@ fn delete_ip_addresses(fd: i32, vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
 
 // get_mac_addresses() function
 /// get Ethernet MAC address from vr's interface
+#[cfg(target_os = "linux")]
 fn get_mac_addresses(
     fd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
     debug: &Verbose,
 ) -> [u8; 6] {
-    // construct interface name
-    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-
     // --- Linux specific interface tyoe handling
     #[cfg(target_os = "linux")]
     {
-        {
+        // construct interface name
+        let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
             // get mac address of interface
             match os::linux::netdev::get_mac_addr(fd, &ifname, debug) {
                 Ok(mac) => mac,
@@ -1148,20 +1150,26 @@ fn get_mac_addresses(
                     [0, 0, 0, 0, 0, 0]
                 }
             }
-        }
     }
     // END Linux specific interface type handling
 
-    // --- FreeBSD specific interface tyoe handling
-    #[cfg(target_os = "freebsd")]
-    // return all zero MAC address as BPF is filling it automatically
-    // and we are not required to maintain the address in memory (yet)
-    [0, 0, 0, 0, 0, 0]
-    // END FreeBSD specific interface type handling
+    // // --- FreeBSD specific interface tyoe handling
+    // #[cfg(target_os = "freebsd")]
+    // {  
+    //     // supress compilation warnings
+    //     let _fd = fd;
+    //     let _vr = vr;
+    //     let _debug = debug;
+    //     // return all zero MAC address as BPF is filling it automatically
+    //     // and we are not required to maintain the address in memory (yet)
+    //     [0, 0, 0, 0, 0, 0]
+    // } 
+    // // END FreeBSD specific interface type handling
 }
 
 // set_mac_addresses() function
 /// Set Ethernet MAC address on vr's interface
+#[cfg(target_os = "linux")]
 fn set_mac_addresses(
     fd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
@@ -1185,6 +1193,7 @@ fn set_mac_addresses(
 
 // set_ip_routes() function
 /// set or unset IPv4 routes on virtual-router interfaces
+#[cfg(target_os = "linux")]
 fn set_ip_routes(
     fd: i32,
     vr: &std::sync::RwLockWriteGuard<VirtualRouter>,

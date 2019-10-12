@@ -2,9 +2,6 @@
 //! This module provides ARP related functions.
 use crate::*;
 
-// constants
-use crate::constants::*;
-
 // channels and threads
 use std::sync::RwLockWriteGuard;
 
@@ -36,19 +33,6 @@ struct ARPframe {
     sender_proto_addr: [u8; 4], // internetwork address of sender
     target_hw_addr: [u8; 6],    // hardware address of target
     target_proto_addr: [u8; 4], // internetwork address of target
-}
-
-// open_raw_socket_arp() function
-/// Open raw socket
-pub fn open_raw_socket_arp() -> io::Result<i32> {
-    unsafe {
-        // man 2 socket
-        // returns a file descriptor or -1 if error.
-        match libc::socket(libc::PF_INET, libc::SOCK_RAW, 0) {
-            -1 => Err(io::Error::last_os_error()),
-            fd => Ok(fd),
-        }
-    }
 }
 
 // broadcast_gratuitious_arp() function
