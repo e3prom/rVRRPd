@@ -66,7 +66,12 @@ pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
 
 // raw_sendto() function
 /// Send RAW frame/packet
-pub fn raw_sendto(sockfd: i32, ifindex: i32, frame: &mut Vec<u8>) -> io::Result<()> {
+pub fn raw_sendto(
+    sockfd: i32,
+    ifindex: i32,
+    frame: &mut Vec<u8>,
+    _debug: &Verbose,
+) -> io::Result<()> {
     // sockaddr_ll (man 7 packet)
     let mut sa = libc::sockaddr_ll {
         sll_family: libc::AF_PACKET as u16,

@@ -38,10 +38,10 @@ use packets::VRRPpkt;
 
 // operating systems support
 mod os;
-#[cfg(target_os = "linux")]
-use os::drivers::{IfTypes, NetDrivers, PflagOp};
 #[cfg(target_os = "freebsd")]
 use os::drivers::{IfTypes, NetDrivers};
+#[cfg(target_os = "linux")]
+use os::drivers::{IfTypes, NetDrivers, PflagOp};
 
 // operating system specific support
 #[cfg(target_os = "freebsd")]
@@ -197,16 +197,14 @@ impl VirtualRouter {
     ) -> io::Result<VirtualRouter> {
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
-        {
-            // get ifindex from interface name
-            let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
-                Ok(i) => i as i32,
-                Err(e) => return Err(e),
-            };
-        }
+        // get ifindex from interface name
+        let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
+            Ok(i) => i as i32,
+            Err(e) => return Err(e),
+        };
         // END Linux specific interface handling
 
-        // --- FreeBSD specific interface handling
+        // -- FreeBSD specific interface handling
         #[cfg(target_os = "freebsd")]
         let ifindex = -1;
         // END FreeBSD specific interface handling
@@ -358,6 +356,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let iface = CString::new(iface.as_bytes() as &[u8]).unwrap();
 
             // initialize a dummy debug
+            #[cfg(target_os = "freebsd")]
             let debug: Verbose = Verbose::new(0, 0, 0);
 
             // --- Linux specific handling

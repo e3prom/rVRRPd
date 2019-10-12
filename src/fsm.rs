@@ -16,7 +16,7 @@ use crate::os::drivers::Operation;
 
 // address resolution protocol
 #[cfg(target_os = "freebsd")]
-use os::freebsd::arp::{broadcast_gratuitious_arp};
+use os::freebsd::arp::broadcast_gratuitious_arp;
 #[cfg(target_os = "linux")]
 use os::linux::arp::{broadcast_gratuitious_arp, open_raw_socket_arp};
 
@@ -620,7 +620,7 @@ pub fn fsm_run(
                         {
                             // send gratuitious ARP requests
                             let arp_sockfd = open_raw_socket_arp().unwrap();
-                            broadcast_gratuitious_arp(arp_sockfd, &vr, &debug).unwrap();
+                            broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
                         }
                         // END Linux specific ARP handling
 
@@ -1139,23 +1139,23 @@ fn get_mac_addresses(
     {
         // construct interface name
         let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-            // get mac address of interface
-            match os::linux::netdev::get_mac_addr(fd, &ifname, debug) {
-                Ok(mac) => mac,
-                Err(e) => {
-                    eprintln!(
-                        "error(mac): error while getting MAC address on interface {:?}: {}",
-                        ifname, e
-                    );
-                    [0, 0, 0, 0, 0, 0]
-                }
+        // get mac address of interface
+        match os::linux::netdev::get_mac_addr(fd, &ifname, debug) {
+            Ok(mac) => mac,
+            Err(e) => {
+                eprintln!(
+                    "error(mac): error while getting MAC address on interface {:?}: {}",
+                    ifname, e
+                );
+                [0, 0, 0, 0, 0, 0]
             }
+        }
     }
     // END Linux specific interface type handling
 
     // // --- FreeBSD specific interface tyoe handling
     // #[cfg(target_os = "freebsd")]
-    // {  
+    // {
     //     // supress compilation warnings
     //     let _fd = fd;
     //     let _vr = vr;
@@ -1163,7 +1163,7 @@ fn get_mac_addresses(
     //     // return all zero MAC address as BPF is filling it automatically
     //     // and we are not required to maintain the address in memory (yet)
     //     [0, 0, 0, 0, 0, 0]
-    // } 
+    // }
     // // END FreeBSD specific interface type handling
 }
 
