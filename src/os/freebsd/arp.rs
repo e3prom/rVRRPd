@@ -68,7 +68,7 @@ pub fn broadcast_gratuitious_arp(
         match write(fd, &mut arpframe as *mut _ as *const c_void, mem::size_of_val(&arpframe)) {
             -1 => Err(io::Error::last_os_error()),
             _ => {
-                print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
+                print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_ARP,
                     format!("VRRPv2 frame successfully sent on BPF device, fd {}", fd)
                 );
                 Ok(())

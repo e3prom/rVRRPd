@@ -805,12 +805,18 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                 // warning: hard-coded buffer size
                                 Ok(len) if len > 0 => {
                                     // acquire read lock
-                                    print_debug(&debug, DEBUG_LEVEL_EXTENSIVE, DEBUG_SRC_THREAD,
-                                        format!("acquiring vr read lock on listener thread")
+                                    print_debug(
+                                        &debug,
+                                        DEBUG_LEVEL_EXTENSIVE,
+                                        DEBUG_SRC_THREAD,
+                                        format!("acquiring vr read lock on listener thread"),
                                     );
                                     let vr = vr.read().unwrap();
-                                    print_debug(&debug, DEBUG_LEVEL_EXTENSIVE, DEBUG_SRC_THREAD,
-                                        format!("acquired vr read lock on listener thread")
+                                    print_debug(
+                                        &debug,
+                                        DEBUG_LEVEL_EXTENSIVE,
+                                        DEBUG_SRC_THREAD,
+                                        format!("acquired vr read lock on listener thread"),
                                     );
 
                                     // create and initialize pkt_hdr

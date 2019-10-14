@@ -24,6 +24,7 @@ pub const DEBUG_SRC_MAIN: &str = "main";
 pub const DEBUG_SRC_MAC: &str = "mac";
 pub const DEBUG_SRC_ROUTE: &str = "route";
 pub const DEBUG_SRC_PACKET: &str = "packet";
+pub const DEBUG_SRC_ARP: &str = "arp";
 pub const DEBUG_SRC_THREAD: &str = "thread";
 pub const DEBUG_SRC_THREADP: &str = "thread-pool";
 pub const DEBUG_SRC_FSM: &str = "fsm";

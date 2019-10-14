@@ -9,7 +9,6 @@ use std::ptr;
 // foreign_types
 use foreign_types::{ForeignType, ForeignTypeRef};
 
-
 // libc-like getifaddrs() function implementation
 // Credit sfackler: https://gist.github.com/sfackler/d614e6c130f3462f443e6c0c6255383a
 foreign_type! {
