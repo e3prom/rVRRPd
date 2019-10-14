@@ -8,8 +8,13 @@
 [rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a programming language known for its inherent portability, memory-safety and speed.
 
 # Features
+<<<<<<< HEAD
  * Aimed to be Fast, Portable and **Secure**
  * Supports multiple operating-systems and processors architectures
+=======
+ * Aimed to be Portable, Fast and **Secure**
+ * Supports Intel IA-64 and ARMv8 Processors
+>>>>>>> 0.2.0-dev
  * Multi-threaded operation (1 thread per VRRP group/interface pair)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/) formats
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
@@ -31,15 +36,26 @@ This project is still in **_development_** stage, and at this time, only support
 The development roadmap for the upcoming `0.2.0` release can be found on its [dedicated project page](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Dependencies
+<<<<<<< HEAD
  * A Linux or FreeBSD (Experimental) 64-bits operating system.
+=======
+ * A Linux 64-bits kernel (_only Linux is supported at this time_).
+>>>>>>> 0.2.0-dev
  * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
  * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
  * At least one Ethernet interface(s), see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
  * Root privileges, required to access raw sockets, configure interfaces and to add kernel routes.
+<<<<<<< HEAD
  * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux only).
 
 # Build and run
 To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Linux Debian and derivatives.
+=======
+ * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface.
+
+# Build and run
+To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Debian and derivatives.
+>>>>>>> 0.2.0-dev
 
 To quickly build the daemon executable, use the `make` or `cargo build --release` command:
 ```console
@@ -53,7 +69,11 @@ $ cargo build --release
     Finished release [optimized] target(s) in 9.63s
 ```
 
+<<<<<<< HEAD
 Then install the `rvrrpd` executable on your system by entering the `make install` command.
+=======
+Then install the `rvrrpd` executable on your system path by entering `make install`.
+>>>>>>> 0.2.0-dev
 
 Before running the VRRPv2 daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
 
