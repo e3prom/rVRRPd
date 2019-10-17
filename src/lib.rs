@@ -820,8 +820,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     );
 
                                     // create and initialize pkt_hdr
-                                    #[cfg(target_os = "linux")]
-                                    let mut pkt_hdr = PktHdr::new();
                                     #[cfg(target_os = "freebsd")]
                                     let pkt_hdr = PktHdr::new();
 
