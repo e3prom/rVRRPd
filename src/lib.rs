@@ -820,7 +820,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     );
 
                                     // create and initialize pkt_hdr
-                                    #[cfg(target_os = "freebsd")]
                                     let pkt_hdr = PktHdr::new();
 
                                     // initialize raw pointers
@@ -883,6 +882,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     });
                 }
                 loop {
+                    // call sleep() to avoid continuous high cpu usage
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+
                     // check if global shutdown variable is set
                     // if set, then call set_if_promiscuous() to remove promisc mode on interface
                     if shutdown.load(Ordering::Relaxed) {
