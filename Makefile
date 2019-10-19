@@ -1,5 +1,6 @@
 TARGET = target/release
 BINARY = main
+PREFIX = /usr
 
 main:
 	@cargo build --release

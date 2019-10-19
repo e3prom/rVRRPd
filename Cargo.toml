@@ -1,6 +1,6 @@
 [package]
 name = "rVRRPd"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 repository = "httsp://github.com/e3prom/rvrrpd"
