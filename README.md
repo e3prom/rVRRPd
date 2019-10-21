@@ -3,6 +3,7 @@
 ![GitHub issues](https://img.shields.io/github/issues/e3prom/rvrrpd.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/e3prom/rvrrpd.svg)
 [![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=master)](https://travis-ci.org/e3prom/rVRRPd)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
 # Introduction
 [rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a modern programming language known for its portability, memory-safety and speed.
@@ -108,6 +109,19 @@ Starting rVRRPd
 ```
 
 Your virtual router will now listen for VRRPv2 packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
+
+# Donation
+Help us by donating to our project. Every penny will directly cover the development costs of `rVRRPd`, which includes coffee, the virtual machines used to setup the test and interoperability labs, and the bare-metal servers powering them.
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
+
+You can donate by Paypal (above button), or by using any of the below crypto currencies:
+| Crypto Currency     | Wallet Address                                           | Additonal (e,g. memo id) |
+| ------------------- | -------------------------------------------------------- | ------------------------ |
+| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                          |
+| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                          |
+| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 3006351358               |
+
 
 # Support
 If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
