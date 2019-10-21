@@ -93,7 +93,7 @@ The above configuration do the following:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
    * Has preemption enabled.
-   * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some vendors).
+   * Has compatibility with [`RFC3768`](https://tools.ietf.org/html/rfc3768) turned on (may be required to fully interoperate with some equipment vendors).
    * Uses the network driver `libnl` which leverage the netlink protocol. Alternatively, you can use the `ioctl` driver, which is simpler but will removes the interface's IP addresse(s) for the VIP when in Master state.
    * Is configured for a `macvlan` type interface, a MAC-based virtual interface.
    * Name the child virtual interface `vrrp0`, the latter will be used to hold the virtual router IP address.
@@ -108,7 +108,7 @@ Starting rVRRPd
 [...]
 ```
 
-Your virtual router will now listen for VRRPv2 packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
+Your virtual router will now listens for VRRP packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
 
 # Donation
 Help us by donating to our project. Every penny will directly cover the development costs of `rVRRPd`, which includes coffee, the virtual machines used to setup the test and interoperability labs, and the bare-metal servers powering them.
@@ -116,6 +116,7 @@ Help us by donating to our project. Every penny will directly cover the developm
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
 You can donate by Paypal (above button), or by using any of the below crypto currencies:
+
 | Crypto Currency     | Wallet Address                                           | Additonal (e,g. memo id) |
 | ------------------- | -------------------------------------------------------- | ------------------------ |
 | Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                          |
@@ -124,4 +125,4 @@ You can donate by Paypal (above button), or by using any of the below crypto cur
 
 
 # Support
-If you are experiencing any stability, security or interoperability problems, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
+If you are experiencing any stability, security or interoperability isues, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
