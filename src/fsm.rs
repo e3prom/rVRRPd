@@ -3,7 +3,7 @@
 use super::*;
 
 // channels and threads
-use std::sync::{Arc, Mutex, RwLockWriteGuard};
+use std::sync::{Arc, Mutex};
 
 // threads
 use std::thread;
@@ -15,175 +15,8 @@ use crate::debug::Verbose;
 use crate::os::drivers::Operation;
 
 // address resolution protocol
-#[cfg(target_os = "freebsd")]
-use os::freebsd::arp::broadcast_gratuitious_arp;
 #[cfg(target_os = "linux")]
-use os::linux::arp::{broadcast_gratuitious_arp, open_raw_socket_arp};
-
-/// Virtual Router Parameters Structure
-#[derive(Debug)]
-pub struct Parameters {
-    vrid: u8,                                              // Virtual Router Identifier (1-255)
-    interface: String,           // Interface where the virtual router is running
-    ifindex: i32,                // Interface ifindex
-    prio: u8,                    // Priority (0-255)
-    vip: [u8; 4],                // Virtual IP (not in RFC parameters list)
-    ipaddrs: Vec<[u8; 4]>, // One or more local IPv4 Addresse(s) associated with the virtual router
-    ipmasks: Vec<[u8; 4]>, // IPv4 Netmask(s) of above IP addresses
-    adverint: u8,          // Advertisement interval
-    skew_time: f32,        // Time to skew Master_Down interval (second)
-    master_down: f32,      // Time interval for Backup to declare Master Down
-    preempt_mode: bool, // Control whether a higher-priority Backup router can preempt a lower-priority Master
-    rfc3768: bool,      // RFC2338 compatibility flag
-    auth_type: u8,      // Authentication type being used
-    auth_data: [u8; 8], // Autentication data (type specific)
-    auth_secret: Option<String>, // Authentication secret
-    notification: Option<Arc<Mutex<mpsc::Sender<Event>>>>, // Notification channel
-    protocols: Arc<Mutex<Protocols>>, // Internal protocols information
-    ifmac: [u8; 6],     // Interface Ethernet MAC address
-    netdrv: NetDrivers, // Network driver
-    iftype: IfTypes,    // Interfaces type
-    vif_name: String,   // Virtual interface name (or physical when saved)
-    vif_idx: i32,       // Virtual interface ifindex
-    fd: i32,            // Raw socket or BPF file descriptor
-}
-
-/// Parameters Type Implementation
-impl Parameters {
-    // new() method
-    pub fn new(
-        vrid: u8,
-        interface: String,
-        ifindex: i32,
-        prio: u8,
-        vip: [u8; 4],
-        ipaddrs: Vec<[u8; 4]>,
-        ipmasks: Vec<[u8; 4]>,
-        adverint: u8,
-        skew_time: f32,
-        master_down: f32,
-        preempt_mode: bool,
-        rfc3768: bool,
-        auth_type: u8,
-        auth_data: [u8; 8],
-        auth_secret: Option<String>,
-        protocols: Arc<Mutex<Protocols>>,
-        netdrv: NetDrivers,
-        iftype: IfTypes,
-        vif_name: String,
-        vif_idx: i32,
-        fd: i32,
-    ) -> Parameters {
-        Parameters {
-            vrid,
-            interface,
-            ifindex,
-            prio,
-            vip,
-            ipaddrs,
-            ipmasks,
-            adverint,
-            skew_time,
-            master_down,
-            preempt_mode,
-            rfc3768,
-            auth_type,
-            auth_data,
-            auth_secret,
-            notification: Option::None,
-            protocols,
-            ifmac: [0, 0, 0, 0, 0, 0],
-            netdrv,
-            iftype,
-            vif_name,
-            vif_idx,
-            fd,
-        }
-    }
-    // vrid() getter
-    pub fn vrid(&self) -> u8 {
-        self.vrid
-    }
-    // interface() getter
-    pub fn interface(&self) -> &String {
-        &self.interface
-    }
-    // ifindex() getter
-    pub fn ifindex(&self) -> i32 {
-        self.ifindex
-    }
-    // prio() getter
-    pub fn prio(&self) -> u8 {
-        self.prio
-    }
-    // vip() getter
-    pub fn vip(&self) -> [u8; 4] {
-        self.vip
-    }
-    // ipaddrs() getter
-    pub fn ipaddrs(&self) -> &Vec<[u8; 4]> {
-        &self.ipaddrs
-    }
-    // adverint() getter
-    pub fn adverint(&self) -> u8 {
-        self.adverint
-    }
-    // rfc3768() getter
-    pub fn rfc3768(&self) -> bool {
-        self.rfc3768
-    }
-    // authtype() getter
-    pub fn authtype(&self) -> u8 {
-        self.auth_type
-    }
-    // authsecret() getter
-    pub fn authsecret(&self) -> &Option<String> {
-        &self.auth_secret
-    }
-    // addrcount() method
-    pub fn addrcount(&self) -> u8 {
-        // calculate the number of addresses (or arrays) in ipaddrs vector
-        let num = *&self.ipaddrs.len() as u8;
-        // if rfc3768 compatibility flag is false, add one to account for the VIP
-        if !self.rfc3768 {
-            num + 1
-        } else {
-            num
-        }
-    }
-    // primary_ip() method
-    pub fn primary_ip(&self) -> [u8; 4] {
-        // return the first array in vector
-        self.ipaddrs[0]
-    }
-    // notification() method
-    pub fn notification(&self) -> &Option<Arc<Mutex<mpsc::Sender<Event>>>> {
-        &self.notification
-    }
-    // iftype() getter
-    #[cfg(target_os = "linux")]
-    pub fn iftype(&self) -> &IfTypes {
-        &self.iftype
-    }
-    // vif_name() getter
-    #[cfg(target_os = "linux")]
-    pub fn vif_name(&self) -> String {
-        self.vif_name.clone()
-    }
-    // vif_idx() getter
-    #[cfg(target_os = "linux")]
-    pub fn vif_idx(&self) -> i32 {
-        self.vif_idx
-    }
-    // fd() getter
-    pub fn fd(&self) -> i32 {
-        self.fd
-    }
-    // fd_set() method
-    pub fn fd_set(&mut self, fd: i32) {
-        self.fd = fd;
-    }
-}
+use os::linux::arp::open_raw_socket_arp;
 
 /// Internal Protocol States "Enumerator"
 #[derive(Debug)]
@@ -349,7 +182,7 @@ pub fn fsm_run(
         );
 
         // evaluate virtual router's current state
-        vr.states = match &vr.states {
+        let st = match &vr.get_states() {
             States::Down => {
                 continue;
             }
@@ -366,11 +199,10 @@ pub fn fsm_run(
                         );
 
                         // print information
+                        let vip = vr.parameters.vip();
                         print_debug(debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "Starting VRRP Virtual Router ({}.{}.{}.{}) for group {}, on interface {} (thread: {})",
-                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface,
-                            id
+                            vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface(), id
                         ));
 
                         // print debugging information
@@ -389,9 +221,9 @@ pub fn fsm_run(
 
                         // if the virtual router is the owner of the virtual ip address
                         // OR the priority has been configured at 255
-                        if vr.is_owner_vip(&vr.parameters.vip) || vr.parameters.prio == 255 {
+                        if vr.is_owner_vip(&vr.parameters.vip()) || vr.parameters.prio() == 255 {
                             // force the priority to 255
-                            vr.parameters.prio = 255;
+                            vr.parameters.set_prio(255);
                             // set VRRP virtual mac address
                             let mut vmac = ETHER_VRRP_V2_SRC_MAC;
                             vmac[5] = vr.parameters.vrid();
@@ -400,22 +232,22 @@ pub fn fsm_run(
                             #[cfg(target_os = "linux")]
                             {
                                 // setup MAC address or virtual interface
-                                match vr.parameters.iftype {
+                                match vr.parameters.iftype() {
                                     // if vr's interface is of type macvlan
                                     IfTypes::macvlan => {
                                         // create macvlan interface
-                                        match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                        match vr.setup_macvlan_link(vmac, Operation::Add, debug) {
                                             Some((vif_idx, vif_name)) => {
                                                 // store the virtual interface's index
-                                                vr.parameters.vif_idx = vif_idx;
+                                                vr.parameters.set_vifidx(vif_idx);
                                                 // save master interface to vif_name
-                                                vr.parameters.vif_name =
-                                                    vr.parameters.interface.clone();
+                                                let vif = vr.parameters.interface();
+                                                vr.parameters.set_vifname(vif);
                                                 // change current vr's interface to the virtual interface
-                                                vr.parameters.interface = vif_name;
+                                                vr.parameters.set_interface(vif_name);
                                                 // save vif interface mac
-                                                vr.parameters.ifmac =
-                                                    get_mac_addresses(fd, &vr, debug);
+                                                let ifmac = vr.get_mac_addresses(fd, debug);
+                                                vr.parameters.set_ifmac(ifmac);
                                             }
                                             // if it failed for some reasons, do not change vr's interface
                                             None => (),
@@ -423,9 +255,10 @@ pub fn fsm_run(
                                     }
                                     _ => {
                                         // save vr's interface mac (old)
-                                        vr.parameters.ifmac = get_mac_addresses(fd, &vr, debug);
+                                        let ifmac = vr.get_mac_addresses(fd, debug);
+                                        vr.parameters.set_ifmac(ifmac);
                                         // set virtual router's MAC address
-                                        set_mac_addresses(fd, &vr, vmac, debug);
+                                        vr.set_mac_addresses(fd, vmac, debug);
                                     }
                                 }
                             }
@@ -433,14 +266,14 @@ pub fn fsm_run(
 
                             // send an ADVERTISEMENT message
                             // and panic on error
-                            packets::send_advertisement(fd, &vr, &debug).unwrap();
+                            vr.send_advertisement(fd, &debug).unwrap(); // rewiew errors handling
 
                             // --- Linux specific ARP handling
                             #[cfg(target_os = "linux")]
                             {
                                 // send gratuitious ARP requests
                                 let arp_sockfd = open_raw_socket_arp().unwrap();
-                                broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                                vr.broadcast_gratuitious_arp(arp_sockfd, debug).unwrap();
                             }
                             // END Linux specific ARP handling
 
@@ -448,12 +281,12 @@ pub fn fsm_run(
                             #[cfg(target_os = "freebsd")]
                             {
                                 // reuse BPF file descriptor
-                                broadcast_gratuitious_arp(fd, &vr, &debug).unwrap();
+                                vr.broadcast_gratuitious_arp(fd, &debug).unwrap();
                             }
                             // END FreeBSD specific ARP handling
 
                             // set advertisement interval
-                            vr.timers.advert = vr.parameters.adverint;
+                            vr.timers.advert = vr.parameters.adverint();
                             // print debugging information
                             print_debug(
                                 &debug,
@@ -462,21 +295,21 @@ pub fn fsm_run(
                                 format!("the advertisement interval is now {}s", vr.timers.advert),
                             );
                             // print information
+                            let vip = vr.parameters.vip();
                             print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                                 "VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Master",
-                                vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                                vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                                vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                             ));
                             // transition to Master state
                             fsm::States::Master
                         } else {
                             // set master_down timer
-                            vr.timers.master_down = vr.parameters.master_down;
+                            vr.timers.master_down = vr.parameters.master_down();
                             // print information
+                            let vip = vr.parameters.vip();
                             print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                                 "VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Backup",
-                                vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                                vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                                vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                             ));
                             // transition to Backup state
                             States::Backup
@@ -485,10 +318,10 @@ pub fn fsm_run(
                     // event: if Shutdown event is received
                     Event::Shutdown => {
                         // print information
+                        let vip = vr.parameters.vip();
                         print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "VR {}.{}.{}.{} for group {} on interface {} - Changed from Init to Down",
-                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                            vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
                         // transition to Down state
                         States::Down
@@ -512,12 +345,12 @@ pub fn fsm_run(
                         // if the priority is zero then set the master_down timer to skew_time
                         if prio == 0 {
                             // set master_down interval to skew_time (necessary?)
-                            vr.timers.master_down = vr.parameters.skew_time;
+                            vr.timers.master_down = vr.parameters.skewtime();
                         } else {
                             // if priority is greater than or equal to the local priority OR preempt is false
-                            if vr.parameters.preempt_mode == false || prio >= vr.parameters.prio {
+                            if vr.parameters.preempt() == false || prio >= vr.parameters.prio() {
                                 // reset master_down interval (necessary?)
-                                vr.timers.master_down = vr.parameters.master_down;
+                                vr.timers.master_down = vr.parameters.master_down();
                                 // clear down flag (signal master is alive)
                                 vr.flags.clear_down_flag();
                                 // print debugging information
@@ -547,18 +380,19 @@ pub fn fsm_run(
                     // event: If the Timers::master_down reached zero
                     Event::MasterDown => {
                         // print information
+                        let vip = vr.parameters.vip();
                         print_debug(
                             debug,
                             DEBUG_LEVEL_INFO,
                             DEBUG_SRC_INFO,
                             format!(
                                 "VR {}.{}.{}.{} for group {} on interface {} - Master VR is down",
-                                vr.parameters.vip[0],
-                                vr.parameters.vip[1],
-                                vr.parameters.vip[2],
-                                vr.parameters.vip[3],
-                                vr.parameters.vrid,
-                                vr.parameters.interface
+                                vip[0],
+                                vip[1],
+                                vip[2],
+                                vip[3],
+                                vr.parameters.vrid(),
+                                vr.parameters.interface()
                             ),
                         );
                         // set VRRP virtual mac address
@@ -568,20 +402,22 @@ pub fn fsm_run(
                         // --- Linux specific interface type handling
                         #[cfg(target_os = "linux")]
                         // setup MAC address or virtual interface
-                        match vr.parameters.iftype {
+                        match vr.parameters.iftype() {
                             // if vr's interface is of type macvlan
                             IfTypes::macvlan => {
                                 // create macvlan interface
-                                match setup_macvlan_link(&vr, vmac, Operation::Add, debug) {
+                                match vr.setup_macvlan_link(vmac, Operation::Add, debug) {
                                     Some((vif_idx, vif_name)) => {
                                         // store the virtual interface's index
-                                        vr.parameters.vif_idx = vif_idx;
+                                        vr.parameters.set_vifidx(vif_idx);
                                         // save master interface to vif_name
-                                        vr.parameters.vif_name = vr.parameters.interface.clone();
+                                        let vif = vr.parameters.interface();
+                                        vr.parameters.set_vifname(vif);
                                         // change current vr's interface to the virtual interface
-                                        vr.parameters.interface = vif_name;
+                                        vr.parameters.set_interface(vif_name);
                                         // save vif interface mac
-                                        vr.parameters.ifmac = get_mac_addresses(fd, &vr, debug);
+                                        let ifmac = vr.get_mac_addresses(fd, debug);
+                                        vr.parameters.set_ifmac(ifmac);
                                     }
                                     // if it failed for some reasons, do not change vr's interface
                                     None => (),
@@ -589,9 +425,10 @@ pub fn fsm_run(
                             }
                             _ => {
                                 // save vr's interface mac (old)
-                                vr.parameters.ifmac = get_mac_addresses(fd, &vr, debug);
+                                let ifmac = vr.get_mac_addresses(fd, debug);
+                                vr.parameters.set_ifmac(ifmac);
                                 // set virtual router's MAC address
-                                set_mac_addresses(fd, &vr, vmac, debug);
+                                vr.set_mac_addresses(fd, vmac, debug);
                             }
                         }
                         // END Linux specific interface type handling
@@ -599,18 +436,18 @@ pub fn fsm_run(
                         // --- Linux specific interface type handling
                         #[cfg(target_os = "linux")]
                         // set VIP according to network driver in use
-                        match vr.parameters.netdrv {
+                        match vr.parameters.netdrv() {
                             NetDrivers::ioctl => {
                                 // set IP addresses (including VIP) on the vr's interface
-                                set_ip_addresses(fd, &vr, Operation::Add, debug);
+                                vr.set_ip_addresses(fd, Operation::Add, debug);
                                 // set routes
-                                set_ip_routes(fd, &vr, Operation::Add, debug);
+                                vr.set_ip_routes(fd, Operation::Add, debug);
                             }
                             NetDrivers::libnl => {
                                 // add vip on vr's interface
-                                set_ip_addresses(fd, &vr, Operation::Add, debug);
+                                vr.set_ip_addresses(fd, Operation::Add, debug);
                                 // set routes
-                                set_ip_routes(fd, &vr, Operation::Add, debug);
+                                vr.set_ip_routes(fd, Operation::Add, debug);
                             }
                         }
                         // END Linux specific interface type handling
@@ -620,7 +457,7 @@ pub fn fsm_run(
                         {
                             // send gratuitious ARP requests
                             let arp_sockfd = open_raw_socket_arp().unwrap();
-                            broadcast_gratuitious_arp(arp_sockfd, &vr).unwrap();
+                            vr.broadcast_gratuitious_arp(arp_sockfd, debug).unwrap();
                         }
                         // END Linux specific ARP handling
 
@@ -628,21 +465,21 @@ pub fn fsm_run(
                         #[cfg(target_os = "freebsd")]
                         {
                             // set VIP
-                            set_ip_addresses(fd, &vr, Operation::Add, debug);
+                            vr.set_ip_addresses(fd, Operation::Add, debug);
                             // reuse BPF file descriptor
-                            broadcast_gratuitious_arp(fd, &vr, &debug).unwrap();
+                            vr.broadcast_gratuitious_arp(fd, &debug).unwrap();
                         }
                         // END FreeBSD specific interface tyoe handling
 
                         // set advertisement timer
-                        vr.timers.advert = vr.parameters.adverint;
+                        vr.timers.advert = vr.parameters.adverint();
                         // send ADVERTISEMENT
-                        packets::send_advertisement(fd, &vr, debug).unwrap();
+                        vr.send_advertisement(fd, debug).unwrap();
                         // print information
+                        let vip = vr.parameters.vip();
                         print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Master",
-                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                            vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
                         // transition to Master state
                         States::Master
@@ -650,10 +487,10 @@ pub fn fsm_run(
                     // event: if Shutdown event is received
                     Event::Shutdown => {
                         // print information
+                        let vip = vr.parameters.vip();
                         print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Down",
-                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                            vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
                         // cancel the 'active' master_down timer
                         vr.timers.master_down = std::f32::NAN;
@@ -670,9 +507,9 @@ pub fn fsm_run(
                     // event: Advertisement timer expired in timer thread
                     Event::GenAdvert => {
                         // send ADVERTISEMENT message
-                        packets::send_advertisement(fd, &vr, debug).unwrap();
+                        vr.send_advertisement(fd, debug).unwrap();
                         // reset the advertisement timer to advertisement interval
-                        vr.timers.advert = vr.parameters.adverint;
+                        vr.timers.advert = vr.parameters.adverint();
                         continue;
                     }
                     // event: we got an ADVERTISEMENT message
@@ -680,23 +517,23 @@ pub fn fsm_run(
                         // if priority is zero
                         if prio == 0 {
                             // send an ADVERTISEMENT message
-                            packets::send_advertisement(fd, &vr, debug).unwrap();
+                            vr.send_advertisement(fd, debug).unwrap();
                             // reset the advertisement timer to advertisement interval
-                            vr.timers.advert = vr.parameters.adverint;
+                            vr.timers.advert = vr.parameters.adverint();
                             // state doesn't change
                             continue;
                         } else {
                             // if ADVERTISEMENT priority is greater than local priority
                             // OR (the priority is equal AND primary address is higher than
                             // local address)
-                            if prio > vr.parameters.prio
-                                || (prio == vr.parameters.prio
-                                    && is_primary_higher(&ipsrc, &vr.parameters.ipaddrs[0]))
+                            if prio > vr.parameters.prio()
+                                || (prio == vr.parameters.prio()
+                                    && is_primary_higher(&ipsrc, &vr.parameters.ipaddrs()[0]))
                             {
                                 // cancel advertisement timer
                                 vr.timers.advert = 0;
                                 // reset master_down timer to master_down interval
-                                vr.timers.master_down = vr.parameters.master_down;
+                                vr.timers.master_down = vr.parameters.master_down();
                                 // clear down flag (mark master alive)
                                 vr.flags.clear_down_flag();
                                 // print debugging information
@@ -710,36 +547,37 @@ pub fn fsm_run(
                                 // --- Linux specific interface tyoe handling
                                 #[cfg(target_os = "linux")]
                                 // restore primary or delete vip on vr's interface
-                                match vr.parameters.iftype {
+                                match vr.parameters.iftype() {
                                     IfTypes::macvlan => {
                                         // removes macvlan interface
-                                        setup_macvlan_link(
-                                            &vr,
-                                            vr.parameters.ifmac,
+                                        vr.setup_macvlan_link(
+                                            vr.parameters.ifmac(),
                                             Operation::Rem,
                                             debug,
                                         );
                                         // restore configured virtual interface name
-                                        vr.parameters.vif_name = vr.parameters.interface.clone();
+                                        let vif = vr.parameters.interface();
+                                        vr.parameters.set_vifname(vif);
                                         // restore master interface name
-                                        vr.parameters.interface = vr.parameters.vif_name.clone();
+                                        let vif = vr.parameters.vifname();
+                                        vr.parameters.set_interface(vif);
                                         // remove added routes
-                                        set_ip_routes(fd, &vr, Operation::Rem, debug);
+                                        vr.set_ip_routes(fd, Operation::Rem, debug);
                                     }
                                     _ => {
                                         // restore interface's MAC address
-                                        set_mac_addresses(fd, &vr, vr.parameters.ifmac, debug);
-                                        match vr.parameters.netdrv {
+                                        vr.set_mac_addresses(fd, vr.parameters.ifmac(), debug);
+                                        match vr.parameters.netdrv() {
                                             NetDrivers::ioctl => {
                                                 // restore primary IP
                                                 #[cfg(target_os = "linux")]
-                                                set_ip_addresses(fd, &vr, Operation::Rem, debug);
+                                                vr.set_ip_addresses(fd, Operation::Rem, debug);
                                                 // re-set routes
-                                                set_ip_routes(fd, &vr, Operation::Add, debug);
+                                                vr.set_ip_routes(fd, Operation::Add, debug);
                                             }
                                             NetDrivers::libnl => {
                                                 // delete vip
-                                                delete_ip_addresses(fd, &vr, debug);
+                                                vr.delete_ip_addresses(fd, debug);
                                             }
                                         }
                                     }
@@ -751,15 +589,15 @@ pub fn fsm_run(
                                 {
                                     // we don't have to re-set the mac address here
                                     // delete the VIP
-                                    delete_ip_addresses(fd, &vr, debug);
+                                    vr.delete_ip_addresses(fd, debug);
                                 }
                                 // END FreeBSD specific interface type handling
 
                                 // print information
+                                let vip = vr.parameters.vip();
                                 print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                                     "VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Backup",
-                                    vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                                    vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                                    vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                                 ));
                                 // transition to Backup state
                                 States::Backup
@@ -782,46 +620,48 @@ pub fn fsm_run(
                     // event: if Shutdown event is received
                     Event::Shutdown => {
                         // print information
+                        let vip = vr.parameters.vip();
                         print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
                             "VR {}.{}.{}.{} for group {} on interface {} - Changed from Master to Down",
-                            vr.parameters.vip[0], vr.parameters.vip[1], vr.parameters.vip[2],
-                            vr.parameters.vip[3], vr.parameters.vrid, vr.parameters.interface
+                            vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
                         // cancel the 'advert' timer
                         vr.timers.advert = 0;
                         // send ADVERTISEMENT with priority equal 0
-                        vr.parameters.prio = 0;
-                        packets::send_advertisement(fd, &vr, debug).unwrap();
+                        vr.parameters.set_prio(0);
+                        vr.send_advertisement(fd, debug).unwrap();
 
                         // -- Linux specific interface tyoe handling
                         #[cfg(target_os = "linux")]
-                        match vr.parameters.iftype {
+                        match vr.parameters.iftype() {
                             IfTypes::macvlan => {
                                 // removes macvlan interface
-                                setup_macvlan_link(&vr, vr.parameters.ifmac, Operation::Rem, debug);
+                                vr.setup_macvlan_link(vr.parameters.ifmac(), Operation::Rem, debug);
                                 // restore configured virtual interface name
-                                vr.parameters.vif_name = vr.parameters.interface.clone();
+                                let vif = vr.parameters.interface();
+                                vr.parameters.set_vifname(vif);
                                 // restore master interface name
-                                vr.parameters.interface = vr.parameters.vif_name.clone();
+                                let vif = vr.parameters.vifname();
+                                vr.parameters.set_interface(vif);
                                 // remove routes
-                                set_ip_routes(fd, &vr, Operation::Rem, debug);
+                                vr.set_ip_routes(fd, Operation::Rem, debug);
                             }
                             _ => {
                                 // restore interface's MAC address
-                                set_mac_addresses(fd, &vr, vr.parameters.ifmac, debug);
+                                vr.set_mac_addresses(fd, vr.parameters.ifmac(), debug);
                                 // restore primary or delete vip on vr's interface
-                                match vr.parameters.netdrv {
+                                match vr.parameters.netdrv() {
                                     NetDrivers::ioctl => {
                                         // restore primary IP
-                                        set_ip_addresses(fd, &vr, Operation::Rem, debug);
+                                        vr.set_ip_addresses(fd, Operation::Rem, debug);
                                         // remove routes
-                                        set_ip_routes(fd, &vr, Operation::Rem, debug);
+                                        vr.set_ip_routes(fd, Operation::Rem, debug);
                                     }
                                     NetDrivers::libnl => {
                                         // delete vip
-                                        delete_ip_addresses(fd, &vr, debug);
+                                        vr.delete_ip_addresses(fd, debug);
                                         // remove added routes
-                                        set_ip_routes(fd, &vr, Operation::Rem, debug);
+                                        vr.set_ip_routes(fd, Operation::Rem, debug);
                                     }
                                 }
                             }
@@ -833,7 +673,7 @@ pub fn fsm_run(
                         {
                             // we don't have to re-set the mac address here
                             // delete the VIP
-                            delete_ip_addresses(fd, &vr, debug);
+                            vr.delete_ip_addresses(fd, debug);
                         }
                         // END FreeBSD specific interface type handling
 
@@ -846,6 +686,8 @@ pub fn fsm_run(
                 }
             }
         };
+        // set end-of-loop state
+        vr.set_states(st);
         // print debugging information
         print_debug(
             debug,
@@ -882,7 +724,7 @@ fn register_tx(
     );
 
     // setting up the notification tx channel
-    vr.parameters.notification = Option::Some(Arc::clone(tx));
+    vr.parameters.set_notification(Arc::clone(tx));
     // print debugging information
     print_debug(
         debug,
@@ -903,431 +745,4 @@ fn is_primary_higher(primary: &[u8; 4], local: &[u8; 4]) -> bool {
         }
     }
     result
-}
-
-// set_ip_addresses() function
-/// set or clear IPv4 addresses on a virtual-router interface
-fn set_ip_addresses(fd: i32, vr: &RwLockWriteGuard<VirtualRouter>, op: Operation, debug: &Verbose) {
-    // create addr and netmask vector
-    let mut addrs: Vec<[u8; 4]> = Vec::new();
-    let mut netmasks: Vec<[u8; 4]> = Vec::new();
-
-    // push vr's address(es) inside addr vector
-    for ip in &vr.parameters.ipaddrs {
-        addrs.push(*ip);
-    }
-    // push address' netmasks inside the netmask vector
-    for m in &vr.parameters.ipmasks {
-        netmasks.push(*m);
-    }
-
-    // if true, add vip and netmask to the respective vectors
-    // make sure this is done last, so the VIP is on top of the addrs vector
-    // otherwise it will never replace the current IP when using ioctls
-    match op {
-        Operation::Add => {
-            // add vip to the IP addresses vector
-            addrs.push(vr.parameters.vip);
-            // add first address' netmask
-            netmasks.push(vr.parameters.ipmasks[0]);
-        }
-        _ => {}
-    }
-
-    // construct interface name
-    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-
-    // set the last ip address from vector
-    let idx = addrs.len() - 1;
-
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_HIGH,
-        DEBUG_SRC_IP,
-        format!(
-            "setting IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
-            addrs[idx][0],
-            addrs[idx][1],
-            addrs[idx][2],
-            addrs[idx][3],
-            netmasks[idx][0],
-            netmasks[idx][1],
-            netmasks[idx][2],
-            netmasks[idx][3],
-            ifname
-        ),
-    );
-
-    // --- Linux specific interface tyoe handling
-    #[cfg(target_os = "linux")]
-    {
-        let ifindex = match vr.parameters.iftype {
-            IfTypes::macvlan => vr.parameters.vif_idx,
-            _ => vr.parameters.ifindex,
-        };
-
-        // set ifindex on physical or macvlan interface
-        // set virtual ip address according to the network driver in use
-        match vr.parameters.netdrv {
-            NetDrivers::ioctl => {
-                if let Err(e) =
-                    os::linux::netdev::set_ip_address(fd, &ifname, addrs[idx], netmasks[idx])
-                {
-                    eprintln!(
-                        "error(ip): error while assigning IP address on interface {:?}: {}",
-                        &ifname, e
-                    );
-                }
-            }
-            NetDrivers::libnl => {
-                print_debug(
-                    debug,
-                    DEBUG_LEVEL_HIGH,
-                    DEBUG_SRC_IP,
-                    format!(
-                    "setting up IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
-                    &ifname, ifindex
-                ),
-                );
-                if let Err(e) = os::linux::libnl::set_ip_address(
-                    ifindex,
-                    &ifname,
-                    addrs[idx],
-                    netmasks[idx],
-                    Operation::Add,
-                    debug,
-                ) {
-                    eprintln!(
-                        "error(ip): error while assigning IP address on interface {:?}: {}",
-                        &ifname, e
-                    );
-                }
-            }
-        }
-    }
-    // END Linux specific interface type handling
-
-    // FreeBSD specific interface type handling
-    #[cfg(target_os = "freebsd")]
-    {
-        print_debug(
-            debug,
-            DEBUG_LEVEL_HIGH,
-            DEBUG_SRC_IP,
-            format!("setting ip addresss on interface {:?}, fd {}", ifname, fd),
-        );
-        if let Err(e) = os::freebsd::netinet::set_ip_address(
-            fd,
-            &ifname,
-            addrs[idx],
-            netmasks[idx],
-            Operation::Add,
-        ) {
-            eprintln!(
-                "error(ip): error while setting IP address on interface {:?}: {}",
-                ifname, e
-            );
-        }
-    }
-    // END FreeBSD specific interface type handling
-}
-
-// delete_ip_addresses() function
-/// delete an ip address on a virtual-router interface
-fn delete_ip_addresses(fd: i32, vr: &std::sync::RwLockWriteGuard<VirtualRouter>, debug: &Verbose) {
-    // create netmasks vector
-    let mut netmasks: Vec<[u8; 4]> = Vec::new();
-
-    // push first ip's netmask
-    // always take the mask of the primary (top) ip
-    netmasks.push(vr.parameters.ipmasks[0]);
-
-    // construct interface name
-    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_HIGH,
-        DEBUG_SRC_IP,
-        format!(
-            "removing IP address {}.{}.{}.{} netmask {}.{}.{}.{} on {:?}",
-            vr.parameters.vip[0],
-            vr.parameters.vip[1],
-            vr.parameters.vip[2],
-            vr.parameters.vip[3],
-            netmasks[0][0],
-            netmasks[0][1],
-            netmasks[0][2],
-            netmasks[0][3],
-            ifname
-        ),
-    );
-
-    // --- Linux specific interface tyoe handling
-    #[cfg(target_os = "linux")]
-    {
-        // workaround compilation warning
-        let _fd = fd;
-        // delete virtual ip address according to the network driver in use
-        match vr.parameters.netdrv {
-            NetDrivers::libnl => {
-                print_debug(
-                    debug,
-                    DEBUG_LEVEL_HIGH,
-                    DEBUG_SRC_IP,
-                    format!(
-                        "removing IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
-                        &ifname, vr.parameters.ifindex
-                    ),
-                );
-                if let Err(e) = os::linux::libnl::set_ip_address(
-                    vr.parameters.ifindex,
-                    &ifname,
-                    vr.parameters.vip,
-                    netmasks[0],
-                    Operation::Rem,
-                    debug,
-                ) {
-                    eprintln!(
-                        "error(ip): error while removing IP address on interface {:?}: {}",
-                        &ifname, e
-                    );
-                }
-            }
-            _ => {}
-        }
-    }
-    // END Linux specific interface type handling
-
-    // FreeBSD specific interface type handling
-    #[cfg(target_os = "freebsd")]
-    {
-        print_debug(
-            debug,
-            DEBUG_LEVEL_HIGH,
-            DEBUG_SRC_IP,
-            format!("setting ip addresss on interface {:?}, fd {}", ifname, fd),
-        );
-        if let Err(e) = os::freebsd::netinet::set_ip_address(
-            fd,
-            &ifname,
-            vr.parameters.vip,
-            netmasks[0],
-            Operation::Rem,
-        ) {
-            eprintln!(
-                "error(ip): error while setting IP address on interface {:?}: {}",
-                ifname, e
-            );
-        }
-    }
-    // END FreeBSD specific interface type handling
-}
-
-// get_mac_addresses() function
-/// get Ethernet MAC address from vr's interface
-#[cfg(target_os = "linux")]
-fn get_mac_addresses(
-    fd: i32,
-    vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    debug: &Verbose,
-) -> [u8; 6] {
-    // --- Linux specific interface tyoe handling
-    #[cfg(target_os = "linux")]
-    {
-        // construct interface name
-        let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-        // get mac address of interface
-        match os::linux::netdev::get_mac_addr(fd, &ifname, debug) {
-            Ok(mac) => mac,
-            Err(e) => {
-                eprintln!(
-                    "error(mac): error while getting MAC address on interface {:?}: {}",
-                    ifname, e
-                );
-                [0, 0, 0, 0, 0, 0]
-            }
-        }
-    }
-    // END Linux specific interface type handling
-
-    // // --- FreeBSD specific interface tyoe handling
-    // #[cfg(target_os = "freebsd")]
-    // {
-    //     // supress compilation warnings
-    //     let _fd = fd;
-    //     let _vr = vr;
-    //     let _debug = debug;
-    //     // return all zero MAC address as BPF is filling it automatically
-    //     // and we are not required to maintain the address in memory (yet)
-    //     [0, 0, 0, 0, 0, 0]
-    // }
-    // // END FreeBSD specific interface type handling
-}
-
-// set_mac_addresses() function
-/// Set Ethernet MAC address on vr's interface
-#[cfg(target_os = "linux")]
-fn set_mac_addresses(
-    fd: i32,
-    vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    mac: [u8; 6],
-    debug: &Verbose,
-) {
-    // construct interface name
-    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-
-    // --- Linux specific interface tyoe handling
-    #[cfg(target_os = "linux")]
-    {
-        // set mac address
-        match os::linux::netdev::set_mac_addr(fd, &ifname, mac, debug) {
-            Err(e) => eprintln!("error(mac): error while setting mac address: {}", e),
-            _ => {}
-        }
-    }
-    // END Linux specific interface type handling
-}
-
-// set_ip_routes() function
-/// set or unset IPv4 routes on virtual-router interfaces
-#[cfg(target_os = "linux")]
-fn set_ip_routes(
-    fd: i32,
-    vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    op: Operation,
-    debug: &Verbose,
-) {
-    // acquire mutex lock on protocols
-    let protocols = &vr.parameters.protocols;
-    let protocols = protocols.lock().unwrap();
-
-    // construct interface name
-    let ifname = CString::new(vr.parameters.interface.as_bytes() as &[u8]).unwrap();
-
-    // check if static protocol reference exists
-    match protocols.r#static.as_ref() {
-        Some(r) => {
-            // for every static routes
-            for st in r {
-                // --- Linux specific interface tyoe handling
-                #[cfg(target_os = "linux")]
-                {
-                    // add route acccording to the network driver in use
-                    match vr.parameters.netdrv {
-                        NetDrivers::ioctl => {
-                            print_debug(
-                                debug,
-                                DEBUG_LEVEL_HIGH,
-                                DEBUG_SRC_IP,
-                                format!(
-                                "setting up route on interface {:?} (ifindex: {}) using netlink (ioctl)",
-                                &ifname, vr.parameters.ifindex
-                            ),
-                            );
-                            if let Err(e) = os::linux::netdev::set_ip_route(
-                                fd,
-                                &vr.parameters.interface,
-                                st.route(),
-                                st.mask(),
-                                st.nh(),
-                                st.metric(),
-                                st.mtu(),
-                                &op,
-                                debug,
-                            ) {
-                                eprintln!(
-                                    "error(route): cannot add or delete route {:?}: {}",
-                                    st.route(),
-                                    e
-                                );
-                            }
-                        }
-                        NetDrivers::libnl => {
-                            print_debug(
-                                debug,
-                                DEBUG_LEVEL_HIGH,
-                                DEBUG_SRC_IP,
-                                format!(
-                                "setting up route on interface {:?} (ifindex: {}) using netlink (libnl)",
-                                &ifname, vr.parameters.ifindex
-                            ),
-                            );
-                            if let Err(e) = os::linux::libnl::set_ip_route(
-                                fd,
-                                &vr.parameters.interface,
-                                st.route(),
-                                st.mask(),
-                                st.nh(),
-                                st.metric(),
-                                st.mtu(),
-                                &op,
-                                debug,
-                            ) {
-                                eprintln!(
-                                    "error(route): cannot add or delete route {:?}: {}",
-                                    st.route(),
-                                    e
-                                );
-                            }
-                        }
-                    }
-                }
-                // END Linux specific interface type handling
-            }
-        }
-        None => {}
-    }
-}
-
-// setup_mac_vlan_link() function (Linux specific)
-#[cfg(target_os = "linux")]
-fn setup_macvlan_link(
-    vr: &std::sync::RwLockWriteGuard<VirtualRouter>,
-    vmac: [u8; 6],
-    op: Operation,
-    debug: &Verbose,
-) -> Option<(i32, String)> {
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_HIGH,
-        DEBUG_SRC_MACVLAN,
-        format!(
-            "setting up macvlan interface on master {:?} using libnl",
-            vr.parameters.interface
-        ),
-    );
-
-    // call to libnl setup_macvlan_link()
-    match os::linux::libnl::setup_macvlan_link(&vr, vmac, &op) {
-        // the macvlan interface has been added or deleted successfully
-        Ok(()) => {
-            // If added, return the ifindex and name of the virtual interface
-            match op {
-                Operation::Add => {
-                    // find new macvlan ifindex
-                    match os::linux::libc::c_ifnametoindex(&vr.parameters.vif_name) {
-                        Ok(i) => {
-                            return Some((i as i32, vr.parameters.vif_name.clone()));
-                        }
-                        Err(_e) => return None,
-                    }
-                }
-                Operation::Rem => {
-                    return None;
-                }
-            }
-        }
-        // catched an error while setting up the macvlan interface
-        Err(e) => {
-            eprintln!(
-                "error(macvlan): cannot perform operation {:?} on macvlan interface (master if: {:?}): {}",
-                op, vr.parameters.interface, e
-            );
-            None
-        }
-    }
 }

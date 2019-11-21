@@ -2,19 +2,19 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/e3prom/rvrrpd.svg)
 ![GitHub issues](https://img.shields.io/github/issues/e3prom/rvrrpd.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/e3prom/rvrrpd.svg)
-[![Build Status](https://travis-ci.org/e3prom/rVRRPd.svg?branch=master)](https://travis-ci.org/e3prom/rVRRPd)
+![Github build status](https://github.com/e3prom/rVRRPd/workflows/Build/badge.svg)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
 # Introduction
 [rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a modern programming language known for its portability, memory-safety and speed.
 
 # Features
- * Aimed to be Fast, Portable and **Secure**
+ * Aimed to be Fast, Portable and **Highly Secure**
  * Supports multiple operating systems and processors architectures
  * Multi-threaded operation
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
-   * Tested interoperable with Cisco IOS and Cisco IOS-XR
+   * Tested interoperable with Cisco IOS and Cisco IOS-XE
  * Authentication Support
    * Password Authentication (Type-1) based on [`RFC2338`](https://tools.ietf.org/html/rfc2338)
    * Proprietary P0 HMAC (SHA256 truncated to 8 bytes)
@@ -117,11 +117,11 @@ Help us by donating to our project. Every penny will directly cover the developm
 
 You can donate by Paypal (above button), or by using any of the below crypto currencies:
 
-| Crypto Currency     | Wallet Address                                           | Additonal (e,g. memo id) |
-| ------------------- | -------------------------------------------------------- | ------------------------ |
-| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                          |
-| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                          |
-| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 3006351358               |
+| Crypto Currency     | Wallet Address                                           | Additional (e,g. memo id) |
+| ------------------- | -------------------------------------------------------- | ------------------------- |
+| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                           |
+| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                           |
+| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 300635135 8               |
 
 
 # Support

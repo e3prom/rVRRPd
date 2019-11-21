@@ -4,7 +4,7 @@ version = "0.1.2"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 repository = "httsp://github.com/e3prom/rvrrpd"
-description = "A fast, open and secure VRRPv2 implementation written in Rust"
+description = "A fast, multi-platform and highly secure VRRP daemon."
 license = "GPL-3.0"
 publish = false
 

@@ -4,29 +4,8 @@
 // constants
 use crate::constants::*;
 
-// channels and threads
-use std::sync::RwLockWriteGuard;
-
 // virtual router
 use crate::VirtualRouter;
-
-// checksums
-use crate::checksums;
-
-// authentication
-use crate::auth::gen_auth_data;
-
-// debugging
-use crate::debug::{print_debug, Verbose};
-
-// operating system specific
-#[cfg(target_os = "freebsd")]
-use crate::os::freebsd::libc::raw_sendto;
-#[cfg(target_os = "linux")]
-use crate::os::linux::libc::raw_sendto;
-
-// std
-use std::io;
 
 /// Raw VRRPv2 Packet Format Structure
 /// This is the fixed size portion of a possibly VRRPv2 packet
@@ -116,7 +95,7 @@ impl VRRPpkt {
     }
     // gen_advert() method
     // generate a VRRPv2 ADVERTISEMENT packet
-    pub fn gen_advert(vr: &RwLockWriteGuard<'_, VirtualRouter>) -> VRRPpkt {
+    pub fn gen_advert(vr: &VirtualRouter) -> VRRPpkt {
         // Ethernet frame headers:
         // dst multicast MAC address for 224.0.0.18
         let dst_mac = ETHER_VRRP_V2_DST_MAC;
@@ -185,132 +164,8 @@ impl VRRPpkt {
     }
 }
 
-// send_advertisement() function
-/// Send a VRRP ADVERTISEMENT message
-pub fn send_advertisement(
-    fd: i32,
-    vr: &RwLockWriteGuard<'_, VirtualRouter>,
-    debug: &Verbose,
-) -> io::Result<()> {
-    // generate initial VRRP ADVERTISEMENT frame/packet
-    let advert = VRRPpkt::gen_advert(vr);
-
-    // build static frame slice
-    let static_frame = unsafe { as_u8_slice(&advert) };
-
-    // initialize frame_vec vector and push static frame into it
-    let mut frame: Vec<u8> = Vec::new();
-    for b in static_frame {
-        frame.push(*b);
-    }
-
-    // set and push the VIP to the ipaddrs
-    let vip = vr.parameters.vip();
-    for i in 0..4 {
-        frame.push(vip[i]);
-    }
-
-    // check if rfc3768 compatibility flag is true
-    if !vr.parameters.rfc3768() {
-        // extend the frame with the variable-length list of local IP addresses
-        for addr in vr.parameters.ipaddrs() {
-            for i in 0..4 {
-                frame.push(addr[i]);
-            }
-        }
-    }
-
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_EXTENSIVE,
-        DEBUG_SRC_PACKET,
-        format!(
-            "sending advertisement frame out if {}, {:?}",
-            vr.parameters.interface(),
-            frame
-        ),
-    );
-
-    // add authentication data
-    match vr.parameters.authtype() {
-        // AUTH_TYPE_P0 (PROPRIETARY-TRUNCATED-8B-SHA256)
-        // AUTH_TYPE_P1 (PROPRIETARY-XOF-8B-SHAKE256)
-        AUTH_TYPE_P0 | AUTH_TYPE_P1 => {
-            for b in gen_auth_data(
-                vr.parameters.authtype(),
-                vr.parameters.authsecret(),
-                Option::Some(&frame[VRRP_V2_FRAME_OFFSET..]),
-            ) {
-                frame.push(b);
-            }
-        }
-        // all remaining types
-        _ => {
-            for b in gen_auth_data(
-                vr.parameters.authtype(),
-                vr.parameters.authsecret(),
-                Option::None,
-            ) {
-                frame.push(b);
-            }
-        }
-    }
-
-    // generate VRRP checksum (vrrp checksum is at offset 34+6 bytes)
-    let vrrp_checksum =
-        checksums::one_complement_sum(&frame[VRRP_V2_FRAME_OFFSET..], Option::Some(6));
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_EXTENSIVE,
-        DEBUG_SRC_PACKET,
-        format!("VRRP checksum is {:#X}", vrrp_checksum),
-    );
-    // set vrrp's checksum field
-    frame[VRRP_V2_FRAME_OFFSET + 6] = vrrp_checksum.to_be() as u8;
-    frame[VRRP_V2_FRAME_OFFSET + 6 + 1] = vrrp_checksum as u8;
-
-    // generate IP checksum (ip checksum is at offset 14+10 bytes)
-    let ip_checksum = checksums::one_complement_sum(&frame[IP_FRAME_OFFSET..], Option::Some(10));
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_EXTENSIVE,
-        DEBUG_SRC_PACKET,
-        format!("IP checksum is {:#X}", ip_checksum),
-    );
-
-    // set ip checksum field (offset 34)
-    frame[IP_FRAME_OFFSET + 10] = ip_checksum.to_be() as u8;
-    frame[IP_FRAME_OFFSET + 10 + 1] = ip_checksum as u8;
-
-    // print debugging information
-    print_debug(
-        debug,
-        DEBUG_LEVEL_EXTENSIVE,
-        DEBUG_SRC_PACKET,
-        format!(
-            "final ADVERTISEMENT frame is {} bytes long",
-            frame.len() - ETHER_FRAME_SIZE
-        ),
-    );
-    // set length of ip packet (offset 16)
-    // the length of ip header + data = frame size - ethernet frame
-    let frame_size = frame.len() - ETHER_FRAME_SIZE;
-    frame[IP_FRAME_OFFSET + 2] = frame_size.to_be() as u8;
-    frame[IP_FRAME_OFFSET + 2 + 1] = frame_size as u8;
-
-    // sending raw ethernet frame
-    let ifindex = vr.parameters.ifindex();
-    let res = raw_sendto(fd, ifindex, &mut frame, &debug);
-
-    // return above call result
-    return res;
-}
-
 // as_u8_slice() unsafe function
 /// transform type T as slice of u8
-unsafe fn as_u8_slice<T: Sized>(p: &T) -> &[u8] {
+pub unsafe fn as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
 }

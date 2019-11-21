@@ -75,6 +75,10 @@ use threads::ThreadPool;
 mod config;
 use config::decode_config;
 
+// virtual routers
+mod vrouter;
+use vrouter::VirtualRouter;
+
 // protocols
 #[allow(dead_code)] // not supported on freebsd yet
 mod protocols;
@@ -161,146 +165,6 @@ impl Config {
                 _ => config::CfgType::Toml,
             },
             None => config::CfgType::Toml,
-        }
-    }
-}
-
-/// Virtual Router Structure
-#[derive(Debug)]
-pub struct VirtualRouter {
-    states: fsm::States,
-    parameters: fsm::Parameters,
-    timers: fsm::Timers,
-    flags: fsm::Flags,
-}
-
-// VirtualRouter Type Implementation
-impl VirtualRouter {
-    // new() method
-    // create new VirtualRouter
-    fn new(
-        vrid: u8,
-        ifname: String,
-        prio: u8,
-        vip: [u8; 4],
-        advertint: u8,
-        preempt: bool,
-        rfc3768: bool,
-        auth_type: u8,
-        auth_secret: Option<String>,
-        protocols: Arc<Mutex<Protocols>>,
-        debug: &Verbose,
-        netdrv: NetDrivers,
-        iftype: IfTypes,
-        vif_name: String,
-        fd: i32,
-    ) -> io::Result<VirtualRouter> {
-        // --- Linux specific interface handling
-        #[cfg(target_os = "linux")]
-        // get ifindex from interface name
-        let ifindex = match os::linux::libc::c_ifnametoindex(&ifname) {
-            Ok(i) => i as i32,
-            Err(e) => return Err(e),
-        };
-        // END Linux specific interface handling
-
-        // -- FreeBSD specific interface handling
-        #[cfg(target_os = "freebsd")]
-        let ifindex = -1;
-        // END FreeBSD specific interface handling
-
-        // create new IPv4 addresses vector
-        let mut v4addrs = Vec::new();
-
-        // create new IPv4 netmasks vector
-        let mut v4masks = Vec::new();
-
-        // build interface IPv4 addresses list
-        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-        {
-            let _r = os::multi::libc::get_addrlist(&ifname, &mut v4addrs, &mut v4masks);
-        }
-        // make sure there is a least one ip/mask pair, otherwise return an error
-        if v4addrs.is_empty() || v4masks.is_empty() {
-            println!(
-                "error(vr): at least one IPv4 address must be available on interface {}",
-                ifname
-            );
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "no ip address configured on vr's interface",
-            ));
-        }
-
-        // print debugging information
-        print_debug(
-            debug,
-            DEBUG_LEVEL_EXTENSIVE,
-            DEBUG_SRC_MAIN,
-            format!(
-                "creating new virtal-router, vrid {} on interface {}, ipaddrs {:?}",
-                vrid, ifname, v4addrs
-            ),
-        );
-
-        // verify authentication settings
-        match auth_type {
-            // if authentication types require a secret
-            1 | 250 => {
-                if auth_secret.is_none() {
-                    print_debug(
-                        debug,
-                        DEBUG_LEVEL_MEDIUM,
-                        DEBUG_SRC_VR,
-                        format!("no authentication secret configured"),
-                    );
-                }
-            }
-            _ => {}
-        }
-
-        // calculate skew_time according to RFC3768 6.1
-        let skew_time: f32 = (256.0 - prio as f32) / 256.0;
-
-        // return the newly built VirtualRouter
-        Ok(VirtualRouter {
-            states: fsm::States::Init,
-            parameters: fsm::Parameters::new(
-                vrid,
-                ifname,
-                ifindex,
-                prio,
-                vip,
-                v4addrs,
-                v4masks,
-                advertint,
-                skew_time,
-                (3.0 * advertint as f32) + skew_time,
-                preempt,
-                rfc3768,
-                auth_type,
-                [0; 8],
-                auth_secret,
-                protocols,
-                netdrv,
-                iftype,
-                vif_name,
-                0,
-                fd,
-            ),
-            // initialize the timers
-            timers: fsm::Timers::new(5.0, 1),
-            // initialize the flags to 0x1 (down flag set)
-            flags: fsm::Flags::new(0x1),
-        })
-    }
-    // is_owner_vip() method
-    // check is the VirtualRouter is the owner of the VIP
-    pub fn is_owner_vip(&self, vip: &[u8; 4]) -> bool {
-        if self.parameters.ipaddrs().contains(vip) {
-            true
-        } else {
-            false
         }
     }
 }
@@ -638,7 +502,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     }
 
                     // store raw socket file descriptor
-                    vr.parameters.fd_set(sockfd);
+                    vr.parameters.set_fd(sockfd);
                 }
 
                 // print debugging information
@@ -678,7 +542,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                         _ => {}
                                     }
                                     let vifname =
-                                        CString::new(vr.parameters.vif_name().as_bytes() as &[u8])
+                                        CString::new(vr.parameters.vifname().as_bytes() as &[u8])
                                             .unwrap();
                                     match os::linux::netdev::set_if_promiscuous(
                                         sockfd,
@@ -768,7 +632,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     bpf_set_promisc(bpf_fd, &debug)?;
 
                     // store BPF file descriptor
-                    vr.parameters.fd_set(bpf_fd);
+                    vr.parameters.set_fd(bpf_fd);
                 }
 
                 // print debugging information

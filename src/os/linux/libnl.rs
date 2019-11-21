@@ -8,7 +8,6 @@ use libc::{c_char, c_int, c_uint, c_void, AF_INET, AF_LLC, ETH_ALEN, IFF_UP, IF_
 // std
 use std::ffi::CString;
 use std::io;
-use std::sync::RwLockWriteGuard;
 
 // constants
 const INT_RTAX_MAX: usize = 8; // to verify __RTAX_MAX enum value
@@ -567,11 +566,7 @@ pub fn set_ip_route(
 // setup_macvlan_link() function
 //
 /// Create new or delete existing macvlan interface
-pub fn setup_macvlan_link(
-    vr: &RwLockWriteGuard<VirtualRouter>,
-    mac: [u8; 6],
-    op: &Operation,
-) -> io::Result<()> {
+pub fn setup_macvlan_link(vr: &VirtualRouter, mac: [u8; 6], op: &Operation) -> io::Result<()> {
     // call to external nlsock() function
     let nlsock = unsafe { nl_socket_alloc() };
     if nlsock.is_null() {
@@ -611,7 +606,7 @@ pub fn setup_macvlan_link(
     match op {
         Operation::Add => {
             // set interface name
-            let mut ifname = vr.parameters.vif_name();
+            let mut ifname = vr.parameters.vifname();
             ifname.push_str("\0");
 
             unsafe { rtnl_link_set_name(link, ifname.as_bytes().as_ptr() as *const c_char) };
@@ -636,7 +631,7 @@ pub fn setup_macvlan_link(
         }
         Operation::Rem => {
             // set macvlan ifindex
-            unsafe { rtnl_link_set_ifindex(link, vr.parameters.vif_idx() as i32) };
+            unsafe { rtnl_link_set_ifindex(link, vr.parameters.vifidx() as i32) };
 
             // delete macvlan link
             let res = unsafe { rtnl_link_delete(nlsock, link) };
