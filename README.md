@@ -10,13 +10,8 @@
 
 # Features
  * Aimed to be Fast, Portable and **Highly Secure**
-<<<<<<< HEAD
- * Supports multiple operating systems and processors architectures
- * Multi-threaded operation
-=======
  * Supports multiple operating systems and processor architectures
  * Multi-threaded support (1 thread per interface and virtual router)
->>>>>>> review
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
    * Tested interoperable with Cisco IOS and Cisco IOS-XE
@@ -122,19 +117,11 @@ Help us by donating to the project. Every penny will directly cover the developm
 
 You can donate by Paypal using the above button, or by using any of the crypto currencies listed below:
 
-<<<<<<< HEAD
-| Crypto Currency     | Wallet Address                                           | Additional (e,g. memo id) |
-| ------------------- | -------------------------------------------------------- | ------------------------- |
-| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                           |
-| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                           |
-| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 300635135 8               |
-=======
 | Crypto Currency     | Wallet Address                                           | More (e,g. memo id) |
 | ------------------- | -------------------------------------------------------- | ------------------- |
 | Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                     |
 | Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                     |
 | Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 3006351358          |
->>>>>>> review
 
 
 # Support
