@@ -212,6 +212,7 @@ pub fn fsm_run(
                             DEBUG_SRC_WORKER,
                             format!("starting timer thread from worker thread {}", id),
                         );
+
                         // starting timer thread(s)
                         // and clone debug structure of type Verbose
                         let d = debug.clone();
@@ -265,8 +266,14 @@ pub fn fsm_run(
                             // END Linux specific interface type handling
 
                             // send an ADVERTISEMENT message
-                            // and panic on error
-                            vr.send_advertisement(fd, &debug).unwrap(); // rewiew errors handling
+                            match vr.send_advertisement(fd, &debug) {
+                                Ok(_) => (),
+                                Err(e) => eprintln!(
+                                    "error(fsm): error while sending VRRP advertisement on interface {}: {}",
+                                    vr.parameters.interface(),
+                                    e
+                                ),
+                            }
 
                             // --- Linux specific ARP handling
                             #[cfg(target_os = "linux")]
@@ -411,8 +418,8 @@ pub fn fsm_run(
                                         // store the virtual interface's index
                                         vr.parameters.set_vifidx(vif_idx);
                                         // save master interface to vif_name
-                                        let vif = vr.parameters.interface();
-                                        vr.parameters.set_vifname(vif);
+                                        let phys = vr.parameters.interface();
+                                        vr.parameters.set_vifname(phys);
                                         // change current vr's interface to the virtual interface
                                         vr.parameters.set_interface(vif_name);
                                         // save vif interface mac
@@ -474,7 +481,14 @@ pub fn fsm_run(
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint();
                         // send ADVERTISEMENT
-                        vr.send_advertisement(fd, debug).unwrap();
+                        match vr.send_advertisement(fd, &debug) {
+                            Ok(_) => (),
+                            Err(e) => eprintln!(
+                                "error(fsm): error while sending VRRP advertisement on interface {}: {}",
+                                vr.parameters.interface(),
+                                e
+                            ),
+                        }
                         // print information
                         let vip = vr.parameters.vip();
                         print_debug(&debug, DEBUG_LEVEL_INFO, DEBUG_SRC_INFO, format!(
@@ -507,7 +521,14 @@ pub fn fsm_run(
                     // event: Advertisement timer expired in timer thread
                     Event::GenAdvert => {
                         // send ADVERTISEMENT message
-                        vr.send_advertisement(fd, debug).unwrap();
+                        match vr.send_advertisement(fd, &debug) {
+                            Ok(_) => (),
+                            Err(e) => eprintln!(
+                                "error(fsm): error while sending VRRP advertisement on interface {}: {}",
+                                vr.parameters.interface(),
+                                e
+                            ),
+                        }
                         // reset the advertisement timer to advertisement interval
                         vr.timers.advert = vr.parameters.adverint();
                         continue;
@@ -517,7 +538,14 @@ pub fn fsm_run(
                         // if priority is zero
                         if prio == 0 {
                             // send an ADVERTISEMENT message
-                            vr.send_advertisement(fd, debug).unwrap();
+                            match vr.send_advertisement(fd, &debug) {
+                                Ok(_) => (),
+                                Err(e) => eprintln!(
+                                    "error(fsm): error while sending VRRP advertisement on interface {}: {}",
+                                    vr.parameters.interface(),
+                                    e
+                                ),
+                            }
                             // reset the advertisement timer to advertisement interval
                             vr.timers.advert = vr.parameters.adverint();
                             // state doesn't change
@@ -555,12 +583,11 @@ pub fn fsm_run(
                                             Operation::Rem,
                                             debug,
                                         );
-                                        // restore configured virtual interface name
+                                        // restore back vif and physical interfaces
                                         let vif = vr.parameters.interface();
+                                        let phys = vr.parameters.vifname();
                                         vr.parameters.set_vifname(vif);
-                                        // restore master interface name
-                                        let vif = vr.parameters.vifname();
-                                        vr.parameters.set_interface(vif);
+                                        vr.parameters.set_interface(phys);
                                         // remove added routes
                                         vr.set_ip_routes(fd, Operation::Rem, debug);
                                     }
@@ -629,7 +656,14 @@ pub fn fsm_run(
                         vr.timers.advert = 0;
                         // send ADVERTISEMENT with priority equal 0
                         vr.parameters.set_prio(0);
-                        vr.send_advertisement(fd, debug).unwrap();
+                        match vr.send_advertisement(fd, &debug) {
+                            Ok(_) => (),
+                            Err(e) => eprintln!(
+                                "error(fsm): error while sending VRRP advertisement on interface {}: {}",
+                                vr.parameters.interface(),
+                                e
+                            ),
+                        }
 
                         // -- Linux specific interface tyoe handling
                         #[cfg(target_os = "linux")]
@@ -637,12 +671,11 @@ pub fn fsm_run(
                             IfTypes::macvlan => {
                                 // removes macvlan interface
                                 vr.setup_macvlan_link(vr.parameters.ifmac(), Operation::Rem, debug);
-                                // restore configured virtual interface name
+                                // restore back vif and physical interfaces
                                 let vif = vr.parameters.interface();
+                                let phys = vr.parameters.vifname();
                                 vr.parameters.set_vifname(vif);
-                                // restore master interface name
-                                let vif = vr.parameters.vifname();
-                                vr.parameters.set_interface(vif);
+                                vr.parameters.set_interface(phys);
                                 // remove routes
                                 vr.set_ip_routes(fd, Operation::Rem, debug);
                             }

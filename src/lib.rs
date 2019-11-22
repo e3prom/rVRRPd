@@ -102,7 +102,6 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(target_os = "freebsd")]
 use std::thread;
 
 /// Library Config Structure
@@ -478,31 +477,26 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // --- Linux specific handling
             #[cfg(target_os = "linux")]
             {
-                // initialize packet buffer
-                let mut pkt_buf: [u8; 1024] = [0; 1024];
-
-                // open raw socket
-                let sockfd = open_raw_socket_fd()?;
-
-                // initialize sockaddr and packet buffer
-                let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
-
                 // set vr's interface(s) in promiscuous mode
                 for vr in &vrouters {
                     // acquire write lock
                     let mut vr = vr.write().unwrap();
 
+                    // open vr's raw socket
+                    let sock_fd = open_raw_socket_fd()?;
+
                     // convert interface string
                     let iface =
                         CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
 
-                    match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
+                    // set interface is promiscuous mode
+                    match os::linux::netdev::set_if_promiscuous(sock_fd, &iface, PflagOp::Set) {
                         Err(e) => return Err(e),
                         _ => {}
                     }
 
                     // store raw socket file descriptor
-                    vr.parameters.set_fd(sockfd);
+                    vr.parameters.set_fd(sock_fd);
                 }
 
                 // print debugging information
@@ -520,7 +514,62 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 threads.startup(&vrouters, &debug);
 
+                // spawn a listener thread per virtual router
+                for vr in &vrouters {
+                    // get vr's socket descriptor
+                    let vro = &vr.read().unwrap();
+                    let sock_fd = vro.parameters.fd();
+
+                    // create single item vrouters vector
+                    let mut vrouters: Vec<Arc<RwLock<VirtualRouter>>> = Vec::new();
+                    vrouters.push(vr.clone());
+
+                    thread::spawn(move || {
+                        // initialize packet buffer
+                        let mut pkt_buf: [u8; 1024] = [0; 1024];
+
+                        // initialize sockaddr and packet buffer
+                        let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
+
+                        loop {
+                            // Block on receiving IP packets
+                            match recv_ip_pkts(sock_fd, &mut sockaddr, &mut pkt_buf) {
+                                Ok(len) => {
+                                    // create and initialize pkg_hdr
+                                    let mut pkt_hdr = PktHdr::new();
+                                    // set inbound interface's ifindex)
+                                    pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
+                                    match verify_vrrp_pkt(
+                                        sock_fd,
+                                        &pkt_hdr,
+                                        &pkt_buf[0..len],
+                                        &vrouters,
+                                        &debug,
+                                    ) {
+                                        Some((ifindex, vrid, ipsrc, advert_prio)) => {
+                                            handle_vrrp_advert(
+                                                &vrouters,
+                                                ifindex,
+                                                vrid,
+                                                ipsrc,
+                                                advert_prio,
+                                                &debug,
+                                            );
+                                        }
+                                        _ => (),
+                                    }
+                                }
+                                Err(_e) => (),
+                            }
+                        }
+                    });
+                }
+
+                // main thread loop
                 loop {
+                    // call sleep() to avoid continuous high cpu usage
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+
                     // check if global shutdown variable is set
                     // if set, then call set_if_promiscuous() to remove promisc mode on interface
                     if shutdown.load(Ordering::Relaxed) {
@@ -528,81 +577,27 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             // acquire read lock
                             let vr = vr.read().unwrap();
 
-                            match vr.parameters.iftype() {
-                                IfTypes::macvlan => {
-                                    let iface =
-                                        CString::new(vr.parameters.interface().as_bytes() as &[u8])
-                                            .unwrap();
-                                    match os::linux::netdev::set_if_promiscuous(
-                                        sockfd,
-                                        &iface,
-                                        PflagOp::Unset,
-                                    ) {
-                                        Err(e) => return Err(e),
-                                        _ => {}
-                                    }
-                                    let vifname =
-                                        CString::new(vr.parameters.vifname().as_bytes() as &[u8])
-                                            .unwrap();
-                                    match os::linux::netdev::set_if_promiscuous(
-                                        sockfd,
-                                        &vifname,
-                                        PflagOp::Unset,
-                                    ) {
-                                        Err(e) => return Err(e),
-                                        _ => {}
-                                    }
-                                }
-                                _ => {
-                                    let iface =
-                                        CString::new(vr.parameters.interface().as_bytes() as &[u8])
-                                            .unwrap();
-                                    match os::linux::netdev::set_if_promiscuous(
-                                        sockfd,
-                                        &iface,
-                                        PflagOp::Unset,
-                                    ) {
-                                        Err(e) => return Err(e),
-                                        _ => {}
-                                    }
-                                }
-                            }
-                        }
-                        println!("Exiting...");
+                            // get vr's socket file descriptor
+                            let sock_fd = vr.parameters.fd();
 
-                        // Manually calling the threads pool destructor
-                        threads.drop(&vrouters, &debug);
-                        std::process::exit(0);
-                    }
-
-                    // Block on receiving IP packets
-                    match recv_ip_pkts(sockfd, &mut sockaddr, &mut pkt_buf) {
-                        Ok(len) => {
-                            // create and initialize pkg_hdr
-                            let mut pkt_hdr = PktHdr::new();
-                            // set inbound interface's ifindex)
-                            pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
-                            match verify_vrrp_pkt(
-                                sockfd,
-                                &pkt_hdr,
-                                &pkt_buf[0..len],
-                                &vrouters,
-                                &debug,
+                            // remove promiscuous mode off interface
+                            let iface = CString::new(vr.parameters.interface().as_bytes() as &[u8])
+                                .unwrap();
+                            match os::linux::netdev::set_if_promiscuous(
+                                sock_fd,
+                                &iface,
+                                PflagOp::Unset,
                             ) {
-                                Some((ifindex, vrid, ipsrc, advert_prio)) => {
-                                    handle_vrrp_advert(
-                                        &vrouters,
-                                        ifindex,
-                                        vrid,
-                                        ipsrc,
-                                        advert_prio,
-                                        &debug,
-                                    );
-                                }
-                                _ => (),
+                                Err(e) => return Err(e),
+                                _ => {}
                             }
                         }
-                        Err(e) => return Err(e),
+
+                        // manually calling the threads pool destructor
+                        threads.drop(&vrouters, &debug);
+
+                        println!("Exiting...");
+                        std::process::exit(0);
                     }
                 }
             }
@@ -745,6 +740,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         }
                     });
                 }
+
                 loop {
                     // call sleep() to avoid continuous high cpu usage
                     std::thread::sleep(std::time::Duration::from_secs(5));

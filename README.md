@@ -6,12 +6,17 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
 # Introduction
-[rVRRPd](https://github.com/e3prom/rVRRPd) is an open and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a modern programming language known for its portability, memory-safety and speed.
+[rVRRPd](https://github.com/e3prom/rVRRPd) is a fast, multi-platform and standard-compliant VRRPv2 implementation written in [Rust](https://www.rust-lang.org/), a modern programming language known for its portability, memory-safety and speed.
 
 # Features
  * Aimed to be Fast, Portable and **Highly Secure**
+<<<<<<< HEAD
  * Supports multiple operating systems and processors architectures
  * Multi-threaded operation
+=======
+ * Supports multiple operating systems and processor architectures
+ * Multi-threaded support (1 thread per interface and virtual router)
+>>>>>>> review
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
    * Tested interoperable with Cisco IOS and Cisco IOS-XE
@@ -23,8 +28,8 @@
    * Sniffer mode (`-m0`)
    * Virtual Router in foreground mode (`-m1`)
    * Virtual Router in daemon mode (`-m2`)
- * Supports MAC-based Virtual LAN interface (`macvlan`) (Linux)
- * Supports Berkeley Packet Filter (`BPF`) (FreeBSD only)
+ * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
+ * Supports Berkeley Packet Filter (`BPF`) _(FreeBSD)_
 
 # Development
 This project is still in **_development_** stage, and at this time, only supports Linux and the FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
@@ -36,11 +41,11 @@ The development roadmap for the upcoming `0.2.0` release can be found on its [pr
  * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
  * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
  * At least one Ethernet interface, see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
- * Root privileges, required to access raw sockets, configure interfaces and to add kernel routes.
- * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux only).
+ * Root privileges, required to access raw sockets, configure interfaces and to add routes.
+ * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux).
 
 # Build and run
-To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev` on Linux Debian and derivatives.
+To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev`, on Linux Debian and derivatives.
 
 To quickly build the daemon executable, use the `make` or `cargo build --release` command:
 ```console
@@ -111,17 +116,25 @@ Starting rVRRPd
 Your virtual router will now listens for VRRP packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
 
 # Donation
-Help us by donating to our project. Every penny will directly cover the development costs of `rVRRPd`, which includes coffee, the virtual machines used to setup the test and interoperability labs, and the bare-metal servers powering them.
+Help us by donating to the project. Every penny will directly cover the development costs of `rVRRPd`, which includes a lot of coffee, the virtual machines used to run the tests and the interoperability labs, and the bare-metal servers powering them.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
-You can donate by Paypal (above button), or by using any of the below crypto currencies:
+You can donate by Paypal using the above button, or by using any of the crypto currencies listed below:
 
+<<<<<<< HEAD
 | Crypto Currency     | Wallet Address                                           | Additional (e,g. memo id) |
 | ------------------- | -------------------------------------------------------- | ------------------------- |
 | Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                           |
 | Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                           |
 | Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 300635135 8               |
+=======
+| Crypto Currency     | Wallet Address                                           | More (e,g. memo id) |
+| ------------------- | -------------------------------------------------------- | ------------------- |
+| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                     |
+| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                     |
+| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 3006351358          |
+>>>>>>> review
 
 
 # Support
