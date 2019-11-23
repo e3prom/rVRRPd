@@ -79,7 +79,10 @@ pub fn start_timers(
                 // acquire transmit channel lock
                 let tx1 = tx1.lock().unwrap();
                 // send MasterDown Event down the channel
-                tx1.send(Event::MasterDown).unwrap();
+                match tx1.send(Event::MasterDown) {
+                    Ok(_) => (),
+                    Err(_) => (), // ignore errors from now
+                }
                 // return Ok(())
                 Ok(())
             }

@@ -573,6 +573,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     // check if global shutdown variable is set
                     // if set, then call set_if_promiscuous() to remove promisc mode on interface
                     if shutdown.load(Ordering::Relaxed) {
+                        // manually calling the threads pool destructor
+                        threads.drop(&vrouters, &debug);
+
                         for vr in &vrouters {
                             // acquire read lock
                             let vr = vr.read().unwrap();
@@ -592,9 +595,6 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                 _ => {}
                             }
                         }
-
-                        // manually calling the threads pool destructor
-                        threads.drop(&vrouters, &debug);
 
                         println!("Exiting...");
                         std::process::exit(0);

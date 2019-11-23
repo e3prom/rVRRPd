@@ -243,7 +243,7 @@ impl VRConfig {
     pub fn vifname(&self) -> String {
         match &self.vifname {
             Some(s) => s.clone(),
-            None => RVRRPD_DFLT_MACVLAN_NAME.to_string(),
+            None => format!("{}{}", RVRRPD_DFLT_MACVLAN_NAME, self.group),
         }
     }
 }
