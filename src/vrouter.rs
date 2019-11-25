@@ -56,6 +56,7 @@ impl VirtualRouter {
         iftype: IfTypes,
         vif_name: String,
         fd: i32,
+        socket_filter: bool,
     ) -> io::Result<VirtualRouter> {
         // --- Linux specific interface handling
         #[cfg(target_os = "linux")]
@@ -149,6 +150,7 @@ impl VirtualRouter {
                 vif_name,
                 0,
                 fd,
+                socket_filter,
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
@@ -813,6 +815,7 @@ pub struct Parameters {
     vif_name: String,   // Virtual interface name (or physical when saved)
     vif_idx: i32,       // Virtual interface ifindex
     fd: i32,            // Raw socket or BPF file descriptor
+    socket_filter: bool, // linux socket filter support
 }
 
 /// Parameters Type Implementation
@@ -840,6 +843,7 @@ impl Parameters {
         vif_name: String,
         vif_idx: i32,
         fd: i32,
+        socket_filter: bool,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -865,6 +869,7 @@ impl Parameters {
             vif_name,
             vif_idx,
             fd,
+            socket_filter,
         }
     }
     // vrid() getter
@@ -1008,5 +1013,9 @@ impl Parameters {
     // set_fd() method
     pub fn set_fd(&mut self, fd: i32) {
         self.fd = fd;
+    }
+    // socket_filter() getter
+    pub fn socket_filter(&self) -> bool {
+        self.socket_filter
     }
 }

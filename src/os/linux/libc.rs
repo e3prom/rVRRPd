@@ -2,10 +2,13 @@
 use crate::*;
 
 // std, libc, ffi
-use libc::{socket, AF_PACKET, SOCK_RAW};
+use libc::{setsockopt, socket, AF_PACKET, SOCK_RAW, SOL_SOCKET, SO_ATTACH_FILTER};
 use std::ffi::CString;
 use std::io;
 use std::mem;
+
+// Linux socket filter
+use crate::os::linux::filter::SockFprog;
 
 // open_raw_socket_fd() function
 /// Open a raw AF_PACKET socket for IPv4
@@ -16,6 +19,24 @@ pub fn open_raw_socket_fd() -> io::Result<i32> {
         match socket(AF_PACKET, SOCK_RAW, ETHER_P_IP.to_be() as i32) {
             -1 => Err(io::Error::last_os_error()),
             fd => Ok(fd),
+        }
+    }
+}
+
+// set_sock_filter function
+/// Set a BPF filter on a socket
+pub fn set_sock_filter(sockfd: i32, bpf: &SockFprog) -> io::Result<i32> {
+    unsafe {
+        // man 2 setsockopt
+        match setsockopt(
+            sockfd,
+            SOL_SOCKET,
+            SO_ATTACH_FILTER,
+            bpf as *const _ as *mut c_void,
+            mem::size_of::<SockFprog>() as u32,
+        ) {
+            -1 => Err(io::Error::last_os_error()),
+            ret => Ok(ret),
         }
     }
 }

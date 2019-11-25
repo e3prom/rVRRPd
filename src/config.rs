@@ -101,6 +101,7 @@ pub struct VRConfig {
     netdrv: Option<String>,
     iftype: Option<String>,
     vifname: Option<String>,
+    socket_filter: Option<bool>,
 }
 impl VRConfig {
     // group() getter
@@ -244,6 +245,13 @@ impl VRConfig {
         match &self.vifname {
             Some(s) => s.clone(),
             None => format!("{}{}", RVRRPD_DFLT_MACVLAN_NAME, self.group),
+        }
+    }
+    // socket_filter() method
+    pub fn socket_filter(&self) -> bool {
+        match self.socket_filter {
+            Some(b) => b,
+            None => true,
         }
     }
 }

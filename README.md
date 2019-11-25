@@ -11,7 +11,7 @@
 # Features
  * Aimed to be Fast, Portable and **Highly Secure**
  * Supports multiple operating systems and processor architectures
- * Multi-threaded support (1 thread per interface and virtual router)
+ * Multi-threaded operation (1 thread per interface and virtual router)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
    * Tested interoperable with Cisco IOS and Cisco IOS-XE
@@ -24,7 +24,8 @@
    * Virtual Router in foreground mode (`-m1`)
    * Virtual Router in daemon mode (`-m2`)
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
- * Supports Berkeley Packet Filter (`BPF`) _(FreeBSD)_
+ * Supports Berkeley Packet Filter interfaces (`BPF`) _(FreeBSD)_
+ * Supports Linux Socket Filters using BPF (_Linux_)
 
 # Development
 This project is still in **_development_** stage, and at this time, only supports Linux and the FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
