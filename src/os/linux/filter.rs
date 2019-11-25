@@ -124,7 +124,7 @@ pub struct SockFprog {
     filter: *const c_void, // Pointer to an array of SockFilter
 }
 
-// SockFprob implementation
+// SockFprog implementation
 impl SockFprog {
     // build_fprog_vrrpv2_gid() method
     pub fn build_fprog_vrrpv2_gid(filter: &[SockFilter; 10]) -> SockFprog {

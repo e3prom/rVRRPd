@@ -294,6 +294,8 @@ pub fn fsm_run(
 
                             // set advertisement interval
                             vr.timers.advert = vr.parameters.adverint();
+                            // cancel master_down timer
+                            vr.timers.master_down = -1.0;
                             // print debugging information
                             print_debug(
                                 &debug,
@@ -351,13 +353,11 @@ pub fn fsm_run(
                     Event::Advert(_ipsrc, prio) => {
                         // if the priority is zero then set the master_down timer to skew_time
                         if prio == 0 {
-                            // set master_down interval to skew_time (necessary?)
+                            // set master_down interval to skew_time
                             vr.timers.master_down = vr.parameters.skewtime();
                         } else {
                             // if priority is greater than or equal to the local priority OR preempt is false
                             if vr.parameters.preempt() == false || prio >= vr.parameters.prio() {
-                                // reset master_down interval (necessary?)
-                                vr.timers.master_down = vr.parameters.master_down();
                                 // clear down flag (signal master is alive)
                                 vr.flags.clear_down_flag();
                                 // print debugging information
@@ -478,8 +478,24 @@ pub fn fsm_run(
                         }
                         // END FreeBSD specific interface tyoe handling
 
+                        // if the master_down and advert timers have been canceled, restart them.
+                        if (vr.timers.master_down <= 0.0) && (vr.timers.advert <= 0) {
+                            // re-init timers
+                            vr.timers.master_down = vr.parameters.master_down();
+                            vr.timers.advert = vr.parameters.adverint();
+
+                            // starting timer thread(s)
+                            // and clone debug structure of type Verbose
+                            let d = debug.clone();
+                            let _timer_thread = thread::spawn(move || {
+                                timers::start_timers(timer_tx, timer_vr, &d);
+                            });
+                        }
+
                         // set advertisement timer
                         vr.timers.advert = vr.parameters.adverint();
+                        // cancel master_down timer
+                        vr.timers.master_down = -1.0;
                         // send ADVERTISEMENT
                         match vr.send_advertisement(fd, &debug) {
                             Ok(_) => (),
@@ -506,8 +522,10 @@ pub fn fsm_run(
                             "VR {}.{}.{}.{} for group {} on interface {} - Changed from Backup to Down",
                             vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
-                        // cancel the 'active' master_down timer
-                        vr.timers.master_down = std::f32::NAN;
+                        // cancel advertisement timer
+                        vr.timers.advert = 0;
+                        // cancel master_down timer
+                        vr.timers.master_down = -1.0;
                         // transition to Down state
                         States::Down
                     }
@@ -559,9 +577,19 @@ pub fn fsm_run(
                                     && is_primary_higher(&ipsrc, &vr.parameters.ipaddrs()[0]))
                             {
                                 // cancel advertisement timer
-                                vr.timers.advert = 0;
-                                // reset master_down timer to master_down interval
-                                vr.timers.master_down = vr.parameters.master_down();
+                                vr.timers.advert = 255;
+                                // if the master_down has been canceled, init and restart it.
+                                if vr.timers.master_down <= 0.0 {
+                                    // re-init timers
+                                    vr.timers.master_down = vr.parameters.master_down();
+
+                                    // starting timer thread(s)
+                                    // and clone debug structure of type Verbose
+                                    let d = debug.clone();
+                                    let _timer_thread = thread::spawn(move || {
+                                        timers::start_timers(timer_tx, timer_vr, &d);
+                                    });
+                                }
                                 // clear down flag (mark master alive)
                                 vr.flags.clear_down_flag();
                                 // print debugging information
@@ -654,6 +682,8 @@ pub fn fsm_run(
                         ));
                         // cancel the 'advert' timer
                         vr.timers.advert = 0;
+                        // cancel master_down timer
+                        vr.timers.master_down = -1.0;
                         // send ADVERTISEMENT with priority equal 0
                         vr.parameters.set_prio(0);
                         match vr.send_advertisement(fd, &debug) {

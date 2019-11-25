@@ -174,6 +174,9 @@ fn is_advert_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> bool 
     let vr = vr.read().unwrap();
     if vr.timers.advert() > 0 {
         true
+    } else if vr.timers.advert() == 255 {
+        // special non-zero value to disable timer
+        true
     } else {
         // print debugging information
         print_debug(
