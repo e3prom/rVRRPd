@@ -663,7 +663,8 @@ impl VirtualRouter {
         // construct interface name
         let ifname = CString::new(self.parameters.interface().as_bytes() as &[u8]).unwrap();
 
-        // ensure routes are added or deleted only once
+        // ensure routes are added or deleted only once per virtual router
+        // routes may be added or removed multiple times across virtual routers
         match op {
             Operation::Add => {
                 if self.flags.rtset() {

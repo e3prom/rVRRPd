@@ -553,8 +553,11 @@ pub fn set_ip_route(
     }
 
     // check 'rtnl_route_add()|delete()' returned value
-    if res < 0 {
-        return Err(io::Error::last_os_error());
+    match res {
+        -6 => (),  // route already exists
+        -12 => (), // route not found
+        r if r < 0 => return Err(io::Error::last_os_error()),
+        _ => (), // no error occured
     }
 
     // free nlroute
