@@ -25,7 +25,7 @@
    * Virtual Router in daemon mode (`-m2`)
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
  * Supports Berkeley Packet Filter interfaces (`BPF`) _(FreeBSD)_
- * Supports Linux Socket Filters using BPF (_Linux_)
+ * Supports BPF Linux Socket Filters (_Linux_)
 
 # Development
 This project is still in **_development_** stage, and at this time, only supports Linux and the FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.

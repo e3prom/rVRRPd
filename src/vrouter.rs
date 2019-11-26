@@ -655,13 +655,27 @@ impl VirtualRouter {
     // set_ip_routes() method
     /// set or unset IPv4 routes on virtual-router interfaces
     #[cfg(target_os = "linux")]
-    pub fn set_ip_routes(&self, fd: i32, op: Operation, debug: &Verbose) {
+    pub fn set_ip_routes(&mut self, fd: i32, op: Operation, debug: &Verbose) {
         // acquire mutex lock on protocols
         let protocols = &self.parameters.protocols();
         let protocols = protocols.lock().unwrap();
 
         // construct interface name
         let ifname = CString::new(self.parameters.interface().as_bytes() as &[u8]).unwrap();
+
+        // ensure routes are added or deleted only once
+        match op {
+            Operation::Add => {
+                if self.flags.rtset() {
+                    return; // route already added
+                }
+            }
+            Operation::Rem => {
+                if !self.flags.rtset() {
+                    return; // remove not needed
+                }
+            }
+        }
 
         // check if static protocol reference exists
         match protocols.r#static.as_ref() {
@@ -735,6 +749,12 @@ impl VirtualRouter {
                 }
             }
             None => {}
+        }
+
+        // set rtset flag according to the completed operation
+        match op {
+            Operation::Add => self.flags.set_rtset(),
+            Operation::Rem => self.flags.clear_rtset(),
         }
     }
 

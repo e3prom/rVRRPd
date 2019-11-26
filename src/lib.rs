@@ -51,7 +51,7 @@ use os::freebsd::bpf::{
 #[cfg(target_os = "freebsd")]
 use os::freebsd::libc::read_bpf_buf;
 #[cfg(target_os = "linux")]
-use os::linux::filter::{SockFprog, SockFilter};
+use os::linux::filter::{SockFilter, SockFprog};
 #[cfg(target_os = "linux")]
 use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts, set_sock_filter};
 
@@ -490,7 +490,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                     // set BPF socket filter if enabled
                     if vr.parameters.socket_filter() {
-                        let filter: [SockFilter; 10] = SockFilter::new_vrrpv2_gid(vr.parameters.vrid());
+                        let filter: [SockFilter; 10] =
+                            SockFilter::new_vrrpv2_gid(vr.parameters.vrid());
                         let bpf_fprog = SockFprog::build_fprog_vrrpv2_gid(&filter);
                         set_sock_filter(sock_fd, &bpf_fprog)?;
                     }

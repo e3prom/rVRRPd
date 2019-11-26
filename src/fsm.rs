@@ -58,14 +58,15 @@ impl Timers {
 /// Flags Structure
 #[derive(Debug)]
 pub struct Flags {
-    down: u8,
+    down: u8,    // down flag
+    rtset: bool, // routes set
 }
 
 // Flags Type Implementation
 impl Flags {
     // new() method
     pub fn new(down: u8) -> Flags {
-        Flags { down }
+        Flags { down, rtset: false }
     }
     // get_down_flag() method
     pub fn get_down_flag(&self) -> u8 {
@@ -78,6 +79,18 @@ impl Flags {
     // clear_down_flag() method
     pub fn clear_down_flag(&mut self) {
         self.down = 0x0;
+    }
+    // rtset() getter
+    pub fn rtset(&self) -> bool {
+        self.rtset
+    }
+    // set_rtset() method
+    pub fn set_rtset(&mut self) {
+        self.rtset = true;
+    }
+    // clear_rtset() method
+    pub fn clear_rtset(&mut self) {
+        self.rtset = false;
     }
 }
 
