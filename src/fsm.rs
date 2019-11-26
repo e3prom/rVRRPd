@@ -81,14 +81,17 @@ impl Flags {
         self.down = 0x0;
     }
     // rtset() getter
+    #[cfg(target_os = "linux")]
     pub fn rtset(&self) -> bool {
         self.rtset
     }
     // set_rtset() method
+    #[cfg(target_os = "linux")]
     pub fn set_rtset(&mut self) {
         self.rtset = true;
     }
     // clear_rtset() method
+    #[cfg(target_os = "linux")]
     pub fn clear_rtset(&mut self) {
         self.rtset = false;
     }

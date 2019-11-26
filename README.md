@@ -28,7 +28,7 @@
  * Supports BPF Linux Socket Filters (_Linux_)
 
 # Development
-This project is still in **_development_** stage, and at this time, only supports Linux and the FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
+This project is still in **_development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Also please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
 
 The development roadmap for the upcoming `0.2.0` release can be found on its [project page](https://github.com/e3prom/rVRRPd/projects/2).
 
@@ -109,14 +109,14 @@ Starting rVRRPd
 [...]
 ```
 
-Your virtual router will now listens for VRRP packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
+Your virtual router will now listen for VRRP packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
 
 # Donation
 Help us by donating to the project. Every penny will directly cover the development costs of `rVRRPd`, which includes a lot of coffee, the virtual machines used to run the tests and the interoperability labs, and the bare-metal servers powering them.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
-You can donate by Paypal using the above button, or by using any of the crypto currencies listed below:
+You can donate by Paypal using the above button, or by using a crypto currency listed below:
 
 | Crypto Currency     | Wallet Address                                           | More (e,g. memo id) |
 | ------------------- | -------------------------------------------------------- | ------------------- |

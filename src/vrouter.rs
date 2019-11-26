@@ -1036,6 +1036,7 @@ impl Parameters {
         self.fd = fd;
     }
     // socket_filter() getter
+    #[cfg(target_os = "linux")]
     pub fn socket_filter(&self) -> bool {
         self.socket_filter
     }
