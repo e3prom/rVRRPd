@@ -27,6 +27,18 @@ pub enum States {
     Master, // Virtual Router is Master
 }
 
+// States enumerator implementation
+impl States {
+    pub fn states(&self) -> String {
+        match self {
+            States::Down => "Down".to_string(),
+            States::Init => "Init".to_string(),
+            States::Backup => "Backup".to_string(),
+            States::Master => "Master".to_string(),
+        }
+    }
+}
+
 /// Timers Structure
 #[derive(Debug)]
 pub struct Timers {
@@ -132,6 +144,21 @@ pub fn fsm_run(
 
     // start thread loop
     loop {
+        // // receive on client API receive channel (non-blocking)
+        // let vro = vr.read().unwrap();
+        // if let Some(crx) = vro.parameters.capi_rx() {
+        //     let q = crx.try_recv().unwrap();
+        //     if (q.group == vro.parameters.vrid()) && (q.interface == vro.parameters.interface()) {
+        //         match q.query {
+        //             _ => {
+        //                 let _r = vro.parameters.capi_tx();
+        //                 println!("debug(fsm): Received Client API query {:?}", q.query);
+        //             }
+        //         }
+        //     }
+        // }
+        // drop(vro);
+
         // print debugging information
         print_debug(
             debug,

@@ -27,6 +27,14 @@ use daemonize::Daemonize;
 // chrono
 extern crate chrono;
 
+// crossbeam
+extern crate crossbeam;
+use crossbeam::{Receiver, Sender};
+
+// gotham
+#[macro_use]
+extern crate gotham_derive;
+
 // generic constants
 #[allow(dead_code)]
 mod constants;
@@ -57,6 +65,10 @@ use os::linux::libc::{open_raw_socket_fd, recv_ip_pkts, set_sock_filter};
 
 // finite state machine
 mod fsm;
+
+// application programming interface
+mod api;
+use api::client::{capi_start_app, DownstreamAPI, FSMQueryResult, UpstreamAPI};
 
 // checksums
 mod checksums;
@@ -399,10 +411,10 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let mut protocols = Protocols { r#static: None };
 
             // read protocols configuration (if any)
-            match config.protocols {
+            match &config.protocols {
                 // if protocols config definition exists
                 Some(proto) => {
-                    match proto.r#static {
+                    match &proto.r#static {
                         // if static routes exists
                         Some(st) => {
                             let mut static_vec: Vec<Static> = Vec::with_capacity(st.len());
@@ -437,7 +449,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let protocols = Arc::new(protocols);
 
             // check if at least one VR exists
-            let vcvr = match config.vrouter {
+            let vcvr = match &config.vrouter {
                 Some(vr) => vr,
                 None => {
                     eprintln!("error(main): no virtual router configured. exiting...");
@@ -477,6 +489,19 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 }
             }
 
+            // Initialize the Downstream Client API, spawn its thread and set its reference.
+            let isClientAPIEnabled = config.client_api();
+            let up_api = UpstreamAPI::new();
+            let down_api = DownstreamAPI::new();
+            let capi: Option<&UpstreamAPI> = match isClientAPIEnabled {
+                true => {
+                    up_api.spawn_thread(&down_api, config, &vrouters);
+                    capi_start_app(down_api);
+                    Some(&up_api)
+                }
+                false => None,
+            };
+
             // --- Linux specific handling
             #[cfg(target_os = "linux")]
             {
@@ -508,6 +533,16 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                     // store raw socket file descriptor
                     vr.parameters.set_fd(sock_fd);
+
+                    // if enabled, set downstream client API sender and receiver channels
+                    match capi {
+                        Some(c) => {
+                            let (s, r) = c.channels();
+                            vr.parameters.set_capi_tx(s);
+                            vr.parameters.set_capi_rx(r);
+                        }
+                        None => (),
+                    }
                 }
 
                 // print debugging information
@@ -639,6 +674,16 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
 
                     // store BPF file descriptor
                     vr.parameters.set_fd(bpf_fd);
+
+                    // if enabled, set client API sender and receiver channels
+                    match client_api {
+                        Some(c) => {
+                            let (s, r) = c.channels();
+                            vr.parameters.set_capi_tx(s);
+                            vr.parameters.set_capi_rx(r);
+                        }
+                        None => (),
+                    }
                 }
 
                 // print debugging information

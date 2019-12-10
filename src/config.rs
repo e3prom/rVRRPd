@@ -12,7 +12,7 @@ pub enum CfgType {
 }
 
 /// Main Configuration Structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CConfig {
     pub debug: Option<u8>,
     pub time_zone: Option<String>,
@@ -23,6 +23,7 @@ pub struct CConfig {
     pub error_log: Option<String>,
     pub vrouter: Option<Vec<VRConfig>>,
     pub protocols: Option<Protocols>,
+    pub client_api: Option<String>,
 }
 
 impl CConfig {
@@ -84,10 +85,20 @@ impl CConfig {
             None => RVRRPD_DFLT_ELOGFILE.to_string(),
         }
     }
+    // client_api() method
+    pub fn client_api(&self) -> bool {
+        match &self.client_api {
+            Some(s) => match &s[..] {
+                "http" => true,
+                _ => true,
+            },
+            None => false,
+        }
+    }
 }
 
 /// Virtual-Routers Configuration Structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct VRConfig {
     group: u8,
     interface: String,
@@ -257,7 +268,7 @@ impl VRConfig {
 }
 
 /// Timers Option Type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct Timers {
     advert: u8,
 }
@@ -268,13 +279,13 @@ impl Default for Timers {
 }
 
 /// Protocols Option Type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Protocols {
     pub r#static: Option<Vec<Static>>,
 }
 
 /// Static Option Type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Static {
     route: String,
     mask: String,

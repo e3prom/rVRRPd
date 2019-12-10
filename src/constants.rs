@@ -9,6 +9,7 @@ pub const RVRRPD_DFLT_LOGFILE: &str = "/var/log/rvrrpd.log";
 pub const RVRRPD_DFLT_ELOGFILE: &str = "/var/log/rvrrpd-error.log";
 pub const RVRRPD_DFLT_DATE_FORMAT: &str = "%b %e %Y %T";
 pub const RVRRPD_DFLT_MACVLAN_NAME: &str = "standby";
+pub const RVRRPD_DFLT_CLIENT_API: &str = "disabled";
 pub const RVRRPD_VERSION_STRING: &str = "0.1.2";
 
 // Debug Constants
