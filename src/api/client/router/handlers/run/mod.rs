@@ -6,3 +6,6 @@ pub mod global;
 
 // vrrp running config
 pub mod vrrp;
+
+// protocols running config
+pub mod protocols;

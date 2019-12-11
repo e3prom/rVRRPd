@@ -139,6 +139,8 @@ pub enum ClientAPIQuery {
     RunVRRPAll,
     RunVRRPGrp(u8),
     RunVRRPGrpIntf(u8, String),
+    RunProtoAll,
+    RunProtoStatic,
 }
 
 /// ClientAPIResponse enumerator
@@ -150,6 +152,8 @@ pub enum ClientAPIResponse {
     RunVRRPAll(Vec<ResponseVRRPAttr>),
     RunVRRPGrp(Option<Vec<ResponseVRRPAttr>>),
     RunVRRPGrpIntf(Option<ResponseVRRPAttr>),
+    RunProtoAll(Option<ResponseProtoAttr>),
+    RunProtoStatic(Option<Vec<ResponseProtoStaticAttr>>),
 }
 
 /// ReponseGlobalAttr structure (Serialize-able)
@@ -173,6 +177,22 @@ pub struct ResponseVRRPAttr {
     priority: u8,
     preempt: bool,
     state: String,
+}
+
+/// RunProtoAttr structure (Serialize-able)
+#[derive(Serialize)]
+pub struct ResponseProtoAttr {
+    r#static: Option<Vec<ResponseProtoStaticAttr>>,
+}
+
+/// RunProtoStaticAttr structure (Serialize-able)
+#[derive(Serialize)]
+pub struct ResponseProtoStaticAttr {
+    destination: String,
+    mask: String,
+    next_hop: String,
+    metric: i16,
+    mtu: u64,
 }
 
 // capi_thread_loop() function
@@ -223,6 +243,14 @@ pub fn capi_thread_loop(
             ClientAPIQuery::RunVRRPGrpIntf(gid, intf) => {
                 let r = capi_req_run_vrrp_grp_intf(&vrs, gid, intf);
                 resp = ClientAPIResponse::RunVRRPGrpIntf(r);
+            }
+            ClientAPIQuery::RunProtoAll => {
+                let r = capi_req_run_proto_all(&vrs);
+                resp = ClientAPIResponse::RunProtoAll(r);
+            }
+            ClientAPIQuery::RunProtoStatic => {
+                let r = capi_req_run_proto_static(&vrs);
+                resp = ClientAPIResponse::RunProtoStatic(r);
             }
         }
 
@@ -363,6 +391,70 @@ fn capi_req_run_vrrp_grp_intf(
         // if there is no matching vr, return None
         None => Option::None,
     }
+}
 
+// capi_req_run_proto_all() function
+fn capi_req_run_proto_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Option<ResponseProtoAttr> {
+    // get static attributes vector (if any)
+    match capi_req_run_proto_static(vrs) {
+        Some(v) => {
+            // build response of protocols attributes
+            let attrs = ResponseProtoAttr { r#static: Some(v) };
+            Some(attrs)
+        }
+        None => None,
+    }
+}
 
+// capi_req_run_proto_static() function
+fn capi_req_run_proto_static(
+    vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
+) -> Option<Vec<ResponseProtoStaticAttr>> {
+    // create static attributes vector
+    let mut pattrs: Vec<ResponseProtoStaticAttr> = Vec::new();
+    // access only first virtual router
+    let vr = &vrs[0];
+    // get read access
+    let vro = vr.read().unwrap();
+    // get access to protocols structure
+    let protocols = vro.parameters.protocols();
+    let vrp = protocols.lock().unwrap();
+    // if static option has some element (of type vector)
+    match &vrp.r#static {
+        Some(stv) => {
+            for st in stv {
+                // build protocols attributes response
+                let attrs = ResponseProtoStaticAttr {
+                    destination: format!(
+                        "{}.{}.{}.{}",
+                        st.route()[0],
+                        st.route()[1],
+                        st.route()[2],
+                        st.route()[3]
+                    ),
+                    mask: format!(
+                        "{}.{}.{}.{}",
+                        st.mask()[0],
+                        st.mask()[1],
+                        st.mask()[2],
+                        st.mask()[3]
+                    ),
+                    next_hop: format!(
+                        "{}.{}.{}.{}",
+                        st.nh()[0],
+                        st.nh()[1],
+                        st.nh()[2],
+                        st.nh()[3]
+                    ),
+                    metric: st.metric(),
+                    mtu: st.mtu(),
+                };
+                // push static attributes in vector
+                pattrs.push(attrs);
+            }
+            // return the vector
+            return Some(pattrs);
+        }
+        None => return None,
+    }
 }

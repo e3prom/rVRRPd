@@ -112,8 +112,9 @@ fn router(down_api: DownstreamAPI) -> Router {
             });
             // vrrp/ scope
             route.scope("/vrrp", |route| {
-                // <group-id>/
+                // /
                 route.get("/").to(handlers::run::vrrp::all);
+                // <group-id>/
                 route
                     .get("/:group_id")
                     .with_path_extractor::<GroupIdExtractor>()
@@ -123,6 +124,13 @@ fn router(down_api: DownstreamAPI) -> Router {
                     .get("/:group_id/:interface")
                     .with_path_extractor::<GroupIdInterfaceExtractor>()
                     .to(handlers::run::vrrp::group_interface);
+            });
+            // protocols/ scope
+            route.scope("/protocols", |route| {
+                // /
+                route.get("/").to(handlers::run::protocols::all);
+                // static/
+                route.get("/static").to(handlers::run::protocols::pstatic);
             });
         });
     })
