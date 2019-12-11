@@ -17,7 +17,7 @@ mod router;
 // config
 use crate::config;
 
-/// Constants
+// Constants
 const NOT_FOUND: &str = "404 Not found";
 
 /// Upstream API structure
@@ -26,7 +26,7 @@ pub struct UpstreamAPI {
     receiver: Receiver<FSMQueryResult>, // channel for fsm's queries results
 }
 
-// Upstream API structure implementation
+/// Upstream API structure implementation
 impl<'a> UpstreamAPI {
     // new() method
     pub fn new() -> UpstreamAPI {
@@ -63,7 +63,7 @@ impl<'a> UpstreamAPI {
     }
 }
 
-// FSMQueryResult structure
+/// FSMQueryResult structure
 #[derive(Debug)]
 pub struct FSMQueryResult {
     pub QRflag: bool,          // Query/Response flag
@@ -73,7 +73,7 @@ pub struct FSMQueryResult {
     pub response: FSMResponse, // recipient response
 }
 
-// FSMQuery enumerator
+/// FSMQuery enumerator
 #[derive(Debug)]
 pub enum FSMQuery {
     GlobalAttr,
@@ -84,7 +84,7 @@ pub enum FSMQuery {
     None,
 }
 
-// FSMResponse enumerator
+/// FSMResponse enumerator
 #[derive(Debug)]
 pub enum FSMResponse {
     States(u8, String),
@@ -94,7 +94,7 @@ pub enum FSMResponse {
     Empty,
 }
 
-// Downstream API structure
+/// Downstream API structure
 #[derive(Clone, StateData)]
 pub struct DownstreamAPI {
     q_sender: Arc<Mutex<Sender<ClientAPIQuery>>>,
@@ -103,7 +103,7 @@ pub struct DownstreamAPI {
     r_receiver: Arc<Mutex<Receiver<ClientAPIResponse>>>,
 }
 
-// Downstream API implementation
+/// Downstream API implementation
 impl DownstreamAPI {
     // new() method
     pub fn new() -> Self {
@@ -130,7 +130,7 @@ impl DownstreamAPI {
     }
 }
 
-// ClientAPIQuery enumerator
+/// ClientAPIQuery enumerator
 pub enum ClientAPIQuery {
     CfgGlobalAll,
     CfgVrrpAll,
@@ -138,19 +138,21 @@ pub enum ClientAPIQuery {
     RunGlobalAll,
     RunVRRPAll,
     RunVRRPGrp(u8),
+    RunVRRPGrpIntf(u8, String),
 }
 
-// ClientAPIResponse enumerator
+/// ClientAPIResponse enumerator
 pub enum ClientAPIResponse {
     CfgGlobalAll(config::CConfig),
     CfgVrrpAll(Vec<config::VRConfig>),
     CfgProtoAll(config::Protocols),
     RunGlobalAll(ResponseGlobalAttr),
     RunVRRPAll(Vec<ResponseVRRPAttr>),
-    RunVRRPGrp(Option<ResponseVRRPAttr>),
+    RunVRRPGrp(Option<Vec<ResponseVRRPAttr>>),
+    RunVRRPGrpIntf(Option<ResponseVRRPAttr>),
 }
 
-// ReponseGlobalAttr structure (Serialize-able)
+/// ReponseGlobalAttr structure (Serialize-able)
 #[derive(Serialize)]
 pub struct ResponseGlobalAttr {
     debug: u8,
@@ -162,7 +164,7 @@ pub struct ResponseGlobalAttr {
     error_log: String,
 }
 
-// ResponseVRRPAttr structure (Serialize-able)
+/// ResponseVRRPAttr structure (Serialize-able)
 #[derive(Serialize)]
 pub struct ResponseVRRPAttr {
     virtual_ip: String,
@@ -218,6 +220,10 @@ pub fn capi_thread_loop(
                 let r = capi_req_run_vrrp_grp(&vrs, gid);
                 resp = ClientAPIResponse::RunVRRPGrp(r);
             }
+            ClientAPIQuery::RunVRRPGrpIntf(gid, intf) => {
+                let r = capi_req_run_vrrp_grp_intf(&vrs, gid, intf);
+                resp = ClientAPIResponse::RunVRRPGrpIntf(r);
+            }
         }
 
         // send queries answer back
@@ -227,7 +233,7 @@ pub fn capi_thread_loop(
 }
 
 // start_capi_app() function
-// start Client API Application server
+/// start Client API Application server
 pub fn capi_start_app(down_api: DownstreamAPI) {
     // spawn the API application server in a new thread
     thread::spawn(move || router::start(down_api));
@@ -295,11 +301,46 @@ fn capi_req_run_vrrp_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Vec<ResponseV
 fn capi_req_run_vrrp_grp(
     vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
     gid: u8,
-) -> Option<ResponseVRRPAttr> {
-    // find a virtual router matching the vrid (gid)
-    let r = vrs.iter().find(|&vr| {
+) -> Option<Vec<ResponseVRRPAttr>> {
+    // initialize attributes vector
+    let mut vaddrs: Vec<ResponseVRRPAttr> = Vec::new();
+
+    // create a new iterator fvr with matched elements
+    let fvr = vrs.iter().filter(|&vr| {
         let vr = vr.read().unwrap();
         vr.parameters.vrid() == gid
+    });
+
+    // build attributes vector
+    for vr in fvr {
+        // get read access
+        let vr = vr.read().unwrap();
+        // build VRRP attributes response
+        let attrs = ResponseVRRPAttr {
+            virtual_ip: vr.parameters.attr_vip(),
+            group: vr.parameters.vrid(),
+            interface: vr.parameters.interface(),
+            priority: vr.parameters.prio(),
+            preempt: vr.parameters.preempt(),
+            state: vr.states.states(),
+        };
+        // push vr
+        vaddrs.push(attrs);
+    }
+
+    Some(vaddrs)
+}
+
+// capi_req_run_vrrp_grp_intf() function
+fn capi_req_run_vrrp_grp_intf(
+    vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
+    gid: u8,
+    intf: String,
+) -> Option<ResponseVRRPAttr> {
+    // find a virtual router matching the vrid (gid) and interface (intf)
+    let r = vrs.iter().find(|&vr| {
+        let vr = vr.read().unwrap();
+        (vr.parameters.vrid() == gid) && (vr.parameters.interface() == intf)
     });
 
     // check if the result is a found vr
@@ -322,4 +363,6 @@ fn capi_req_run_vrrp_grp(
         // if there is no matching vr, return None
         None => Option::None,
     }
+
+
 }

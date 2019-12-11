@@ -66,6 +66,8 @@ mod handlers;
 //              |_ / PUT       modify a static route (specify route)
 //              |_ / DELETE    remove a static route (specifc route)
 //
+
+// router() function
 fn router(down_api: DownstreamAPI) -> Router {
     // create the state middleware to share the downstream API
     let middleware = StateMiddleware::new(down_api);
@@ -110,11 +112,19 @@ fn router(down_api: DownstreamAPI) -> Router {
             });
             // vrrp/ scope
             route.scope("/vrrp", |route| {
+                // <group-id>/
                 route.get("/").to(handlers::run::vrrp::all);
-                route.get("/:group_id").with_path_extractor::<GroupIdExtractor>().to(handlers::run::vrrp::group);
+                route
+                    .get("/:group_id")
+                    .with_path_extractor::<GroupIdExtractor>()
+                    .to(handlers::run::vrrp::group);
+                // <group-id>/<interface>/
+                route
+                    .get("/:group_id/:interface")
+                    .with_path_extractor::<GroupIdInterfaceExtractor>()
+                    .to(handlers::run::vrrp::group_interface);
             });
         });
-
     })
 }
 
@@ -139,6 +149,13 @@ fn serialize_answer<T: Serialize>(state: &State, ans: T) -> Response<Body> {
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 struct GroupIdExtractor {
     group_id: u8,
+}
+
+// GroupIdInterfaceExtractor structure
+#[derive(Deserialize, StateData, StaticResponseExtender)]
+struct GroupIdInterfaceExtractor {
+    group_id: u8,
+    interface: String,
 }
 
 #[cfg(test)]
