@@ -63,7 +63,7 @@ pub fn auth_api_client(
 /// return the user name String if sucessfully authenticated
 fn auth_user_from_db(cfg: &config::CConfig, user: String, passwd: String) -> Option<String> {
     // initialize response
-    let mut res: Option<String> = None;
+    let res: Option<String> = None;
 
     // access configuation api users
     if let Some(a) = &cfg.api {

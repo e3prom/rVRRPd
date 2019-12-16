@@ -228,49 +228,87 @@ pub fn capi_thread_loop(
                 let r = auth_api_client(&cfg, user, passwd);
                 resp = ClientAPIResponse::AuthResponse(r);
             }
-            ClientAPIQuery::CfgGlobalAll(sess) => {
-                match sess.validate() {
-                    Some(_) => {
-                        let r = capi_req_cfg_global_all(&cfg);
-                        resp = ClientAPIResponse::CfgGlobalAll(r);
-                    },
-                    None => {
-                        resp = ClientAPIResponse::Unauthorized;
-                    }
+            ClientAPIQuery::CfgGlobalAll(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_cfg_global_all(&cfg);
+                    resp = ClientAPIResponse::CfgGlobalAll(r);
                 }
-            }
-            ClientAPIQuery::CfgVrrpAll(sess) => {
-                let r = capi_req_cfg_vrrp_all(&cfg);
-                resp = ClientAPIResponse::CfgVrrpAll(r);
-            }
-            ClientAPIQuery::CfgProtoAll(sess) => {
-                let r = capi_req_cfg_proto_all(&cfg);
-                resp = ClientAPIResponse::CfgProtoAll(r);
-            }
-            ClientAPIQuery::RunGlobalAll(sess) => {
-                let r = capi_req_run_global_all(&cfg);
-                resp = ClientAPIResponse::RunGlobalAll(r);
-            }
-            ClientAPIQuery::RunVRRPAll(sess) => {
-                let r = capi_req_run_vrrp_all(&vrs);
-                resp = ClientAPIResponse::RunVRRPAll(r);
-            }
-            ClientAPIQuery::RunVRRPGrp(sess, gid) => {
-                let r = capi_req_run_vrrp_grp(&vrs, gid);
-                resp = ClientAPIResponse::RunVRRPGrp(r);
-            }
-            ClientAPIQuery::RunVRRPGrpIntf(sess, gid, intf) => {
-                let r = capi_req_run_vrrp_grp_intf(&vrs, gid, intf);
-                resp = ClientAPIResponse::RunVRRPGrpIntf(r);
-            }
-            ClientAPIQuery::RunProtoAll(sess) => {
-                let r = capi_req_run_proto_all(&vrs);
-                resp = ClientAPIResponse::RunProtoAll(r);
-            }
-            ClientAPIQuery::RunProtoStatic(sess) => {
-                let r = capi_req_run_proto_static(&vrs);
-                resp = ClientAPIResponse::RunProtoStatic(r);
-            }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::CfgVrrpAll(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_cfg_vrrp_all(&cfg);
+                    resp = ClientAPIResponse::CfgVrrpAll(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::CfgProtoAll(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_cfg_proto_all(&cfg);
+                    resp = ClientAPIResponse::CfgProtoAll(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::RunGlobalAll(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_run_global_all(&cfg);
+                    resp = ClientAPIResponse::RunGlobalAll(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::RunVRRPAll(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_run_vrrp_all(&vrs);
+                    resp = ClientAPIResponse::RunVRRPAll(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::RunVRRPGrp(sess, gid) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_run_vrrp_grp(&vrs, gid);
+                    resp = ClientAPIResponse::RunVRRPGrp(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::RunVRRPGrpIntf(sess, gid, intf) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_run_vrrp_grp_intf(&vrs, gid, intf);
+                    resp = ClientAPIResponse::RunVRRPGrpIntf(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::RunProtoAll(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_run_proto_all(&vrs);
+                    resp = ClientAPIResponse::RunProtoAll(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
+            ClientAPIQuery::RunProtoStatic(sess) => match sess.validate() {
+                Some(_) => {
+                    let r = capi_req_run_proto_static(&vrs);
+                    resp = ClientAPIResponse::RunProtoStatic(r);
+                }
+                None => {
+                    resp = ClientAPIResponse::Unauthorized;
+                }
+            },
         }
 
         // send queries answer back

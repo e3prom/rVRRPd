@@ -25,7 +25,15 @@ pub fn all(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::RunProtoAll(ans) => serialize_answer(&state, ans),
-            _ => create_response(&state, StatusCode::NOT_FOUND, mime::TEXT_PLAIN, NOT_FOUND),
+            ClientAPIResponse::Unauthorized => {
+                create_empty_response(&state, StatusCode::UNAUTHORIZED)
+            }
+            _ => create_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                mime::TEXT_PLAIN,
+                NOT_FOUND,
+            ),
         }
     };
     return (state, htbody);
@@ -47,7 +55,15 @@ pub fn pstatic(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::RunProtoStatic(ans) => serialize_answer(&state, ans),
-            _ => create_response(&state, StatusCode::NOT_FOUND, mime::TEXT_PLAIN, NOT_FOUND),
+            ClientAPIResponse::Unauthorized => {
+                create_empty_response(&state, StatusCode::UNAUTHORIZED)
+            }
+            _ => create_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                mime::TEXT_PLAIN,
+                NOT_FOUND,
+            ),
         }
     };
     return (state, htbody);

@@ -25,7 +25,15 @@ pub fn all(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::RunVRRPAll(ans) => serialize_answer(&state, ans),
-            _ => create_response(&state, StatusCode::NOT_FOUND, mime::TEXT_PLAIN, NOT_FOUND),
+            ClientAPIResponse::Unauthorized => {
+                create_empty_response(&state, StatusCode::UNAUTHORIZED)
+            }
+            _ => create_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                mime::TEXT_PLAIN,
+                NOT_FOUND,
+            ),
         }
     };
     return (state, htbody);
@@ -50,7 +58,15 @@ pub fn group(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::RunVRRPGrp(ans) => serialize_answer(&state, ans),
-            _ => create_response(&state, StatusCode::NOT_FOUND, mime::TEXT_PLAIN, NOT_FOUND),
+            ClientAPIResponse::Unauthorized => {
+                create_empty_response(&state, StatusCode::UNAUTHORIZED)
+            }
+            _ => create_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                mime::TEXT_PLAIN,
+                NOT_FOUND,
+            ),
         }
     };
     return (state, htbody);
@@ -86,7 +102,15 @@ pub fn group_interface(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::RunVRRPGrpIntf(ans) => serialize_answer(&state, ans),
-            _ => create_response(&state, StatusCode::NOT_FOUND, mime::TEXT_PLAIN, NOT_FOUND),
+            ClientAPIResponse::Unauthorized => {
+                create_empty_response(&state, StatusCode::UNAUTHORIZED)
+            }
+            _ => create_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                mime::TEXT_PLAIN,
+                NOT_FOUND,
+            ),
         }
     };
     return (state, htbody);

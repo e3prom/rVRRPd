@@ -25,11 +25,9 @@ pub fn all(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::CfgGlobalAll(ans) => serialize_answer(&state, ans),
-            ClientAPIResponse::Unauthorized => create_response(
+            ClientAPIResponse::Unauthorized => create_empty_response(
                 &state,
                 StatusCode::UNAUTHORIZED,
-                mime::TEXT_PLAIN,
-                NOT_FOUND,
             ),
             _ => create_response(
                 &state,
