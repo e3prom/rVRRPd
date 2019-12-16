@@ -21,6 +21,10 @@ use rand::Rng;
 // sha256
 use sha2::{Digest, Sha256};
 
+// scrypt
+extern crate scrypt;
+use scrypt::{scrypt_check, scrypt_simple, ScryptParams};
+
 /// auth_api_client() function
 pub fn auth_api_client(
     cfg: &config::CConfig,
@@ -99,6 +103,18 @@ fn auth_user_from_db(cfg: &config::CConfig, user: String, passwd: String) -> Opt
                                     return Some(username);
                                 }
                             }
+                            "scrypt" => {
+                                // // create scrypt parameters with sound values
+                                // let params = ScryptParams::new(4, 8, 1).unwrap();
+                                // // hash the received password
+                                // let h2 = scrypt_simple(&passwd, &params).expect("PNRG failure");
+                                // // print the hashed password for debugging purpose
+                                // println!("DEBUG: h2 is {}", h2);
+                                // check if password is matching the stored hash
+                                if scrypt_check(&passwd, &hash).is_ok() {
+                                    return Some(username);
+                                }
+                            }
                             // if alg doesn't match, continue
                             &_ => (),
                         }
@@ -120,11 +136,11 @@ fn regex_captures_apiuser(acc: &String) -> Option<regex::Captures> {
     // the API user account information is formatted as follow:
     // {{<hash-alg>}}<user-name>:<access-level>:<salt><password-hash>
     // 'user-name' must be alphanumeric between 1 and 256 characters
-    // 'salt' must be between 16 and 64 hex digits
-    // 'passowrd-hash' must be betwween 16 and 256 hex digits
+    // 'salt' must be between 0 and 64 hex digits
+    // 'passowrd-hash' must be betwween 16 and 256 printable digits
     lazy_static! {
         static ref REGEX_HTBODY_AUTH_AV: Regex =
-            Regex::new(r"^\{\{(?P<a>[[:alnum:]]{1,16})\}\}(?P<u>[[:alnum:]]{1,256}):(?P<l>\d):(?P<s>[[:xdigit:]]{16,64}):(?P<p>[[:xdigit:]]{16,256})$")
+            Regex::new(r"^\{\{(?P<a>[[:alnum:]]{1,16})\}\}(?P<u>[[:alnum:]]{1,256}):(?P<l>\d):(?P<s>[[:xdigit:]]{0,64}):(?P<p>[[:print:]]{16,256})$")
                 .unwrap();
     }
     // capture content using the pre-compiled regular expression
