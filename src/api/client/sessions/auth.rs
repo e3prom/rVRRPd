@@ -35,7 +35,7 @@ pub fn auth_api_client(
             // set authenticated user
             token.set_user(usr);
             // generate the token
-            match token.gen_token() {
+            match token.gen_token(cfg) {
                 // if succesfully generated
                 Ok(()) => {
                     // set session duration

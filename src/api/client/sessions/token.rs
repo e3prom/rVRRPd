@@ -12,6 +12,9 @@ use hmac::{Hmac, Mac};
 // sha3
 use sha3::Sha3_256;
 
+// config
+use crate::config;
+
 /// SessionTroken structure
 pub struct SessionToken {
     user: String,
@@ -55,7 +58,7 @@ impl SessionToken {
         self.token = token;
     }
     // gen_token() method
-    pub fn gen_token(&mut self) -> std::io::Result<()> {
+    pub fn gen_token(&mut self, cfg: &config::CConfig) -> std::io::Result<()> {
         // get current system time (in seconds since the Unix Epoch)
         let now = SystemTime::now();
         let time = now
@@ -72,7 +75,8 @@ impl SessionToken {
         // concatenate the user and time with the nonce
         let utn = format!("{}{}{}", self.user, self.ts_since, self.nonce);
         // hash the above elements
-        let token = gen_hmac_string(&utn);
+        let secret = cfg.api.as_ref().unwrap().secret();
+        let token = gen_hmac_string(&utn, secret);
         // set the hashed token
         self.token = token;
         // confirm completion
@@ -96,11 +100,12 @@ impl SessionToken {
     }
     // validate() method
     // check the integrity of the token (hash)
-    pub fn validate(&self) -> Option<String> {
+    pub fn validate(&self, cfg: &config::CConfig) -> Option<String> {
         // concatenate the user and time with the nonce
         let utn = format!("{}{}{}", self.user, self.ts_since, self.nonce);
         // hash the above elements
-        let token = gen_hmac_string(&utn);
+        let secret = cfg.api.as_ref().unwrap().secret();
+        let token = gen_hmac_string(&utn, secret);
         // do a comparison betwen the stored and the recompute tokens
         if self.token == token {
             Some(token)
@@ -114,8 +119,8 @@ impl SessionToken {
 type HmacSha3_256 = Hmac<Sha3_256>;
 
 // gen_hmac_string() function
-fn gen_hmac_string(input: &String) -> String {
-    let mut mac = HmacSha3_256::new_varkey(b"changeme").expect("Wrong hmac key");
+fn gen_hmac_string(input: &String, secret: String) -> String {
+    let mut mac = HmacSha3_256::new_varkey(secret.as_bytes()).expect("invalid key length");
     mac.input(input.as_bytes());
     let res = mac.result();
     let out = res.code();

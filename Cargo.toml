@@ -28,6 +28,7 @@ chrono = "0.4.6"
 hmac = "0.7"
 sha2 = "0.8"
 sha3 = "0.8"
+scrypt = "0.2"
 crossbeam = "0.7"
 gotham = { git = "https://github.com/gotham-rs/gotham" }
 gotham_derive = "0.4.0"

@@ -5,6 +5,9 @@ use super::*;
 // std
 use std::net::IpAddr;
 
+// rand
+use rand::Rng;
+
 /// CfgType Enumerator
 pub enum CfgType {
     Toml, // TOML
@@ -378,6 +381,7 @@ pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct API {
     users: Vec<String>,
+    secret: Option<String>,
 }
 
 // API structure implementation
@@ -386,4 +390,27 @@ impl API {
     pub fn users(&self) -> Vec<String> {
         self.users.clone()
     }
+    // secret() method
+    pub fn secret(&self) -> String {
+        let secret = match &self.secret {
+            Some(s) => s.clone(),
+            None => gen_runtime_secret(),
+        };
+
+        secret
+    }
+}
+
+// gen_runtime_secret() function
+fn gen_runtime_secret() -> String {
+    // create a static secret key string
+    lazy_static! {
+        static ref SECRET: String = {
+            // generate a unique runtime secret
+            let mut rng = rand::thread_rng();
+            let r = rng.gen::<u128>();
+            format!("{:x}", r)
+        };
+    }
+    SECRET.to_string()
 }
