@@ -25,16 +25,10 @@ pub fn all(state: State) -> (State, Response<Body>) {
         match down.read() {
             // if a response is returned
             ClientAPIResponse::CfgGlobalAll(ans) => serialize_answer(&state, ans),
-            ClientAPIResponse::Unauthorized => create_empty_response(
-                &state,
-                StatusCode::UNAUTHORIZED,
-            ),
-            _ => create_response(
-                &state,
-                StatusCode::INTERNAL_SERVER_ERROR,
-                mime::TEXT_PLAIN,
-                NOT_FOUND,
-            ),
+            ClientAPIResponse::Unauthorized => {
+                create_empty_response(&state, StatusCode::UNAUTHORIZED)
+            }
+            _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
     return (state, htbody);

@@ -28,12 +28,7 @@ pub fn all(state: State) -> (State, Response<Body>) {
             ClientAPIResponse::Unauthorized => {
                 create_empty_response(&state, StatusCode::UNAUTHORIZED)
             }
-            _ => create_response(
-                &state,
-                StatusCode::INTERNAL_SERVER_ERROR,
-                mime::TEXT_PLAIN,
-                NOT_FOUND,
-            ),
+            _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
     return (state, htbody);
@@ -61,12 +56,7 @@ pub fn group(state: State) -> (State, Response<Body>) {
             ClientAPIResponse::Unauthorized => {
                 create_empty_response(&state, StatusCode::UNAUTHORIZED)
             }
-            _ => create_response(
-                &state,
-                StatusCode::INTERNAL_SERVER_ERROR,
-                mime::TEXT_PLAIN,
-                NOT_FOUND,
-            ),
+            _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
     return (state, htbody);
@@ -105,12 +95,7 @@ pub fn group_interface(state: State) -> (State, Response<Body>) {
             ClientAPIResponse::Unauthorized => {
                 create_empty_response(&state, StatusCode::UNAUTHORIZED)
             }
-            _ => create_response(
-                &state,
-                StatusCode::INTERNAL_SERVER_ERROR,
-                mime::TEXT_PLAIN,
-                NOT_FOUND,
-            ),
+            _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
     return (state, htbody);
