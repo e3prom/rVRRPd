@@ -9,6 +9,7 @@ license = "GPL-3.0"
 publish = false
 
 [dependencies]
+rand = "0.7"
 getopts = "0.2"
 libc = "0.2.51"
 nix = "0.15"
@@ -28,7 +29,10 @@ hmac = "0.7"
 sha2 = "0.8"
 sha3 = "0.8"
 crossbeam = "0.7"
-gotham = "0.4.0"
+gotham = { git = "https://github.com/gotham-rs/gotham" }
 gotham_derive = "0.4.0"
 hyper = "0.12"
 mime = "0.3.14"
+cookie = "0.12"
+regex = "1"
+lazy_static = "1.4"

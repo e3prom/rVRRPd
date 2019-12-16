@@ -1,0 +1,8 @@
+POST using x-www-form-urlencoded
+--------------------------------
+curl -v -s -d "user=eprom passwd=test" -c /tmp/api-cookie -X POST http://localhost:7080/auth
+
+GET using cookies
+-----------------
+curl -s -v -b /tmp/api-cookie -X GET http://localhost:7080/config/global | jq
+

@@ -24,6 +24,7 @@ pub struct CConfig {
     pub vrouter: Option<Vec<VRConfig>>,
     pub protocols: Option<Protocols>,
     pub client_api: Option<String>,
+    pub api: Option<API>,
 }
 
 impl CConfig {
@@ -370,5 +371,19 @@ pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
             };
             return config;
         }
+    }
+}
+
+/// API structure
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct API {
+    users: Vec<String>,
+}
+
+// API structure implementation
+impl API {
+    // users() method
+    pub fn users(&self) -> Vec<String> {
+        self.users.clone()
     }
 }

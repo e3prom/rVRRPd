@@ -3,26 +3,38 @@ use super::*;
 
 // gotham
 extern crate gotham;
-use gotham::helpers::http::response::create_response;
+use gotham::helpers::http::response::{create_empty_response, create_response};
+use gotham::middleware::cookie::CookieParser;
 use gotham::middleware::state::StateMiddleware;
+use gotham::pipeline::new_pipeline;
 use gotham::pipeline::single::single_pipeline;
-use gotham::pipeline::single_middleware;
 use gotham::router::builder::*;
 use gotham::router::Router;
 use gotham::state::{FromState, State};
 
 // hyper
 extern crate hyper;
+use hyper::header::SET_COOKIE;
 use hyper::{Body, Response, StatusCode};
 
 // mime
 extern crate mime;
+
+// cookie
+extern crate cookie;
+use cookie::{Cookie, CookieJar};
 
 // serde
 use serde::Serialize;
 
 // handlers
 mod handlers;
+
+// handlers constants
+const COOKIE_USER: &str = "user";
+const COOKIE_TIMESTAMP: &str = "ts";
+const COOKIE_NONCE: &str = "nonce";
+const COOKIE_TOKEN: &str = "token";
 
 // Client API routing
 // ------------------
@@ -69,24 +81,31 @@ mod handlers;
 
 // router() function
 fn router(down_api: DownstreamAPI) -> Router {
-    // create the state middleware to share the downstream API
-    let middleware = StateMiddleware::new(down_api);
+    // create new pipeline
+    let pipeline = new_pipeline();
 
-    // create a middleware pipeline
-    let pipeline = single_middleware(middleware);
+    // add CookieParser middleware
+    let pipeline = pipeline.add(CookieParser);
+
+    // create the state middleware to share the downstream API
+    let stm = StateMiddleware::new(down_api);
+
+    // add state middleware to existing pipeline
+    let pipeline = pipeline.add(stm);
 
     // construct a basic chain from the pipeline
-    let (chain, pipelines) = single_pipeline(pipeline);
+    let (chain, pipelines) = single_pipeline(pipeline.build());
 
     // build the router with chain and pipelines
     build_router(chain, pipelines, |route| {
         // index
         route.get_or_head("/").to(handlers::index);
 
-        // // auth/ scope
-        // route.scope("/auth", |route| {
-        //     route.get("/client").to(auth::client);
-        // });
+        // auth/ scope
+        route.scope("/auth", |route| {
+            // / (POST)
+            route.post("/").to(handlers::auth::client);
+        });
 
         // config/ scope
         route.scope("/config", |route| {
@@ -164,6 +183,33 @@ struct GroupIdExtractor {
 struct GroupIdInterfaceExtractor {
     group_id: u8,
     interface: String,
+}
+
+// read_session_cookies() function
+pub fn read_session_cookies(state: &State) -> (String, u64, u64, String) {
+    // retrieve session cookies
+    let c = CookieJar::borrow_from(&state);
+    let user = {
+        c.get(COOKIE_USER)
+            .map(|c| c.value().to_owned())
+            .unwrap_or_else(|| "null".to_string())
+    };
+    let ts_since: u64 = {
+        c.get(COOKIE_TIMESTAMP)
+            .map(|c| c.value().parse::<u64>().unwrap())
+            .unwrap_or_else(|| 0)
+    };
+    let nonce: u64 = {
+        c.get(COOKIE_NONCE)
+            .map(|c| c.value().parse::<u64>().unwrap())
+            .unwrap_or_else(|| 0)
+    };
+    let token = {
+        c.get(COOKIE_TOKEN)
+            .map(|c| c.value().to_owned())
+            .unwrap_or_else(|| "null".to_string())
+    };
+    (user, ts_since, nonce, token)
 }
 
 #[cfg(test)]

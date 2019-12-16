@@ -24,6 +24,9 @@ extern crate serde_json;
 extern crate daemonize;
 use daemonize::Daemonize;
 
+// hmac
+extern crate hmac;
+
 // chrono
 extern crate chrono;
 
@@ -34,6 +37,13 @@ use crossbeam::{Receiver, Sender};
 // gotham
 #[macro_use]
 extern crate gotham_derive;
+
+// rand
+extern crate rand;
+
+// lazy_static
+#[macro_use]
+extern crate lazy_static;
 
 // generic constants
 #[allow(dead_code)]

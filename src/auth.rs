@@ -2,7 +2,6 @@
 use super::*;
 
 // hmac
-extern crate hmac;
 use hmac::digest::{ExtendableOutput, XofReader};
 use hmac::{digest::Input, Hmac, Mac};
 

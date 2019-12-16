@@ -6,8 +6,18 @@ pub fn all(state: State) -> (State, Response<Body>) {
     // borrow references to the Downstream API
     let down = DownstreamAPI::borrow_from(&state);
 
+    // retrieve session cookie
+    let (user, ts_since, nonce, token) = read_session_cookies(&state);
+
+    // create SessionToken
+    let mut sess = SessionToken::new();
+    sess.set_user(user);
+    sess.set_tssince(ts_since);
+    sess.set_nonce(nonce);
+    sess.set_token(token);
+
     // send a query downstream
-    let q = ClientAPIQuery::RunVRRPAll;
+    let q = ClientAPIQuery::RunVRRPAll(sess);
     down.query(q);
 
     // read answer and set HTTP body (blocking)
@@ -31,8 +41,9 @@ pub fn group(state: State) -> (State, Response<Body>) {
     let gid = path.group_id;
 
     // send a query downstream
-    let q = ClientAPIQuery::RunVRRPGrp;
-    down.query(q(gid));
+    let sess = SessionToken::new();
+    let q = ClientAPIQuery::RunVRRPGrp(sess, gid);
+    down.query(q);
 
     // read answer and set HTTP body (blocking)
     let htbody = {
@@ -45,10 +56,20 @@ pub fn group(state: State) -> (State, Response<Body>) {
     return (state, htbody);
 }
 
-// group_interface() handler function
+/// group_interface() handler function
 pub fn group_interface(state: State) -> (State, Response<Body>) {
     // borrow references to the Downstream API
     let down = DownstreamAPI::borrow_from(&state);
+
+    // retrieve session cookie
+    let (user, ts_since, nonce, token) = read_session_cookies(&state);
+
+    // create SessionToken
+    let mut sess = SessionToken::new();
+    sess.set_user(user);
+    sess.set_tssince(ts_since);
+    sess.set_nonce(nonce);
+    sess.set_token(token);
 
     // extract group_id and interface from GET path
     let path = GroupIdInterfaceExtractor::borrow_from(&state);
@@ -56,8 +77,9 @@ pub fn group_interface(state: State) -> (State, Response<Body>) {
     let intf = path.interface.clone();
 
     // send a query downstream
-    let q = ClientAPIQuery::RunVRRPGrpIntf;
-    down.query(q(gid, intf));
+    let sess = SessionToken::new();
+    let q = ClientAPIQuery::RunVRRPGrpIntf(sess, gid, intf);
+    down.query(q);
 
     // read answer and set HTTP body (blocking)
     let htbody = {

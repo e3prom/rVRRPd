@@ -14,6 +14,11 @@ use crate::VirtualRouter;
 // router
 mod router;
 
+// sessions
+mod sessions;
+use sessions::auth::auth_api_client;
+use sessions::token::SessionToken;
+
 // config
 use crate::config;
 
@@ -30,7 +35,7 @@ pub struct UpstreamAPI {
 impl<'a> UpstreamAPI {
     // new() method
     pub fn new() -> UpstreamAPI {
-        let (sender, receiver) = unbounded(); // try bounded
+        let (sender, receiver) = unbounded();
         UpstreamAPI { sender, receiver }
     }
     // spawn_thread method
@@ -132,19 +137,22 @@ impl DownstreamAPI {
 
 /// ClientAPIQuery enumerator
 pub enum ClientAPIQuery {
-    CfgGlobalAll,
-    CfgVrrpAll,
-    CfgProtoAll,
-    RunGlobalAll,
-    RunVRRPAll,
-    RunVRRPGrp(u8),
-    RunVRRPGrpIntf(u8, String),
-    RunProtoAll,
-    RunProtoStatic,
+    AuthRequest(String, String),
+    CfgGlobalAll(SessionToken),
+    CfgVrrpAll(SessionToken),
+    CfgProtoAll(SessionToken),
+    RunGlobalAll(SessionToken),
+    RunVRRPAll(SessionToken),
+    RunVRRPGrp(SessionToken, u8),
+    RunVRRPGrpIntf(SessionToken, u8, String),
+    RunProtoAll(SessionToken),
+    RunProtoStatic(SessionToken),
 }
 
 /// ClientAPIResponse enumerator
 pub enum ClientAPIResponse {
+    Unauthorized,
+    AuthResponse(Option<SessionToken>),
     CfgGlobalAll(config::CConfig),
     CfgVrrpAll(Vec<config::VRConfig>),
     CfgProtoAll(config::Protocols),
@@ -216,39 +224,50 @@ pub fn capi_thread_loop(
         // listen for downstream queries (blocking)
         let q = qrx.recv().unwrap();
         match q {
-            ClientAPIQuery::CfgGlobalAll => {
-                let r = capi_req_cfg_global_all(&cfg);
-                resp = ClientAPIResponse::CfgGlobalAll(r);
+            ClientAPIQuery::AuthRequest(user, passwd) => {
+                let r = auth_api_client(&cfg, user, passwd);
+                resp = ClientAPIResponse::AuthResponse(r);
             }
-            ClientAPIQuery::CfgVrrpAll => {
+            ClientAPIQuery::CfgGlobalAll(sess) => {
+                match sess.validate() {
+                    Some(_) => {
+                        let r = capi_req_cfg_global_all(&cfg);
+                        resp = ClientAPIResponse::CfgGlobalAll(r);
+                    },
+                    None => {
+                        resp = ClientAPIResponse::Unauthorized;
+                    }
+                }
+            }
+            ClientAPIQuery::CfgVrrpAll(sess) => {
                 let r = capi_req_cfg_vrrp_all(&cfg);
                 resp = ClientAPIResponse::CfgVrrpAll(r);
             }
-            ClientAPIQuery::CfgProtoAll => {
+            ClientAPIQuery::CfgProtoAll(sess) => {
                 let r = capi_req_cfg_proto_all(&cfg);
                 resp = ClientAPIResponse::CfgProtoAll(r);
             }
-            ClientAPIQuery::RunGlobalAll => {
+            ClientAPIQuery::RunGlobalAll(sess) => {
                 let r = capi_req_run_global_all(&cfg);
                 resp = ClientAPIResponse::RunGlobalAll(r);
             }
-            ClientAPIQuery::RunVRRPAll => {
+            ClientAPIQuery::RunVRRPAll(sess) => {
                 let r = capi_req_run_vrrp_all(&vrs);
                 resp = ClientAPIResponse::RunVRRPAll(r);
             }
-            ClientAPIQuery::RunVRRPGrp(gid) => {
+            ClientAPIQuery::RunVRRPGrp(sess, gid) => {
                 let r = capi_req_run_vrrp_grp(&vrs, gid);
                 resp = ClientAPIResponse::RunVRRPGrp(r);
             }
-            ClientAPIQuery::RunVRRPGrpIntf(gid, intf) => {
+            ClientAPIQuery::RunVRRPGrpIntf(sess, gid, intf) => {
                 let r = capi_req_run_vrrp_grp_intf(&vrs, gid, intf);
                 resp = ClientAPIResponse::RunVRRPGrpIntf(r);
             }
-            ClientAPIQuery::RunProtoAll => {
+            ClientAPIQuery::RunProtoAll(sess) => {
                 let r = capi_req_run_proto_all(&vrs);
                 resp = ClientAPIResponse::RunProtoAll(r);
             }
-            ClientAPIQuery::RunProtoStatic => {
+            ClientAPIQuery::RunProtoStatic(sess) => {
                 let r = capi_req_run_proto_static(&vrs);
                 resp = ClientAPIResponse::RunProtoStatic(r);
             }

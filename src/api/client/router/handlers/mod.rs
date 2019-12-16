@@ -4,12 +4,16 @@ use super::*;
 // gotham
 use gotham::state::State;
 
+// authentication scope handlers
+pub mod auth;
+
 // configuration scope handlers
 pub mod config;
 
 // running config scope handlers
 pub mod run;
 
+// handlers constants
 const HELLO: &str = "Hello and welcome";
 
 // index() function
