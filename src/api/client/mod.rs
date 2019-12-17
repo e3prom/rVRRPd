@@ -22,9 +22,6 @@ use sessions::token::SessionToken;
 // config
 use crate::config;
 
-// Constants
-const NOT_FOUND: &str = "404 Not found";
-
 /// Upstream API structure
 pub struct UpstreamAPI {
     sender: Sender<FSMQueryResult>,     // channel for queries to fsm
@@ -80,6 +77,7 @@ pub struct FSMQueryResult {
 
 /// FSMQuery enumerator
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum FSMQuery {
     GlobalAttr,
     States,
@@ -91,6 +89,7 @@ pub enum FSMQuery {
 
 /// FSMResponse enumerator
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum FSMResponse {
     States(u8, String),
     Group(u8, String),
@@ -205,8 +204,8 @@ pub struct ResponseProtoStaticAttr {
 
 // capi_thread_loop() function
 pub fn capi_thread_loop(
-    utx: Sender<FSMQueryResult>,
-    urx: Receiver<FSMQueryResult>,
+    _utx: Sender<FSMQueryResult>,
+    _urx: Receiver<FSMQueryResult>,
     qrx: Arc<Mutex<Receiver<ClientAPIQuery>>>,
     rtx: Arc<Mutex<Sender<ClientAPIResponse>>>,
     cfg: config::CConfig,

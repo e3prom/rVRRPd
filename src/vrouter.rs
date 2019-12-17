@@ -1049,11 +1049,11 @@ impl Parameters {
         self.socket_filter
     }
     // capi_tx() getter
-    pub fn capi_tx(&self) -> &Option<Sender<FSMQueryResult>> {
+    pub fn _capi_tx(&self) -> &Option<Sender<FSMQueryResult>> {
         &self.capi_tx
     }
     // capi_rx() getter
-    pub fn capi_rx(&self) -> &Option<Receiver<FSMQueryResult>> {
+    pub fn _capi_rx(&self) -> &Option<Receiver<FSMQueryResult>> {
         &self.capi_rx
     }
     // set_capi_tx() setter
