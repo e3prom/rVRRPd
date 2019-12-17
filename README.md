@@ -14,7 +14,7 @@
  * Multi-threaded operation (1 thread per interface and virtual router)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
-   * Tested interoperable with Cisco IOS and Cisco IOS-XE
+   * Fully compatible with Cisco IOS and Cisco IOS-XE devices
  * Authentication Support
    * Password Authentication (Type-1) based on [`RFC2338`](https://tools.ietf.org/html/rfc2338)
    * Proprietary P0 HMAC (SHA256 truncated to 8 bytes)
@@ -23,20 +23,21 @@
    * Sniffer mode (`-m0`)
    * Virtual Router in foreground mode (`-m1`)
    * Virtual Router in daemon mode (`-m2`)
- * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
- * Supports Berkeley Packet Filter interfaces (`BPF`) _(FreeBSD)_
- * Supports BPF Linux Socket Filters (_Linux_)
+ * MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
+ * Berkeley Packet Filter (`BPF`) _(FreeBSD)_
+ * BPF Linux Socket Filters (_Linux_)
+ * RESTful Client Application Programming Interface (API)
 
 # Development
-This project is still in **_development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Also please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
+This project is still in **_development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no defintive API, configuration or even documentation yet. Also, [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features.
 
-The development roadmap for the upcoming `0.2.0` release can be found on its [project page](https://github.com/e3prom/rVRRPd/projects/2).
+The development roadmap for the upcoming `0.2.0` release can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Dependencies
  * A Linux or FreeBSD 64-bits operating system.
  * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
  * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
- * At least one Ethernet interface, see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
+ * At least one Ethernet interface, see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example.
  * Root privileges, required to access raw sockets, configure interfaces and to add routes.
  * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux).
 
@@ -51,7 +52,7 @@ $ cargo build --release
    Compiling foreign-types-macros v0.1.0
    Compiling serde_derive v1.0.92
    Compiling foreign-types v0.4.0
-   Compiling rVRRPd v0.1.2 (/home/e3prom/rVRRPd)
+   Compiling rVRRPd v0.1.3 (/home/e3prom/rVRRPd)
     Finished release [optimized] target(s) in 9.62s
 ```
 
@@ -66,6 +67,7 @@ pid = "/var/tmp/rvrrpd.pid"
 working_dir = "/var/tmp"
 main_log = "/var/tmp/rvrrpd.log"
 error_log = "/var/tmp/rvrrpd-error.log"
+client_api = "http"
 
 [[vrouter]]
 group = 1
@@ -80,16 +82,19 @@ vifname = "vrrp0"
 auth_type = "rfc2338-simple"
 auth_secret = "thissecretnolongeris"
 
-
 [protocols]
     [[protocols.static]]
     route = "0.0.0.0"
     mask = "0.0.0.0"
     nh = "10.240.0.254"
+
+[api]
+    users = [ "{{SHA256}}admin:0:1eb7ac761a1201f9:095820afab9855b1d999b35a82d896df1461d574c43346d56856f29239bf483f" ]
 ```
 
 The above configuration do the following:
  * Starts the daemon in foreground mode with a debug level of `5` (extensive).
+ * Enable the Client API with the `http` listener (the later listens by default on tcp/7080).
  * Runs one virtual-router with group id `1` on interface `ens192.900`, with the below parameters:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
@@ -101,6 +106,8 @@ The above configuration do the following:
    * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.
+* The Client API only allow users listed in the `users` attribute list under the `[api]` section.
+  * You can generate user hashed passwords using the `rvrrpd-pw` utility.
 
 Finally run the binary executable you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
 ```bash

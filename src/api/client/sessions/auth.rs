@@ -103,13 +103,7 @@ fn auth_user_from_db(cfg: &config::CConfig, user: String, passwd: String) -> Opt
                                     return Some(username);
                                 }
                             }
-                            "scrypt" => {
-                                // // create scrypt parameters with sound values
-                                // let params = ScryptParams::new(4, 8, 1).unwrap();
-                                // // hash the received password
-                                // let h2 = scrypt_simple(&passwd, &params).expect("PNRG failure");
-                                // // print the hashed password for debugging purpose
-                                // println!("DEBUG: h2 is {}", h2);
+                            "SCRYPT" => {
                                 // check if password is matching the stored hash
                                 if scrypt_check(&passwd, &hash).is_ok() {
                                     return Some(username);
