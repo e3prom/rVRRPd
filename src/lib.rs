@@ -505,8 +505,9 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let down_api = DownstreamAPI::new();
             let capi: Option<&UpstreamAPI> = match isClientAPIEnabled {
                 true => {
+                    let host = config.api.as_ref().unwrap().host();
                     up_api.spawn_thread(&down_api, config, &vrouters);
-                    capi_start_app(down_api);
+                    capi_start_app(down_api, host);
                     Some(&up_api)
                 }
                 false => None,

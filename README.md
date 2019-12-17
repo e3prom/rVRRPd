@@ -26,10 +26,10 @@
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
  * Uses Berkeley Packet Filters Sockets (`BPF`) _(FreeBSD)_
  * Supports BPF Linux Socket Filters (_Linux_)
- * Runs a RESTful Client Application Programming Interface (API)
+ * Provides a RESTful Client Application Programming Interface (API)
 
 # Development
-This project is still in **_active development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as type-2 authentication).
+This project is still in **_active development_**, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as P0 or P1 authentication).
 
 The development roadmap for the upcoming `0.2.0` release can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
@@ -58,8 +58,8 @@ $ cargo build --release
 
 Then install the `rvrrpd` executable on your system by entering the `make install` command.
 
-## Binaries
-You can also run `rvrrpd` using pre-compiled binaries available in the [release](https://github.com/e3prom/rVRRPd/releases) page.
+# Binaries
+You can also run `rvrrpd` using pre-compiled binaries available in the [release](https://github.com/e3prom/rVRRPd/releases) page. These binaries are stable enough to be used in production, however if you need the latest features, please use the sources from the Master branch instead.
 
 # Running
 Before running the VRRP daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
@@ -93,6 +93,7 @@ auth_secret = "thissecretnolongeris"
     nh = "10.240.0.254"
 
 [api]
+    host = "0.0.0.0:7080"
     users = [ "{{SHA256}}admin:0:1eb7ac761a1201f9:095820afab9855b1d999b35a82d896df1461d574c43346d56856f29239bf483f" ]
 ```
 
@@ -113,7 +114,7 @@ The above configuration do the following:
 * The Client API only authorize queries from users listed in the `users` list under the `[api]` section.
   * You can generate users passwords lines using the [`rvrrpd-pw`](https://github.com/e3prom/rVRRPd/tree/client-api/utils/rvrrpd-pw) utility.
 
-Finally run the executable you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
+Finally run the executable using the command-line parameter `-m1`, to start the daemon in foreground mode:
 ```bash
 $ sudo rvrrpd -m1 -c conf/rvrrpd.conf
 Starting rVRRPd

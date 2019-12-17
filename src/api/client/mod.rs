@@ -318,9 +318,9 @@ pub fn capi_thread_loop(
 
 // start_capi_app() function
 /// start Client API Application server
-pub fn capi_start_app(down_api: DownstreamAPI) {
+pub fn capi_start_app(down_api: DownstreamAPI, host: String) {
     // spawn the API application server in a new thread
-    thread::spawn(move || router::start(down_api));
+    thread::spawn(move || router::start(down_api, host));
 }
 
 // capi_req_cfg_global_all() function

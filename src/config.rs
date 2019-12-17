@@ -382,6 +382,7 @@ pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
 pub struct API {
     users: Vec<String>,
     secret: Option<String>,
+    host: Option<String>,
 }
 
 // API structure implementation
@@ -398,6 +399,13 @@ impl API {
         };
 
         secret
+    }
+    // host() method
+    pub fn host(&self) -> String {
+        match &self.host {
+            Some(s) => s.clone(),
+            None => "0.0.0.0:7080".to_string()
+        }
     }
 }
 

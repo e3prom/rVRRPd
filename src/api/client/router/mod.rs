@@ -156,10 +156,9 @@ fn router(down_api: DownstreamAPI) -> Router {
 }
 
 // start() function
-pub fn start(down_api: DownstreamAPI) {
-    let addr = "0.0.0.0:7080";
-    println!("Client API Server listening on http://{}", addr);
-    gotham::start(addr, router(down_api))
+pub fn start(down_api: DownstreamAPI, host: String) {
+    println!("Client API Server listening on http://{}", host);
+    gotham::start(host, router(down_api))
 }
 
 // serialize_answer() function
