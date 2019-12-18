@@ -1,6 +1,7 @@
 //! Client API - session token module
 
 // std
+use std::thread;
 use std::time::SystemTime;
 
 // rand
@@ -11,6 +12,9 @@ use hmac::{Hmac, Mac};
 
 // sha3
 use sha3::Sha3_256;
+
+// time
+use std::time;
 
 // config
 use crate::config;
@@ -99,14 +103,20 @@ impl SessionToken {
         self.token.clone()
     }
     // validate() method
-    // check the integrity of the token (hash)
+    // check the integrity of the token
     pub fn validate(&self, cfg: &config::CConfig) -> Option<String> {
         // concatenate the user and time with the nonce
         let utn = format!("{}{}{}", self.user, self.ts_since, self.nonce);
         // hash the above elements
         let secret = cfg.api.as_ref().unwrap().secret();
         let token = gen_hmac_string(&utn, secret);
-        // do a comparison betwen the stored and the recompute tokens
+        // compare the stored (or passed) hash with the recomputed hash/token above
+        // make sure the comparison time is randomized or constant to avoid timing attacks
+        let mut rng = rand::thread_rng();
+        let rdelay = rng.gen_range(10, 40);
+        let time = time::Duration::from_millis(rdelay);
+        thread::sleep(time);
+        // return the token if they match
         if self.token == token {
             Some(token)
         } else {

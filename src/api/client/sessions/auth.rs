@@ -23,7 +23,7 @@ use sha2::{Digest, Sha256};
 
 // scrypt
 extern crate scrypt;
-use scrypt::{scrypt_check};
+use scrypt::scrypt_check;
 
 /// auth_api_client() function
 pub fn auth_api_client(
@@ -32,7 +32,7 @@ pub fn auth_api_client(
     passwd: String,
 ) -> Option<SessionToken> {
     // authenticate the API user
-    let sess = match auth_user_from_db(cfg, user, passwd) {
+    let sess = match auth_user_from_cfg(cfg, user, passwd) {
         Some(usr) => {
             // if authentication is succesful, create a new SessionToken
             let mut token = SessionToken::new();
@@ -59,13 +59,13 @@ pub fn auth_api_client(
     sess
 }
 
-/// auth_user_from_db() function
+/// auth_user_from_cfg() function
 /// read the 'users' vector in the api configuration section
 /// and for every user, compare the hashed passwords according
 /// to the configured hash function.
 ///
 /// return the user name String if sucessfully authenticated
-fn auth_user_from_db(cfg: &config::CConfig, user: String, passwd: String) -> Option<String> {
+fn auth_user_from_cfg(cfg: &config::CConfig, user: String, passwd: String) -> Option<String> {
     // initialize response
     let res: Option<String> = None;
 
@@ -93,7 +93,7 @@ fn auth_user_from_db(cfg: &config::CConfig, user: String, passwd: String) -> Opt
                                 // convert the result to an hex formatted String
                                 let h2 = format!("{:x}", hasher.result());
                                 // reduce likelihood of timing attacks by introducing a random delay
-                                // prior to the hashes's comparison.
+                                // prior to the hashes comparison.
                                 let mut rng = rand::thread_rng();
                                 let rdelay = rng.gen::<u8>() as u64;
                                 let time = time::Duration::from_millis(rdelay);
@@ -112,7 +112,6 @@ fn auth_user_from_db(cfg: &config::CConfig, user: String, passwd: String) -> Opt
                             // if alg doesn't match, continue
                             &_ => (),
                         }
-                        //return Some(username);
                     }
                 }
                 // if regex caputre failed, proceed to next account entry
