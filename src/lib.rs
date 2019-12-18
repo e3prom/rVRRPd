@@ -687,7 +687,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     vr.parameters.set_fd(bpf_fd);
 
                     // if enabled, set client API sender and receiver channels
-                    match client_api {
+                    match capi {
                         Some(c) => {
                             let (s, r) = c.channels();
                             vr.parameters.set_capi_tx(s);

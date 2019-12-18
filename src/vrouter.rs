@@ -991,7 +991,6 @@ impl Parameters {
         self.notification = Option::Some(chan);
     }
     // protocols() getter // review review
-    #[cfg(target_os = "linux")]
     pub fn protocols(&self) -> Arc<Mutex<Protocols>> {
         self.protocols.clone()
     }
