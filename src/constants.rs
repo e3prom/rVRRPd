@@ -10,7 +10,11 @@ pub const RVRRPD_DFLT_ELOGFILE: &str = "/var/log/rvrrpd-error.log";
 pub const RVRRPD_DFLT_DATE_FORMAT: &str = "%b %e %Y %T";
 pub const RVRRPD_DFLT_MACVLAN_NAME: &str = "standby";
 pub const RVRRPD_DFLT_CLIENT_API: &str = "disabled";
-pub const RVRRPD_VERSION_STRING: &str = "0.1.2";
+pub const RVRRPD_VERSION_STRING: &str = "0.1.3";
+
+// Config Constants
+pub const RVRRPD_CFG_DFLT_TLSKEY: &str = "/etc/rvrrpd/ssl/key.pem";
+pub const RVRRPD_CFG_DFLT_TLSCERT: &str = "/etc/rvrrpd/ssl/cert.pem";
 
 // Debug Constants
 pub const DEBUG_LEVEL_INFO: u8 = 0;

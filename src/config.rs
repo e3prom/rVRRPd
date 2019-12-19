@@ -383,6 +383,9 @@ pub struct API {
     users: Vec<String>,
     secret: Option<String>,
     host: Option<String>,
+    tls: Option<bool>,
+    tls_key: Option<String>,
+    tls_cert: Option<String>,
 }
 
 // API structure implementation
@@ -404,7 +407,28 @@ impl API {
     pub fn host(&self) -> String {
         match &self.host {
             Some(s) => s.clone(),
-            None => "0.0.0.0:7080".to_string()
+            None => "0.0.0.0:7080".to_string(),
+        }
+    }
+    // tls() method
+    pub fn tls(&self) -> bool {
+        match self.tls {
+            Some(b) => b,
+            None => false,
+        }
+    }
+    // tls_key() method
+    pub fn tls_key(&self) -> String {
+        match &self.tls_key {
+            Some(s) => s.clone(),
+            None => RVRRPD_CFG_DFLT_TLSKEY.to_string(),
+        }
+    }
+    // tls_cert() method
+    pub fn tls_cert(&self) -> String {
+        match &self.tls_cert {
+            Some(s) => s.clone(),
+            None => RVRRPD_CFG_DFLT_TLSCERT.to_string(),
         }
     }
 }

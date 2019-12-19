@@ -506,8 +506,11 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             let capi: Option<&UpstreamAPI> = match isClientAPIEnabled {
                 true => {
                     let host = config.api.as_ref().unwrap().host();
+                    let tls = config.api.as_ref().unwrap().tls();
+                    let tls_key = config.api.as_ref().unwrap().tls_key();
+                    let tls_cert = config.api.as_ref().unwrap().tls_cert();
                     up_api.spawn_thread(&down_api, config, &vrouters);
-                    capi_start_app(down_api, host);
+                    capi_start_app(down_api, host, tls, tls_key, tls_cert);
                     Some(&up_api)
                 }
                 false => None,

@@ -26,7 +26,8 @@
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
  * Uses Berkeley Packet Filters Sockets (`BPF`) _(FreeBSD)_
  * Supports BPF Linux Socket Filters (_Linux_)
- * Provides a RESTful Client Application Programming Interface (API)
+ * Provides an HTTP Client Application Programming Interface (API)
+   * Supports plain-text HTTP or SSL/TLS (HTTPS=
 
 # Development
 This project is still in **_active development_**, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as P0 or P1 authentication).

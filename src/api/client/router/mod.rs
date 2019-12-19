@@ -1,8 +1,15 @@
 //! Client API router
 use super::*;
 
+// std
+use std::net::ToSocketAddrs;
+
+// future
+use futures::future::Future;
+
 // gotham
 extern crate gotham;
+use gotham::bind_server;
 use gotham::helpers::http::response::{create_empty_response, create_response};
 use gotham::middleware::cookie::CookieParser;
 use gotham::middleware::state::StateMiddleware;
@@ -16,6 +23,24 @@ use gotham::state::{FromState, State};
 extern crate hyper;
 use hyper::header::SET_COOKIE;
 use hyper::{Body, Response, StatusCode};
+
+// failure
+use failure::{err_msg, Error};
+
+// openssl
+extern crate openssl;
+use openssl::{
+    pkey::PKey,
+    ssl::{SslAcceptor, SslMethod},
+    x509::X509,
+};
+
+// tokio
+use tokio::{net::TcpListener, runtime::Runtime};
+
+// tokio_openssl
+extern crate tokio_openssl;
+use tokio_openssl::SslAcceptorExt;
 
 // mime
 extern crate mime;
@@ -80,7 +105,7 @@ const COOKIE_TOKEN: &str = "token";
 //
 
 // router() function
-fn router(down_api: DownstreamAPI) -> Router {
+fn router(down_api: &DownstreamAPI) -> Router {
     // create new pipeline
     let pipeline = new_pipeline();
 
@@ -88,7 +113,7 @@ fn router(down_api: DownstreamAPI) -> Router {
     let pipeline = pipeline.add(CookieParser);
 
     // create the state middleware to share the downstream API
-    let stm = StateMiddleware::new(down_api);
+    let stm = StateMiddleware::new(down_api.clone()); // verify
 
     // add state middleware to existing pipeline
     let pipeline = pipeline.add(stm);
@@ -156,9 +181,52 @@ fn router(down_api: DownstreamAPI) -> Router {
 }
 
 // start() function
-pub fn start(down_api: DownstreamAPI, host: String) {
+pub fn start(down_api: DownstreamAPI, host: String, tls: bool, tls_key: String, tls_cert: String) {
     println!("Client API Server listening on http://{}", host);
-    gotham::start(host, router(down_api))
+
+    // if TLS is enabled
+    if tls {
+        let acceptor = build_tls_acceptor(tls_key, tls_cert).unwrap();
+        let sockaddr = host
+            .to_socket_addrs()
+            .unwrap()
+            .next()
+            .ok_or_else(|| err_msg("Invalid Socket Address"))
+            .unwrap();
+        let listener = TcpListener::bind(&sockaddr).unwrap();
+        let server = bind_server(
+            listener,
+            move || Ok(router(&down_api)),
+            move |socket| {
+                acceptor
+                    .accept_async(socket)
+                    .map_err(|e| println!("OpenSSL error: {}", e))
+            },
+        );
+        let mut runtime = Runtime::new().unwrap();
+        runtime
+            .block_on(server)
+            .map_err(|()| err_msg("Server failed"))
+            .unwrap();
+    } else {
+        gotham::start(host, router(&down_api))
+    }
+}
+
+// build_tls_acceptor() function
+fn build_tls_acceptor(keyfile: String, certfile: String) -> Result<SslAcceptor, Error> {
+    // openssl req -new -x509 -sha256 -newkey rsa:2048 -nodes -keyout key.pem -days 365 -out cert.pem
+    let key = std::fs::read(keyfile).expect("Cannot read RSA key file");
+    let cert = std::fs::read(certfile).expect("Cannot read X.509 certificate file");
+    let cert = X509::from_pem(&cert).expect("Malformed X.509 certificate");
+    let key = PKey::private_key_from_pem(&key).expect("Malformed PEM key");
+
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;
+    builder.set_certificate(&cert)?;
+    builder.set_private_key(&key)?;
+
+    let acceptor = builder.build();
+    Ok(acceptor)
 }
 
 // serialize_answer() function
@@ -221,7 +289,7 @@ mod tests {
     fn receive_hello_response() {
         let down_api = DownstreamAPI::new();
 
-        let server = TestServer::new(router(down_api)).unwrap();
+        let server = TestServer::new(router(&down_api)).unwrap();
         let response = server.client().get("http://localhost").perform().unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
