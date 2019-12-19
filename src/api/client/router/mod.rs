@@ -225,8 +225,5 @@ mod tests {
         let response = server.client().get("http://localhost").perform().unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-
-        let body = response.read_body().unwrap();
-        assert_eq!(&body[..], b"Hello and welcome");
     }
 }

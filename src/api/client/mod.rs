@@ -158,7 +158,7 @@ pub enum ClientAPIResponse {
     RunGlobalAll(ResponseGlobalAttr),
     RunVRRPAll(Vec<ResponseVRRPAttr>),
     RunVRRPGrp(Option<Vec<ResponseVRRPAttr>>),
-    RunVRRPGrpIntf(Option<ResponseVRRPAttr>),
+    RunVRRPGrpIntf(Option<ResponseVRRPAttrExt>),
     RunProtoAll(Option<ResponseProtoAttr>),
     RunProtoStatic(Option<Vec<ResponseProtoStaticAttr>>),
 }
@@ -169,6 +169,7 @@ pub struct ResponseGlobalAttr {
     debug: u8,
     timestamp: u8,
     timezone: u8,
+    timeformat: u8,
     pid: String,
     working_dir: String,
     main_log: String,
@@ -184,6 +185,23 @@ pub struct ResponseVRRPAttr {
     priority: u8,
     preempt: bool,
     state: String,
+}
+
+/// ResponseVRRPAttrExt structure (Serialize-able)
+#[derive(Serialize)]
+pub struct ResponseVRRPAttrExt {
+    virtual_ip: String,
+    group: u8,
+    interface: String,
+    priority: u8,
+    preempt: bool,
+    state: String,
+    auth_type: u8,
+    vif_name: String,
+    interface_hwaddress: String,
+    advert_interval: u8,
+    masterdown_interval: f32,
+    skew_time: f32,
 }
 
 /// RunProtoAttr structure (Serialize-able)
@@ -348,6 +366,7 @@ fn capi_req_run_global_all(cfg: &config::CConfig) -> ResponseGlobalAttr {
         debug: cfg.debug(),
         timestamp: cfg.time_format(),
         timezone: cfg.time_zone(),
+        timeformat: cfg.time_format(),
         pid: cfg.pid(),
         working_dir: cfg.working_dir(),
         main_log: cfg.main_log(),
@@ -420,7 +439,7 @@ fn capi_req_run_vrrp_grp_intf(
     vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
     gid: u8,
     intf: String,
-) -> Option<ResponseVRRPAttr> {
+) -> Option<ResponseVRRPAttrExt> {
     // find a virtual router matching the vrid (gid) and interface (intf)
     let r = vrs.iter().find(|&vr| {
         let vr = vr.read().unwrap();
@@ -433,13 +452,27 @@ fn capi_req_run_vrrp_grp_intf(
             // get read access
             let vr = vr.read().unwrap();
             // build VRRP attributes response
-            let attrs = ResponseVRRPAttr {
+            let attrs = ResponseVRRPAttrExt {
                 virtual_ip: vr.parameters.attr_vip(),
                 group: vr.parameters.vrid(),
                 interface: vr.parameters.interface(),
                 priority: vr.parameters.prio(),
                 preempt: vr.parameters.preempt(),
                 state: vr.states.states(),
+                auth_type: vr.parameters.authtype(),
+                vif_name: vr.parameters.vifname(),
+                interface_hwaddress: format!(
+                    "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                    vr.parameters.ifmac()[0],
+                    vr.parameters.ifmac()[1],
+                    vr.parameters.ifmac()[2],
+                    vr.parameters.ifmac()[3],
+                    vr.parameters.ifmac()[4],
+                    vr.parameters.ifmac()[5],
+                ),
+                advert_interval: vr.parameters.adverint(),
+                masterdown_interval: vr.parameters.master_down(),
+                skew_time: vr.parameters.skewtime(),
             };
             // return vr's attributes
             Some(attrs)
