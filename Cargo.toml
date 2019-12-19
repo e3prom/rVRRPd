@@ -4,9 +4,14 @@ version = "0.1.3"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 repository = "httsp://github.com/e3prom/rvrrpd"
+homepage = "https://github.com/e3prom/rVRRPd"
+readme = "README.md"
 description = "A fast, multi-platform and highly secure VRRP daemon."
 license = "GPL-3.0"
 publish = false
+
+[badges]
+github-actions = { repository = "e3prom/rVRRPd", workflow = "Build"}
 
 [dependencies]
 rand = "0.7"
