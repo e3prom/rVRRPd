@@ -31,7 +31,7 @@ use crate::os::linux::arp;
 #[derive(Debug)]
 pub struct VirtualRouter {
     pub parameters: Parameters,
-    states: fsm::States,
+    pub states: fsm::States,
     pub timers: fsm::Timers,
     pub flags: fsm::Flags,
 }
@@ -151,6 +151,8 @@ impl VirtualRouter {
                 0,
                 fd,
                 socket_filter,
+                Option::None,
+                Option::None,
             ),
             // initialize the timers
             timers: fsm::Timers::new(5.0, 1),
@@ -836,7 +838,9 @@ pub struct Parameters {
     vif_name: String,   // Virtual interface name (or physical when saved)
     vif_idx: i32,       // Virtual interface ifindex
     fd: i32,            // Raw socket or BPF file descriptor
-    socket_filter: bool, // linux socket filter support
+    socket_filter: bool, // Linux socket filter support
+    capi_tx: Option<Sender<FSMQueryResult>>, // Client API sender channel
+    capi_rx: Option<Receiver<FSMQueryResult>>, // Client API receiver channel
 }
 
 /// Parameters Type Implementation
@@ -865,6 +869,8 @@ impl Parameters {
         vif_idx: i32,
         fd: i32,
         socket_filter: bool,
+        capi_tx: Option<Sender<FSMQueryResult>>,
+        capi_rx: Option<Receiver<FSMQueryResult>>,
     ) -> Parameters {
         Parameters {
             vrid,
@@ -891,6 +897,8 @@ impl Parameters {
             vif_idx,
             fd,
             socket_filter,
+            capi_tx,
+            capi_rx,
         }
     }
     // vrid() getter
@@ -983,7 +991,6 @@ impl Parameters {
         self.notification = Option::Some(chan);
     }
     // protocols() getter // review review
-    #[cfg(target_os = "linux")]
     pub fn protocols(&self) -> Arc<Mutex<Protocols>> {
         self.protocols.clone()
     }
@@ -1039,5 +1046,28 @@ impl Parameters {
     #[cfg(target_os = "linux")]
     pub fn socket_filter(&self) -> bool {
         self.socket_filter
+    }
+    // capi_tx() getter
+    pub fn _capi_tx(&self) -> &Option<Sender<FSMQueryResult>> {
+        &self.capi_tx
+    }
+    // capi_rx() getter
+    pub fn _capi_rx(&self) -> &Option<Receiver<FSMQueryResult>> {
+        &self.capi_rx
+    }
+    // set_capi_tx() setter
+    pub fn set_capi_tx(&mut self, tx: Sender<FSMQueryResult>) {
+        self.capi_tx = Some(tx);
+    }
+    // set_capi_rx() setter
+    pub fn set_capi_rx(&mut self, rx: Receiver<FSMQueryResult>) {
+        self.capi_rx = Some(rx);
+    }
+    // attr_vip() method
+    pub fn attr_vip(&self) -> String {
+        format!(
+            "{}.{}.{}.{}",
+            self.vip[0], self.vip[1], self.vip[2], self.vip[3]
+        )
     }
 }

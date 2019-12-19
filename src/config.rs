@@ -5,6 +5,9 @@ use super::*;
 // std
 use std::net::IpAddr;
 
+// rand
+use rand::Rng;
+
 /// CfgType Enumerator
 pub enum CfgType {
     Toml, // TOML
@@ -12,7 +15,7 @@ pub enum CfgType {
 }
 
 /// Main Configuration Structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CConfig {
     pub debug: Option<u8>,
     pub time_zone: Option<String>,
@@ -23,6 +26,8 @@ pub struct CConfig {
     pub error_log: Option<String>,
     pub vrouter: Option<Vec<VRConfig>>,
     pub protocols: Option<Protocols>,
+    pub client_api: Option<String>,
+    pub api: Option<API>,
 }
 
 impl CConfig {
@@ -84,10 +89,20 @@ impl CConfig {
             None => RVRRPD_DFLT_ELOGFILE.to_string(),
         }
     }
+    // client_api() method
+    pub fn client_api(&self) -> bool {
+        match &self.client_api {
+            Some(s) => match &s[..] {
+                "http" => true,
+                _ => true,
+            },
+            None => false,
+        }
+    }
 }
 
 /// Virtual-Routers Configuration Structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct VRConfig {
     group: u8,
     interface: String,
@@ -257,7 +272,7 @@ impl VRConfig {
 }
 
 /// Timers Option Type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct Timers {
     advert: u8,
 }
@@ -268,13 +283,13 @@ impl Default for Timers {
 }
 
 /// Protocols Option Type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Protocols {
     pub r#static: Option<Vec<Static>>,
 }
 
 /// Static Option Type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Static {
     route: String,
     mask: String,
@@ -360,4 +375,74 @@ pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
             return config;
         }
     }
+}
+
+/// API structure
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct API {
+    users: Vec<String>,
+    secret: Option<String>,
+    host: Option<String>,
+    tls: Option<bool>,
+    tls_key: Option<String>,
+    tls_cert: Option<String>,
+}
+
+// API structure implementation
+impl API {
+    // users() method
+    pub fn users(&self) -> Vec<String> {
+        self.users.clone()
+    }
+    // secret() method
+    pub fn secret(&self) -> String {
+        let secret = match &self.secret {
+            Some(s) => s.clone(),
+            None => gen_runtime_secret(),
+        };
+
+        secret
+    }
+    // host() method
+    pub fn host(&self) -> String {
+        match &self.host {
+            Some(s) => s.clone(),
+            None => "0.0.0.0:7080".to_string(),
+        }
+    }
+    // tls() method
+    pub fn tls(&self) -> bool {
+        match self.tls {
+            Some(b) => b,
+            None => false,
+        }
+    }
+    // tls_key() method
+    pub fn tls_key(&self) -> String {
+        match &self.tls_key {
+            Some(s) => s.clone(),
+            None => RVRRPD_CFG_DFLT_TLSKEY.to_string(),
+        }
+    }
+    // tls_cert() method
+    pub fn tls_cert(&self) -> String {
+        match &self.tls_cert {
+            Some(s) => s.clone(),
+            None => RVRRPD_CFG_DFLT_TLSCERT.to_string(),
+        }
+    }
+}
+
+// gen_runtime_secret() function
+fn gen_runtime_secret() -> String {
+    // create a static secret key string
+    lazy_static! {
+        static ref SECRET: String = {
+            // generate a unique runtime secret
+            let mut rng = rand::thread_rng();
+            let r = rng.gen::<u128>();
+            format!("{:x}", r)
+        };
+    }
+    SECRET.to_string()
 }

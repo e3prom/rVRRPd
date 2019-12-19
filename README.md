@@ -14,7 +14,7 @@
  * Multi-threaded operation (1 thread per interface and virtual router)
  * Easily configurable using [TOML](https://github.com/toml-lang/toml) or [JSON](https://www.json.org/)
  * Interoperable with [`RFC3768`](https://tools.ietf.org/html/rfc3768) (VRRPv2) compliant devices
-   * Tested interoperable with Cisco IOS and Cisco IOS-XE
+   * Fully compatible with Cisco IOS and Cisco IOS-XE devices
  * Authentication Support
    * Password Authentication (Type-1) based on [`RFC2338`](https://tools.ietf.org/html/rfc2338)
    * Proprietary P0 HMAC (SHA256 truncated to 8 bytes)
@@ -24,23 +24,25 @@
    * Virtual Router in foreground mode (`-m1`)
    * Virtual Router in daemon mode (`-m2`)
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
- * Supports Berkeley Packet Filter interfaces (`BPF`) _(FreeBSD)_
+ * Uses Berkeley Packet Filters Sockets (`BPF`) _(FreeBSD)_
  * Supports BPF Linux Socket Filters (_Linux_)
+ * Provides a RESTful Client API
+   * Runs plain-text HTTP or HTTPS (SSL/TLS)
 
 # Development
-This project is still in **_development_** stage, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. Also please keep in mind that [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not always be fully interoperable with standard-compliant network equipments, especially when using proprietary features.
+This project is still in **_active development_**, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as P0 or P1 authentication).
 
-The development roadmap for the upcoming `0.2.0` release can be found on its [project page](https://github.com/e3prom/rVRRPd/projects/2).
+The development roadmap for the upcoming `0.2.0` release can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Dependencies
  * A Linux or FreeBSD 64-bits operating system.
  * An Intel IA-64 (x86_64), or an ARMv8 processor (aarch64).
  * Rust's [`Cargo`](https://doc.rust-lang.org/cargo/) (v1.33.0 or higher), to build the project and all its dependencies.
- * At least one Ethernet interface, see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic TOML configuration example.
+ * At least one Ethernet interface, see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example.
  * Root privileges, required to access raw sockets, configure interfaces and to add routes.
  * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux).
 
-# Build and run
+# Build from sources
 To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev`, on Linux Debian and derivatives.
 
 To quickly build the daemon executable, use the `make` or `cargo build --release` command:
@@ -51,12 +53,16 @@ $ cargo build --release
    Compiling foreign-types-macros v0.1.0
    Compiling serde_derive v1.0.92
    Compiling foreign-types v0.4.0
-   Compiling rVRRPd v0.1.2 (/home/e3prom/rVRRPd)
+   Compiling rVRRPd v0.1.3 (/home/e3prom/rVRRPd)
     Finished release [optimized] target(s) in 9.62s
 ```
 
 Then install the `rvrrpd` executable on your system by entering the `make install` command.
 
+# Binaries
+You can also run `rvrrpd` using pre-compiled binaries available in the [release](https://github.com/e3prom/rVRRPd/releases) page. These binaries are stable enough to be used in production, however if you need the latest features, please use the sources from the Master branch instead.
+
+# Running
 Before running the VRRP daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
 
 See below for an example of a virtual router running on an Ethernet interface with password authentication and preemption enabled:
@@ -66,6 +72,7 @@ pid = "/var/tmp/rvrrpd.pid"
 working_dir = "/var/tmp"
 main_log = "/var/tmp/rvrrpd.log"
 error_log = "/var/tmp/rvrrpd-error.log"
+client_api = "http"
 
 [[vrouter]]
 group = 1
@@ -80,16 +87,21 @@ vifname = "vrrp0"
 auth_type = "rfc2338-simple"
 auth_secret = "thissecretnolongeris"
 
-
 [protocols]
     [[protocols.static]]
     route = "0.0.0.0"
     mask = "0.0.0.0"
     nh = "10.240.0.254"
+
+[api]
+    tls = false
+    host = "0.0.0.0:7080"
+    users = [ "{{SHA256}}admin:0:1eb7ac761a1201f9:095820afab9855b1d999b35a82d896df1461d574c43346d56856f29239bf483f" ]
 ```
 
 The above configuration do the following:
  * Starts the daemon in foreground mode with a debug level of `5` (extensive).
+ * Enable the Client API with the `http` listener (the later listen by default on tcp/7080).
  * Runs one virtual-router with group id `1` on interface `ens192.900`, with the below parameters:
    * Uses the virtual IP address `10.100.100.1`.
    * Is configured with the highest priority of `254`.
@@ -101,8 +113,10 @@ The above configuration do the following:
    * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.
+* The Client API only authorizes queries from users listed in the `users` list of the `[api]` section.
+  * You can generate users passwords lines using the [`rvrrpd-pw`](https://github.com/e3prom/rVRRPd/tree/client-api/utils/rvrrpd-pw) utility.
 
-Finally run the binary executable you just built using the command-line parameter `-m1`, to start the daemon in foreground mode:
+Finally run the executable using the command-line parameter `-m1`, to start the daemon in foreground mode:
 ```bash
 $ sudo rvrrpd -m1 -c conf/rvrrpd.conf
 Starting rVRRPd
@@ -112,17 +126,17 @@ Starting rVRRPd
 Your virtual router will now listen for VRRP packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
 
 # Donation
-Help us by donating to the project. Every penny will directly cover the development costs of `rVRRPd`, which includes a lot of coffee, the virtual machines used to run the tests and the interoperability labs, and the bare-metal servers powering them.
+Help us by donating to the project. Every penny will directly cover the development costs of `rVRRPd`, which range from coffee to the bare-metal servers powering the interporability and testing labs.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
 You can donate by Paypal using the above button, or by using a crypto currency listed below:
 
-| Crypto Currency     | Wallet Address                                           | More (e,g. memo id) |
-| ------------------- | -------------------------------------------------------- | ------------------- |
-| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |                     |
-| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |                     |
-| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 3006351358          |
+| Crypto Currency     | Wallet Address                                           | Memo ID    |
+| ------------------- | -------------------------------------------------------- | ---------- |
+| Bitcoin (BTC)       | 3Pz7PQk5crAABg2MsR6PVfUxGzq2MmPd2i                       |            |
+| Etherum (ETH)       | 0x0686Dd4474dAA1181Fc3391035d22C8e0D2dA058               |            |
+| Stellar Lumen (XLM) | GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37 | 3006351358 |
 
 
 # Support
