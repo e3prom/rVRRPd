@@ -26,8 +26,8 @@
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
  * Uses Berkeley Packet Filters Sockets (`BPF`) _(FreeBSD)_
  * Supports BPF Linux Socket Filters (_Linux_)
- * Provides an HTTP Client Application Programming Interface (API)
-   * Supports plain-text HTTP or SSL/TLS (HTTPS=
+ * Provides a RESTful Client API
+   * Runs plain-text HTTP or HTTPS (SSL/TLS)
 
 # Development
 This project is still in **_active development_**, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as P0 or P1 authentication).
@@ -94,6 +94,7 @@ auth_secret = "thissecretnolongeris"
     nh = "10.240.0.254"
 
 [api]
+    tls = false
     host = "0.0.0.0:7080"
     users = [ "{{SHA256}}admin:0:1eb7ac761a1201f9:095820afab9855b1d999b35a82d896df1461d574c43346d56856f29239bf483f" ]
 ```
@@ -112,7 +113,7 @@ The above configuration do the following:
    * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.
-* The Client API only authorize queries from users listed in the `users` list under the `[api]` section.
+* The Client API only authorizes queries from users listed in the `users` list of the `[api]` section.
   * You can generate users passwords lines using the [`rvrrpd-pw`](https://github.com/e3prom/rVRRPd/tree/client-api/utils/rvrrpd-pw) utility.
 
 Finally run the executable using the command-line parameter `-m1`, to start the daemon in foreground mode:
