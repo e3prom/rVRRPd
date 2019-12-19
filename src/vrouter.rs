@@ -995,9 +995,12 @@ impl Parameters {
         self.protocols.clone()
     }
     // ifmac() getter
-    #[cfg(target_os = "linux")]
     pub fn ifmac(&self) -> [u8; 6] {
-        self.ifmac
+        if cfg!(target_os = "linux") {
+            self.ifmac
+        } else {
+            [0, 0, 0, 0, 0, 0]
+        }
     }
     // set_ifmac() setter
     #[cfg(target_os = "linux")]
@@ -1015,9 +1018,12 @@ impl Parameters {
         &self.iftype
     }
     // vif_name() getter
-    #[cfg(target_os = "linux")]
     pub fn vifname(&self) -> String {
-        self.vif_name.clone()
+        if cfg!(target_os = "linux") {
+            self.vif_name.clone()
+        } else {
+            self.interface.clone()
+        }
     }
     // set_vif_name() setter
     #[cfg(target_os = "linux")]

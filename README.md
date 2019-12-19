@@ -41,6 +41,7 @@ The development roadmap for the upcoming `0.2.0` release can be found [here](htt
  * At least one Ethernet interface, see [`conf/rvrrpd.conf`](conf/rvrrpd.conf) for a basic configuration example.
  * Root privileges, required to access raw sockets, configure interfaces and to add routes.
  * The [`libnl-3`](https://www.infradead.org/~tgr/libnl/) and `libnl-route-3` libraries for accessing the netlink interface (Linux).
+ * The `libssl-dev` package for OpenSSL development headers files.
 
 # Build from sources
 To quickly build a development version of [`rVRRPd`](https://github.com/e3prom/rVRRPd), first make sure you have the **latest** version of [`Cargo`](https://doc.rust-lang.org/cargo/) installed. The recommended steps are to first [install](https://doc.rust-lang.org/cargo/getting-started/installation.html) Cargo, then the GNU Compiler Collection (GCC) toolchain and lastly the `libnl-3` development packages (including headers files), namely `libnl-3-dev` and `libnl-route-3-dev`, on Linux Debian and derivatives.
