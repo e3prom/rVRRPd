@@ -26,7 +26,7 @@
  * Supports MAC-based Virtual LAN interface (`macvlan`) _(Linux)_
  * Uses Berkeley Packet Filters Sockets (`BPF`) _(FreeBSD)_
  * Supports BPF Linux Socket Filters (_Linux_)
- * Provides a RESTful Client API
+ * Provides a Client Application Programming Interface (API)
    * Runs plain-text HTTP or HTTPS (SSL/TLS)
 
 # Development
@@ -64,6 +64,7 @@ Then install the `rvrrpd` executable on your system by entering the `make instal
 You can also run `rvrrpd` using pre-compiled binaries available in the [release](https://github.com/e3prom/rVRRPd/releases) page. These binaries are stable enough to be used in production, however if you need the latest features, please use the sources from the Master branch instead.
 
 # Running
+### Configuring
 Before running the VRRP daemon, copy the example configuration file at [`conf/rvrrpd.conf`](conf/rvrrpd.conf) to the default configuration file path `/etc/rvrrpd/rvrrpd.conf`. Then use your favorite text editor to configure the virtual router(s) to your needs.
 
 See below for an example of a virtual router running on an Ethernet interface with password authentication and preemption enabled:
@@ -97,7 +98,7 @@ auth_secret = "thissecretnolongeris"
 [api]
     tls = false
     host = "0.0.0.0:7080"
-    users = [ "{{SHA256}}admin:0:1eb7ac761a1201f9:095820afab9855b1d999b35a82d896df1461d574c43346d56856f29239bf483f" ]
+    users = [ "{{SHA256}}admin:0:1eb7ac761a1201f9:095820af..." ]
 ```
 
 The above configuration do the following:
@@ -114,8 +115,10 @@ The above configuration do the following:
    * Set authentication to the [`RFC2338`]'s (https://tools.ietf.org/html/rfc2338) `Simple Password` authentication method.
    * Set the secret key (or password) to be shared between the virtual routers.
 * When master, install a static default route with a next-hop of `10.240.0.254`.
-* The Client API only authorizes queries from users listed in the `users` list of the `[api]` section.
-  * You can generate users passwords lines using the [`rvrrpd-pw`](https://github.com/e3prom/rVRRPd/tree/client-api/utils/rvrrpd-pw) utility.
+* The Client API only authorizes queries from the users listed in the `users` list under the `[api]` section. The users must authenticate prior to accessing the virtual router's information.
+  * You can generate users passwords hashes using the [`rvrrpd-pw`](https://github.com/e3prom/rVRRPd/tree/client-api/utils/rvrrpd-pw) utility.
+
+### Starting the daemon
 
 Finally run the executable using the command-line parameter `-m1`, to start the daemon in foreground mode:
 ```bash
@@ -125,6 +128,39 @@ Starting rVRRPd
 ```
 
 Your virtual router will now listen for VRRP packets and will take the `Master` or `Backup` role. If the router owns the virtual IP address, it will automatically take the `Master` role with a priority of `255`.
+
+### Querying the Client API
+You can get running information directly from the VRRP router using the HTTP Client API, but first you must authenticate using a `POST` request to the `auth/` path. The below example shows how to authenticate to the daemon running on `10.0.0.1`, using curl:
+```bash
+$ curl -k -c /tmp/rvrrpd-api-cookie -d "user=admin passwd=banana" -X POST https://10.0.0.1:7080/auth
+```
+
+The above command will send a POST request to the API, and if successful will store the resulting session cookie to `/tmp/rvrrpd-api-cookie`. Once authenticated, you can query the router for the current VRRP running information by sending a `GET` request to `run/vrrp`:
+```bash
+$ curl -k -s -b /tmp/rvrrpd-api-cookie -X GET https://10.0.0.1:7080/run/vrrp | jq
+```
+
+You should get a JSON formatted answer like below:
+```json
+[
+  {
+    "virtual_ip": "10.100.100.1",
+    "group": 1,
+    "interface": "standby1",
+    "priority": 254,
+    "preempt": true,
+    "state": "Master"
+  },
+  {
+    "virtual_ip": "10.100.101.1",
+    "group": 2,
+    "interface": "standby2",
+    "priority": 254,
+    "preempt": true,
+    "state": "Master"
+  }
+]
+```
 
 # Donation
 Help us by donating to the project. Every penny will directly cover the development costs of `rVRRPd`, which range from coffee to the bare-metal servers powering the interporability and testing labs.
