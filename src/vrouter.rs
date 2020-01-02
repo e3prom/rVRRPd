@@ -177,7 +177,15 @@ impl VirtualRouter {
     pub fn set_states(&mut self, s: fsm::States) {
         self.states = s;
     }
-
+    // current_state() method
+    pub fn current_state(&self) -> &str {
+        match self.states {
+            fsm::States::Master => "Master",
+            fsm::States::Backup => "Backup",
+            fsm::States::Down => "Down",
+            fsm::States::Init => "Init",
+        }
+    }
     // send_advertisement() method
     /// Send a VRRP ADVERTISEMENT message
     pub fn send_advertisement(&self, fd: i32, debug: &Verbose) -> io::Result<()> {

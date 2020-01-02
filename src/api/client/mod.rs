@@ -193,11 +193,11 @@ pub struct ResponseVRRPAttrExt {
     virtual_ip: String,
     group: u8,
     interface: String,
+    vif: String,
     priority: u8,
     preempt: bool,
     state: String,
     auth_type: u8,
-    vif_name: String,
     interface_hwaddress: String,
     advert_interval: u8,
     masterdown_interval: f32,
@@ -394,7 +394,12 @@ fn capi_req_run_vrrp_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Vec<ResponseV
         let attrs = ResponseVRRPAttr {
             virtual_ip: vro.parameters.attr_vip(),
             group: vro.parameters.vrid(),
-            interface: vro.parameters.interface(),
+            interface: {
+                match vro.current_state() {
+                    "Master" => vro.parameters.vifname(),
+                    _ => vro.parameters.interface(),
+                }
+            },
             priority: vro.parameters.prio(),
             preempt: vro.parameters.preempt(),
             state: vro.states.states(),
@@ -428,7 +433,12 @@ fn capi_req_run_vrrp_grp(
         let attrs = ResponseVRRPAttr {
             virtual_ip: vr.parameters.attr_vip(),
             group: vr.parameters.vrid(),
-            interface: vr.parameters.interface(),
+            interface: {
+                match vr.current_state() {
+                    "Master" => vr.parameters.vifname(),
+                    _ => vr.parameters.interface(),
+                }
+            },
             priority: vr.parameters.prio(),
             preempt: vr.parameters.preempt(),
             state: vr.states.states(),
@@ -461,12 +471,22 @@ fn capi_req_run_vrrp_grp_intf(
             let attrs = ResponseVRRPAttrExt {
                 virtual_ip: vr.parameters.attr_vip(),
                 group: vr.parameters.vrid(),
-                interface: vr.parameters.interface(),
+                interface: {
+                    match vr.current_state() {
+                        "Master" => vr.parameters.vifname(),
+                        _ => vr.parameters.interface(),
+                    }
+                },
+                vif: {
+                    match vr.current_state() {
+                        "Master" => vr.parameters.interface(),
+                        _ => vr.parameters.vifname(),
+                    }
+                },
                 priority: vr.parameters.prio(),
                 preempt: vr.parameters.preempt(),
                 state: vr.states.states(),
                 auth_type: vr.parameters.authtype(),
-                vif_name: vr.parameters.vifname(),
                 interface_hwaddress: format!(
                     "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
                     vr.parameters.ifmac()[0],
