@@ -459,7 +459,11 @@ fn capi_req_run_vrrp_grp_intf(
     // find a virtual router matching the vrid (gid) and interface (intf)
     let r = vrs.iter().find(|&vr| {
         let vr = vr.read().unwrap();
-        (vr.parameters.vrid() == gid) && (vr.parameters.interface() == intf)
+        if vr.current_state() == "Master" {
+            (vr.parameters.vrid() == gid) && (vr.parameters.vifname() == intf)
+        } else {
+            (vr.parameters.vrid() == gid) && (vr.parameters.interface() == intf)
+        }
     });
 
     // check if the result is a found vr
