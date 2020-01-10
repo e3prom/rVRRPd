@@ -10,4 +10,7 @@ Cargo.lock
 **/*.rs.bk
 
 # local configuration files
-*.local.conf
+*.local.con
+
+# documentation
+docs/_build
