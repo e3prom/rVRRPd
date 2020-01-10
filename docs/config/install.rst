@@ -35,8 +35,8 @@ a stable release of the daemon and its utilities:
 
 .. _dependencies:
 
-Build Dependencies
-^^^^^^^^^^^^^^^^^^
+Building Dependencies
+^^^^^^^^^^^^^^^^^^^^^
 To build **rVRRPd** from source you must have several programs and libraries installed on your system (preferrably system-wide):
  * Rust `Cargo <https://doc.rust-lang.org/cargo/getting-started/installation.html>`_ (v1.33.0 or later), \
    to build the project and its related dependencies (crates).

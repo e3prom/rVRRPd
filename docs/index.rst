@@ -68,7 +68,7 @@ responses.
    :maxdepth: 2
 
    api/intro
-   api/config
+   api/reference
    api/examples
 
 Additional resources

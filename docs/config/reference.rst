@@ -3,7 +3,6 @@
 Configuration Reference
 =======================
 
-
 General Directives
 ------------------
 
