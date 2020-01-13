@@ -9,7 +9,7 @@ General Directives
 debug
 ^^^^^
     :Description: The verbose or debugging level.
-    :Value type: decimal
+    :Value type: Decimal
     :Default: 0
 
     The ``debug`` directive sets the debugging (or verbosity) level
@@ -25,7 +25,7 @@ debug
 time_zone
 ^^^^^^^^^
     :Description: The timestamps reference time zone
-    :Value type: string
+    :Value type: String
     :Default: local
 
     The ``time_zone`` directive sets the reference time zone for
@@ -41,7 +41,7 @@ time_zone
 time_format
 ^^^^^^^^^^^
     :Description: The timestamps time format
-    :Value type: string
+    :Value type: String
     :Default: disabled
 
     The ``time_format`` directive sets the reference time format for
@@ -50,13 +50,13 @@ time_format
     Possible values are:
         * ``disabled`` for no particular time format (use the default
           time format)
-        * ``short`` for a shorthened, more concise time format
+        * ``short`` for a shortened, more concise time format
         * ``rfc2822`` for the standard `RFC2822 <https://tools.ietf.org/html/rfc2822>`_, Internet Time Format
 
 pid
 ^^^
     :Description: The daemon's PID file path
-    :Value type: string
+    :Value type: String
     :Default: /var/run/rvrrpd.pid
 
     The ``pid`` directive sets the full or relative path to the daemon's
@@ -65,7 +65,7 @@ pid
 working_dir
 ^^^^^^^^^^^
     :Description: The daemon's working directory
-    :Value type: string
+    :Value type: String
     :Default: /tmp
 
     The ``working_dir`` directive sets the daemon's working directory.
@@ -74,7 +74,7 @@ working_dir
 main_log
 ^^^^^^^^
     :Description: Path to the daemon's main log file
-    :Value type: string
+    :Value type: String
     :Default: /var/log/rvrrpd.log
 
     The ``main_log`` directive sets the path to the daemon's main log file.
@@ -93,7 +93,7 @@ error_log
 client_api
 ^^^^^^^^^^
     :Description: Client API interface type
-    :Value type: string
+    :Value type: String
     :Default: http
 
     The ``client_api`` directive sets the Client API interface type.
@@ -111,7 +111,7 @@ Virtual Routers Directives
 group
 ^^^^^^
     :Description: Virtual Router Group ID (VRID)
-    :Value type: integer
+    :Value type: Integer
     :Default: *none*
 
     The ``group`` directive sets the VRRP group id or virtual-router id (VRID).
@@ -124,7 +124,7 @@ group
 interface
 ^^^^^^^^^
     :Description: Interface to run VRRP on
-    :Value type: string
+    :Value type: String
     :Default: *none*
 
     The ``interface`` directive sets the VRRP virtual-router's interface.
@@ -133,7 +133,7 @@ interface
 vip
 ^^^
     :Description: Virtual IP Address
-    :Value type: string
+    :Value type: String
     :Default: *none*
 
     The ``vip`` directive sets the VRRP standby address or virtual-router
@@ -142,7 +142,7 @@ vip
 priority
 ^^^^^^^^
     :Description: Virtual Router Priority
-    :Value type: integer
+    :Value type: Integer
     :Default: 100
 
     The ``priority`` directive sets the virtual-router VRRP priority.
@@ -155,7 +155,7 @@ priority
 preemption
 ^^^^^^^^^^
     :Description: Preemption Support
-    :Value type: boolean
+    :Value type: Boolean
     :Default: false
 
     The ``preemption`` directive sets if preemption is enabled. By default,
@@ -172,7 +172,7 @@ preemption
 auth_type
 ^^^^^^^^^
     :Description: Authentication Type
-    :Value type: string
+    :Value type: String
     :Default: *none*
 
     The ``auth_type`` directive sets the VRRP group's authentication type.
@@ -184,17 +184,17 @@ auth_type
     Valid values are:
         * ``rfc2338-simple`` for `RFC2338 <https://tools.ietf.org/html/rfc2338>`_
           Simple Password Authentication.
-        * ``p0-t8-sha256`` for prioprietary P0 Authentication. Uses a
-          SHA256 HMAC of the VRRP messsages. This type provides both messages
+        * ``p0-t8-sha256`` for proprietary P0 Authentication. Uses a
+          SHA256 HMAC of the VRRP messages. This type provides both messages
           authentication and integrity.
-        * ``p1-t8-shake256`` for prioprietary P1 Authentication. Uses the
+        * ``p1-t8-shake256`` for proprietary P1 Authentication. Uses the
           SHAKE256 Extendable-Output Function (XOF). This type provides both
           messages authentication and integrity.
 
 auth_secret
 ^^^^^^^^^^^
     :Description: Authentication Secret
-    :Value type: string
+    :Value type: String
     :Default: *none*
 
     The ``auth_secret`` directive sets the VRRP group's authentication secret
@@ -209,7 +209,7 @@ auth_secret
 rfc3768
 ^^^^^^^
     :Description: RFC3768 Compatibility Warning Flag
-    :Value type: boolean
+    :Value type: Boolean
     :Default: true
 
     The ``rfc3768`` directive allow you to force the compatibility flag.
@@ -234,7 +234,7 @@ rfc3768
 netdrv
 ^^^^^^
     :Description: Network Driver
-    :Value type: string
+    :Value type: String
     :Default: ioctl
 
     The ``netdrv`` directive specify which network driver to uses for the
@@ -262,7 +262,7 @@ netdrv
 vifname
 ^^^^^^^^
     :Description: Virtual Interface Name
-    :Value type: string
+    :Value type: String
     :Default: standby\<*group-id*\>
 
     The ``vifname`` directive sets the virtual-router's virtual interface name.
@@ -273,7 +273,7 @@ vifname
 socket_filter
 ^^^^^^^^^^^^^
     :Description: Socket Filter Support
-    :Value type: string
+    :Value type: String
     :Default: true
 
     The ``socket_filter`` directive allow you to enable or disable the
@@ -296,7 +296,7 @@ API Directives
 users
 ^^^^^
     :Description: API Users
-    :Value type: list of strings
+    :Value type: List of Strings
     :Default: *none*
 
     The ``users`` directive lists the user accounts authorized for the
@@ -306,7 +306,7 @@ users
 secret
 ^^^^^^
     :Description: API Secret
-    :Value type: string
+    :Value type: String
     :Default: 128-bits random number
 
     The ``secret`` directive sets the API secret. This secret is used for
@@ -331,7 +331,7 @@ secret
 host
 ^^^^
     :Description: Listening Host
-    :Value type: string
+    :Value type: String
     :Default: 0.0.0.0:7080
 
     The ``host`` directive sets the IP address(es) and port for the
@@ -345,7 +345,7 @@ host
 tls
 ^^^
     :Description: Transport Layer Security (TLS) Support
-    :Value type: boolean
+    :Value type: Boolean
     :Default: false
 
     The ``tls`` directive allow you to enable or disable support for

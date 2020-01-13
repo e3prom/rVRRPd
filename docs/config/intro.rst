@@ -21,7 +21,7 @@ use the Client API extensively.
 The **rVRRPd** daemon runs one ``virtual-router`` per ``interface, group``
 pair, which means you can configure the same VRRP groups id or
 ``virtual-router`` id across several physical interfaces. The daemon can
-scale to hundreads if not thousands of active virtual-routers if the CPU
+scale to hundreds if not thousands of active virtual-routers if the CPU
 and memory resources permit.
 
 The initial :ref:`developer <developers>` of **rVRRPd** has chosen to build the daemon
@@ -41,7 +41,7 @@ without the hassles commonly found in commercial solutions.
 
 This project wouldn't be live without the dedication of its developers, and
 the open source community. Any `contributions <https://github.com/e3prom/rVRRPd>`_
-are greatly welcome, and will help us developping new features and a more
+are greatly welcome, and will help us developing new features and a more
 stable and secure implementation.
 
 .. _developers:

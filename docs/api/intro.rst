@@ -34,7 +34,7 @@ can take over a Master router.
 To query **rVRRPd** for information, such as the current role of a
 running VRRP virtual router, a simple HTTP GET request can be made
 to a specific resource path. If the query can be honored, the API
-will return a `JSON <https://en.wikipedia.org/wiki/JSON>`_ formated
+will return a `JSON <https://en.wikipedia.org/wiki/JSON>`_ formatted
 body response with all the attributes and values corresponding to
 your query.
 

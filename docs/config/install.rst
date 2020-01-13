@@ -37,7 +37,7 @@ a stable release of the daemon and its utilities:
 
 Building Dependencies
 ^^^^^^^^^^^^^^^^^^^^^
-To build **rVRRPd** from source you must have several programs and libraries installed on your system (preferrably system-wide):
+To build **rVRRPd** from source you must have several programs and libraries installed on your system (preferably system-wide):
  * Rust `Cargo <https://doc.rust-lang.org/cargo/getting-started/installation.html>`_ (v1.33.0 or later), \
    to build the project and its related dependencies (crates).
  * The `OpenSSL <https://www.openssl.org/>`_ development headers
@@ -126,7 +126,7 @@ using the ``-m1`` and ``-m2`` switches, respectively.
 
 .. warning::
 
-  The daemon requires root privileges to run succesfully. The daemon must
+  The daemon requires root privileges to run successfully. The daemon must
   have access to raw sockets, and to privileged kernel functions to create
   virtual interfaces, IP addresses and routes.
 
@@ -142,7 +142,7 @@ Binary Package Installation
 ---------------------------
 **rVRRPd** could also be installed directly from binaries packages.
 This is the recommended way of installing the VRRP daemon for production uses
-as we are testing every executables for stability prior to shipping the
+as we are testing every executable for stability prior to shipping the
 releases to the public.
 
 Getting Binary Archives
@@ -198,7 +198,7 @@ Running
 ^^^^^^^
 .. warning::
 
-  The daemon requires root privileges to run succesfully. The daemon must
+  The daemon requires root privileges to run successfully. The daemon must
   have access to raw sockets, and to privileged kernel functions to create
   virtual interfaces, IP addresses and routes.
 

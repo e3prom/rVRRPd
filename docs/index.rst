@@ -16,16 +16,16 @@ Networking (SDN) applications.
 
 Features
 --------
-rVRRPd supports a number of innovative features, some of which allow for a more efficient and secure operation of the protocol:
+rVRRPd supports a number of innovative features:
  - Secure software architecture leveraging the `Rust <https://www.rust-lang.org/>`_ programming language
- - Highly scalable; up to several hundreads of concurrent VRRP groups
+ - Highly scalable; up to several hundreds of concurrent VRRP groups
  - Supports standard `RFC3768 <https://tools.ietf.org/html/rfc3768>`_ and \
    `RFC2338 <https://tools.ietf.org/html/rfc2338>`_, ``Simple Password`` authentication
  - Supports additional :ref:`proprietary authentication
    <config/reference:auth_type>` methods
  - Supports multiple operating systems and processors architectures
  - Provides a RESTful Client Application Programming Interface (API)
- - Provides a plaintext HTTP or SSL/TLS HTTPS interface to the Client API
+ - Provides a plain-text HTTP or SSL/TLS HTTPS interface to the Client API
  - Leverages additional features such as ``macvlan`` and \
    ``Linux Socket Filters``
 
@@ -74,5 +74,3 @@ responses.
 Additional resources
 --------------------
 * `Github Repository <https://github.com/e3prom/rVRRPd>`_
-* :ref:`genindex`
-* :ref:`search`

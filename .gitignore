@@ -12,5 +12,8 @@ Cargo.lock
 # local configuration files
 *.local.con
 
+# editors
+.vscode/
+
 # documentation
 docs/_build
