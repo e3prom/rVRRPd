@@ -229,8 +229,6 @@ pub fn capi_thread_loop(
     cfg: config::CConfig,
     vrs: Vec<Arc<RwLock<VirtualRouter>>>,
 ) {
-    eprintln!("Upstream Client API thread now runs!");
-
     loop {
         // declare empty response
         let resp;

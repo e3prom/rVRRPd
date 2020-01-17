@@ -82,7 +82,7 @@ main_log
 error_log
 ^^^^^^^^^
     :Description: Path to the daemon's error log file
-    :Value type: string
+    :Value type: String
     :Default: disabled
 
     The ``error_log`` directive sets the path to the daemon's error log file.
@@ -361,7 +361,7 @@ tls
 tls_key
 ^^^^^^^
     :Description: SSL/TLS Key File
-    :Value type: string
+    :Value type: String
     :Default: /etc/rvrrpd/ssl/key.pem
 
     The ``tls_key`` directive allow you to set the full or relative path
@@ -370,7 +370,7 @@ tls_key
 tls_cert
 ^^^^^^^^
     :Description: SSL/TLS Certificate File
-    :Value type: string
+    :Value type: String
     :Default: /etc/rvrrpd/ssl/cert.pem
 
     The ``tls_key`` directive allow you to set the full or relative path
