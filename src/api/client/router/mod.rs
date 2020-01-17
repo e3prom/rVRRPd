@@ -47,7 +47,7 @@ extern crate mime;
 
 // cookie
 extern crate cookie;
-use cookie::{Cookie, CookieJar};
+use cookie::{Cookie, CookieJar, SameSite};
 
 // serde
 use serde::Serialize;

@@ -26,6 +26,7 @@ pub struct SessionToken {
     ts_valid: u64,
     nonce: u64,
     token: String,
+    secure: bool,
 }
 
 /// SessionToken implementation
@@ -38,6 +39,7 @@ impl SessionToken {
             ts_valid: 0,
             nonce: 0,
             token: "null".to_string(),
+            secure: false,
         }
     }
     // set_user() setter
@@ -83,6 +85,10 @@ impl SessionToken {
         let token = gen_hmac_string(&utn, secret);
         // set the hashed token
         self.token = token;
+        // set the token's 'secure' flag if tls is enabled
+        if cfg.api.as_ref().unwrap().tls() {
+            self.secure = true;
+        }
         // confirm completion
         Ok(())
     }
@@ -101,6 +107,10 @@ impl SessionToken {
     // token() method
     pub fn token(&self) -> String {
         self.token.clone()
+    }
+    // secure() method
+    pub fn secure(&self) -> bool {
+        self.secure
     }
     // validate() method
     // check the integrity of the token

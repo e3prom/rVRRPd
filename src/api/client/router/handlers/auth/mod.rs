@@ -45,18 +45,28 @@ pub fn client(mut state: State) -> Box<HandlerFuture> {
                             // authentication succeeded
                             Some(st) => {
                                 // build cookies
-                                let cookie_user = Cookie::build(COOKIE_USER, st.user())
-                                    .http_only(true)
-                                    .finish();
-                                let cookie_ts = Cookie::build(COOKIE_TIMESTAMP, st.ts_since())
-                                    .http_only(true)
-                                    .finish();
-                                let cookie_nonce = Cookie::build(COOKIE_NONCE, st.nonce())
-                                    .http_only(true)
-                                    .finish();
-                                let cookie_token = Cookie::build(COOKIE_TOKEN, st.token())
-                                    .http_only(true)
-                                    .finish();
+                                let mut cookie_user =
+                                    Cookie::build(COOKIE_USER, st.user()).http_only(true);
+                                let mut cookie_ts =
+                                    Cookie::build(COOKIE_TIMESTAMP, st.ts_since()).http_only(true);
+                                let mut cookie_nonce =
+                                    Cookie::build(COOKIE_NONCE, st.nonce()).http_only(true);
+                                let mut cookie_token =
+                                    Cookie::build(COOKIE_TOKEN, st.token()).http_only(true);
+                                // add 'secure' attribute if TLS is enabled
+                                if st.secure() {
+                                    cookie_user = cookie_user.secure(true);
+                                    cookie_ts = cookie_ts.secure(true);
+                                    cookie_nonce = cookie_nonce.secure(true);
+                                    cookie_token = cookie_token.secure(true);
+                                }
+                                // add 'SameSite' attribute and finish the cookies
+                                let cookie_user = cookie_user.same_site(SameSite::Strict).finish();
+                                let cookie_ts = cookie_ts.same_site(SameSite::Strict).finish();
+                                let cookie_nonce =
+                                    cookie_nonce.same_site(SameSite::Strict).finish();
+                                let cookie_token =
+                                    cookie_token.same_site(SameSite::Strict).finish();
                                 // create an empty response
                                 let mut resp = create_empty_response(&state, StatusCode::OK);
                                 // append cookies to response
@@ -73,10 +83,7 @@ pub fn client(mut state: State) -> Box<HandlerFuture> {
                             }
                             // no token has been issued
                             None => {
-                                let resp = create_empty_response(
-                                    &state,
-                                    StatusCode::UNAUTHORIZED,
-                                );
+                                let resp = create_empty_response(&state, StatusCode::UNAUTHORIZED);
                                 return future::ok((state, resp));
                             }
                         }
