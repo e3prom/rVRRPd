@@ -67,14 +67,13 @@ We will now clone the source from our official `github repository <https://githu
 Switching to Stable Release
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We move to the ``rvrrpd`` directory just created by git and we will
-switch to the latest stable release (here version ``0.1.2``):
+switch to the latest stable release (here version ``0.1.3``):
 
 .. code-block:: console
 
     $ cd rvrrpd
-    $ git checkout tags/0.1.2
+    $ git checkout tags/0.1.3
     [...]
-    HEAD is now at e604562... Added more cond. compilation for FreeBSD
 
 Invoking the Build Process
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -154,7 +153,7 @@ You can download directly from the command-line using the ``wget`` utility:
 
 .. code-block:: console
 
-    $ wget "https://github.com/e3prom/rVRRPd/releases/download/0.1.2/rvrrpd-0.1.2-linux-amd64.tar.xz"
+    $ wget "https://github.com/e3prom/rVRRPd/releases/download/0.1.3/rvrrpd-0.1.3-linux-amd64.tar.xz"
 
 Verifying the Archives Integrity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -163,9 +162,9 @@ to ensure it has not be tempered by a third party.
 
 .. code-block:: console
 
-  $ wget "https://github.com/e3prom/rVRRPd/releases/download/0.1.2/SHA256SUMS"
+  $ wget "https://github.com/e3prom/rVRRPd/releases/download/0.1.3/SHA256SUMS"
   $ sha256sum --check SHA256SUMS
-  rvrrpd-0.1.2-linux-amd64.tar.xz: OK
+  rvrrpd-0.1.3-linux-amd64.tar.xz: OK
 
 Unpacking Archives
 ^^^^^^^^^^^^^^^^^^
@@ -173,14 +172,14 @@ Untar the downloaded archive using ``tar``:
 
 .. code-block:: console
 
-    $ tar -xvf rvrrpd-0.1.2-linux-amd64.tar.xz
-    rvrrpd-0.1.2-linux-amd64/
-    rvrrpd-0.1.2-linux-amd64/README.md
-    rvrrpd-0.1.2-linux-amd64/conf/
-    rvrrpd-0.1.2-linux-amd64/conf/rvrrpd.conf
-    rvrrpd-0.1.2-linux-amd64/conf/rvrrpd.json.conf
-    rvrrpd-0.1.2-linux-amd64/rvrrpd
-    rvrrpd-0.1.2-linux-amd64/LICENSE
+    $ tar -xvf rvrrpd-0.1.3-linux-amd64.tar.xz
+    rvrrpd-0.1.3-linux-amd64/
+    rvrrpd-0.1.3-linux-amd64/README.md
+    rvrrpd-0.1.3-linux-amd64/conf/
+    rvrrpd-0.1.3-linux-amd64/conf/rvrrpd.conf
+    rvrrpd-0.1.3-linux-amd64/conf/rvrrpd.json.conf
+    rvrrpd-0.1.3-linux-amd64/rvrrpd
+    rvrrpd-0.1.3-linux-amd64/LICENSE
 
 Configuring
 ^^^^^^^^^^^^
@@ -189,7 +188,7 @@ created above:
 
 .. code-block:: console
 
-    $ cd rvrrpd-0.1.2-linux-amd64/
+    $ cd rvrrpd-0.1.3-linux-amd64/
 
 :ref:`Edit <config_example>` the sample configuration file in
 ``etc/rvrrpd.conf`` and run the daemon from the current directory:

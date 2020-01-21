@@ -104,6 +104,10 @@ client_api
             to the client API. It does include user authentication and
             a secure communication channel when SSL/TLS is enabled.
 
+.. versionadded:: 0.1.3
+
+   Directive added with Client API Support
+
 
 Virtual Routers Directives
 --------------------------
@@ -129,6 +133,25 @@ interface
 
     The ``interface`` directive sets the VRRP virtual-router's interface.
     Only Ethernet interfaces are supported.
+
+.. _if_type:
+
+iftype
+^^^^^^
+    :Description: Interface type
+    :Value type: String
+    :Default: *none*
+
+    The ``iftype`` directive sets the VRRP virtual-router's interface type.
+    By default, the daemon will directly work with the configured running
+    interface, and therefore may change its IP and/or MAC address(es).
+
+    Valid values are:
+        * ``macvlan`` Use a MAC-Based Virtual LAN interface.
+
+.. versionadded:: 0.1.1
+
+   Directive added with MAC-Based Virtual LAN Interface Support
 
 vip
 ^^^
@@ -270,6 +293,15 @@ vifname
     format, where ``group-id`` correspond to the virtual-router's VRRP group
     id or VRID.
 
+    .. note::
+
+        This directive is only used when virtual interface support is activated.
+        (e,g. by having the :ref:`iftype <if_type>` directive set to ``macvlan``).
+
+.. versionadded:: 0.1.1
+
+   Directive added with MAC-Based Virtual LAN Interface Support
+
 socket_filter
 ^^^^^^^^^^^^^
     :Description: Socket Filter Support
@@ -288,6 +320,10 @@ socket_filter
           kernel to filter out unwanted traffic not to be processed by
           the listening thread.
         * ``false`` for disabling support for socket filters.
+
+.. versionadded:: 0.1.2
+
+   Directive added with Linux Socket Filters Support
 
 
 API Directives

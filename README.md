@@ -36,7 +36,7 @@ This project is still in **_active development_**, and at this time, only suppor
 The development roadmap for the upcoming `0.2.0` release can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
 # Documentation
-You can access the latest documentation at [rvrrpd.rtfd.io](https://rvrrpd.rtfd.io).
+You can access the latest documentation at [https://rvrrpd.readthedocs.io/en/latest/](https://rvrrpd.readthedocs.io/en/latest/).
 
 # Support
-If you are experiencing any stability, security or interoperability isues, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
+If you are experiencing any stability, security or interoperability issues, feel free to open a [new issue](https://github.com/e3prom/rVRRPd/issues/new).
