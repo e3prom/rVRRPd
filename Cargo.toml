@@ -37,7 +37,7 @@ sha2 = "0.8"
 sha3 = "0.8"
 scrypt = "0.2"
 crossbeam = "0.7"
-gotham = { git = "https://github.com/gotham-rs/gotham" }
+gotham = { git = "https://github.com/gotham-rs/gotham", rev= "22e68d5f" }
 gotham_derive = "0.4.0"
 hyper = "0.12"
 mime = "0.3.14"
