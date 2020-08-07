@@ -1,7 +1,7 @@
 //! FreeBSD specific constants
 
 // libc
-use libc::{c_ulong, c_uint, c_int};
+use libc::{c_int, c_uint, c_ulong};
 
 // sockios, ioctls
 pub const BIOCGBLEN: c_ulong = 0x40044266;
@@ -18,8 +18,8 @@ pub const BIOCGRSIG: c_ulong = 0x40044272;
 pub const BIOCSRSIG: c_ulong = 0x80044273;
 pub const BIOCGHDRCMPLT: c_ulong = 0x40044274;
 pub const BIOCSHDRCMPLT: c_ulong = 0x80044275;
-pub const BIOCGSEESENT: c_ulong  = 0x40044276;
-pub const BIOCSSEESENT: c_ulong  = 0x80044277;
+pub const BIOCGSEESENT: c_ulong = 0x40044276;
+pub const BIOCSSEESENT: c_ulong = 0x80044277;
 pub const BIOCSDLT: c_ulong = 0x80044278;
 pub const SIOCGIFADDR: c_ulong = 0xc0206921;
 pub const SIOCAIFADDR: c_ulong = 0x8040691a;

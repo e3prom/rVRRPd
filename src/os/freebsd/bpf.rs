@@ -2,14 +2,14 @@
 use crate::*;
 
 // std
-use std::io;
 use std::convert::TryInto;
+use std::io;
 
 // libc
-use libc::{IF_NAMESIZE};
+use libc::IF_NAMESIZE;
 
 // ffi
-use std::ffi::{CString};
+use std::ffi::CString;
 
 // FreeBSD constants
 use crate::os::freebsd::constants::*;
@@ -32,10 +32,10 @@ pub struct bpf_ts {
 // bpf_xhdr structure
 #[repr(C)]
 pub struct bpf_xhdr {
-    pub bh_tstamp: bpf_ts,  // timestamp
-    pub bh_caplen: u32,     // length of captured pattern
-    pub bh_datalen: u32,    // length of packet
-    pub bh_hdrlen: u16,     // length of this structure + alignment padding
+    pub bh_tstamp: bpf_ts, // timestamp
+    pub bh_caplen: u32,    // length of captured pattern
+    pub bh_datalen: u32,   // length of packet
+    pub bh_hdrlen: u16,    // length of this structure + alignment padding
 }
 
 // bpf_open_device() function
@@ -52,8 +52,13 @@ pub fn bpf_open_device(debug: &Verbose) -> io::Result<(i32)> {
     buf.clone_from_slice(bpf_dev_slice);
 
     // open /dev/bpf device
-    print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF, format!("opening /dev/bpf device"));
-    let res = unsafe {libc::open(&buf as *const i8, libc::O_RDWR)};
+    print_debug(
+        debug,
+        DEBUG_LEVEL_MEDIUM,
+        DEBUG_SRC_BPF,
+        format!("opening /dev/bpf device"),
+    );
+    let res = unsafe { libc::open(&buf as *const i8, libc::O_RDWR) };
     if res >= 0 {
         return Ok(res);
     }
@@ -72,8 +77,13 @@ pub fn bpf_open_device(debug: &Verbose) -> io::Result<(i32)> {
         buf.clone_from_slice(bpf_dev_slice);
 
         // open bpf device
-        print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF, format!("opening /dev/bpf{} device", i));
-        let res = unsafe {libc::open(&buf as *const i8, libc::O_RDWR)};
+        print_debug(
+            debug,
+            DEBUG_LEVEL_MEDIUM,
+            DEBUG_SRC_BPF,
+            format!("opening /dev/bpf{} device", i),
+        );
+        let res = unsafe { libc::open(&buf as *const i8, libc::O_RDWR) };
 
         // check returned value
         // if negative, an error occured, continue
@@ -90,30 +100,39 @@ pub fn bpf_open_device(debug: &Verbose) -> io::Result<(i32)> {
 
 // bpf_bind_device() function
 //
-/// Bind BPF device to a physical interface 
+/// Bind BPF device to a physical interface
 pub fn bpf_bind_device(bpf_fd: i32, interface: &CString, debug: &Verbose) -> io::Result<()> {
     let ifname_slice = &mut [0u8; IF_NAMESIZE];
     for (i, b) in interface.as_bytes_with_nul().iter().enumerate() {
-        ifname_slice[i] = *b; 
+        ifname_slice[i] = *b;
     }
 
     // create Ifreq structure
     let ifbound = IfreqS {
         ifr_name: {
             let mut buf = [0u8; IF_NAMESIZE];
-            buf.clone_from_slice(ifname_slice); 
+            buf.clone_from_slice(ifname_slice);
             buf
-        }
+        },
     };
 
     // ioctl
-    print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
-        format!("binding BPF device with fd {} to interface {:?}", bpf_fd, interface)
+    print_debug(
+        debug,
+        DEBUG_LEVEL_MEDIUM,
+        DEBUG_SRC_BPF,
+        format!(
+            "binding BPF device with fd {} to interface {:?}",
+            bpf_fd, interface
+        ),
     );
     match unsafe { libc::ioctl(bpf_fd, BIOCSETIF, &ifbound) } {
         r if r >= 0 => Ok(()),
         e => {
-            eprintln!("error while binding BPF device, fd {}, error no: {}", bpf_fd, e);
+            eprintln!(
+                "error while binding BPF device, fd {}, error no: {}",
+                bpf_fd, e
+            );
             return Err(io::Error::last_os_error());
         }
     }
@@ -127,45 +146,65 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8], debug: &Verbose) -> io::Re
     // initialize local buf_len with current buffer size
     let buf_len = pkt_buf.len();
 
-    if buf_len == 0 { 
+    if buf_len == 0 {
         // get buffer length (ioctl)
         // actually ignoring returned value
-        match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len)} {
+        match unsafe { libc::ioctl(bpf_fd, BIOCGBLEN, &buf_len) } {
             e if e < 0 => {
-                eprintln!("error while getting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+                eprintln!(
+                    "error while getting buffer length on BPF device, fd {}, error no: {}",
+                    bpf_fd, e
+                );
                 return Err(io::Error::last_os_error());
             }
             s => {
-                print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
-                    format!("required buffer length for BPF device, fd {}, is: {} bytes", bpf_fd, s)
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_MEDIUM,
+                    DEBUG_SRC_BPF,
+                    format!(
+                        "required buffer length for BPF device, fd {}, is: {} bytes",
+                        bpf_fd, s
+                    ),
                 );
-                
             }
         };
-    } else {   
+    } else {
         // set buffer length (ioctl)
-        match unsafe { libc::ioctl(bpf_fd, BIOCSBLEN, &buf_len)} {
+        match unsafe { libc::ioctl(bpf_fd, BIOCSBLEN, &buf_len) } {
             e if e < 0 => {
-                eprintln!("error while setting buffer length on BPF device, fd {}, error no: {}", bpf_fd, e);
+                eprintln!(
+                    "error while setting buffer length on BPF device, fd {}, error no: {}",
+                    bpf_fd, e
+                );
                 return Err(io::Error::last_os_error());
             }
             _ => {
-                print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
-                    format!("buffer length for BPF device, fd {} set", bpf_fd)
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_MEDIUM,
+                    DEBUG_SRC_BPF,
+                    format!("buffer length for BPF device, fd {} set", bpf_fd),
                 );
             }
         };
-    } 
+    }
 
     // activate immediate mode (ioctl)
     match unsafe { libc::ioctl(bpf_fd, BIOCIMMEDIATE, &buf_len) } {
         e if e < 0 => {
-            eprintln!("error while setting immediate mode on BPF device, fd {}, error no: {}", bpf_fd, e);
+            eprintln!(
+                "error while setting immediate mode on BPF device, fd {}, error no: {}",
+                bpf_fd, e
+            );
             return Err(io::Error::last_os_error());
         }
         _ => {
-            print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
-                format!("immediate mode set on BPF device, fd {}", bpf_fd)
+            print_debug(
+                debug,
+                DEBUG_LEVEL_MEDIUM,
+                DEBUG_SRC_BPF,
+                format!("immediate mode set on BPF device, fd {}", bpf_fd),
             );
         }
     };
@@ -174,12 +213,21 @@ pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8], debug: &Verbose) -> io::Re
     let flag = 1;
     match unsafe { libc::ioctl(bpf_fd, BIOCSHDRCMPLT, &flag) } {
         e if e < 0 => {
-            eprintln!("error while setting ({}) header complete flag on BPF device, fd {}, error no: {}", flag, bpf_fd, e);
+            eprintln!(
+                "error while setting ({}) header complete flag on BPF device, fd {}, error no: {}",
+                flag, bpf_fd, e
+            );
             return Err(io::Error::last_os_error());
         }
         _ => {
-            print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
-                format!("header complete flag set to {} on BPF device, fd {}", flag, bpf_fd)
+            print_debug(
+                debug,
+                DEBUG_LEVEL_MEDIUM,
+                DEBUG_SRC_BPF,
+                format!(
+                    "header complete flag set to {} on BPF device, fd {}",
+                    flag, bpf_fd
+                ),
             );
         }
     };
@@ -195,17 +243,23 @@ pub fn bpf_set_promisc(bpf_fd: i32, debug: &Verbose) -> io::Result<()> {
     // set interface in promiscuous mode
     match unsafe { libc::ioctl(bpf_fd, BIOCPROMISC.into(), 0) } {
         e if e < 0 => {
-            eprintln!("error while setting promiscuous mode on BPF device, fd {}, error no: {}", bpf_fd, e);
+            eprintln!(
+                "error while setting promiscuous mode on BPF device, fd {}, error no: {}",
+                bpf_fd, e
+            );
             return Err(io::Error::last_os_error());
         }
         _ => {
-            print_debug(debug, DEBUG_LEVEL_MEDIUM, DEBUG_SRC_BPF,
-                format!("promiscuous mode set on BPF device, fd {}", bpf_fd)
+            print_debug(
+                debug,
+                DEBUG_LEVEL_MEDIUM,
+                DEBUG_SRC_BPF,
+                format!("promiscuous mode set on BPF device, fd {}", bpf_fd),
             );
             Ok(())
         }
     }
-} 
+}
 
 // bpf_wordalign() function
 //

@@ -1,11 +1,11 @@
 //! FreeBSD network support
 
 // libc
-use libc::{IF_NAMESIZE, c_int, c_short, c_uchar, ioctl, AF_INET};
+use libc::{c_int, c_short, c_uchar, ioctl, AF_INET, IF_NAMESIZE};
 
 // std
-use std::io;
 use std::ffi::CString;
+use std::io;
 
 // FreeBSD constants
 use crate::os::freebsd::constants::*;
@@ -16,10 +16,10 @@ use crate::os::drivers::Operation;
 // IfAliasReq Structure
 #[repr(C)]
 struct IfAliasReq {
-    ifr_name: [u8; IF_NAMESIZE],    // interface name
-    ifra_addr: int_sockaddr_in,        // IPv4 address
-    ifra_broadaddr: int_sockaddr_in,   // destination address
-    ifra_mask: int_sockaddr_in,        // netmask
+    ifr_name: [u8; IF_NAMESIZE],     // interface name
+    ifra_addr: int_sockaddr_in,      // IPv4 address
+    ifra_broadaddr: int_sockaddr_in, // destination address
+    ifra_mask: int_sockaddr_in,      // netmask
     ifra_vhid: c_int,
 }
 
@@ -30,11 +30,17 @@ struct int_sockaddr_in {
     sin_family: c_uchar,
     sin_port: c_short,
     sin_addr: [c_uchar; 12],
-} 
+}
 
 // set_ip_address() function
 /// Set IPv4 Address on given interface
-pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4], op: Operation) -> io::Result<()> {
+pub fn set_ip_address(
+    _fd: i32,
+    ifname: &CString,
+    ip: [u8; 4],
+    netmask: [u8; 4],
+    op: Operation,
+) -> io::Result<()> {
     // create a slice of mutable reference to array of 16 u8
     let ifname_slice = &mut [0u8; 16];
     // for every bytes/character in name of type Cstring, insert it into the above slice.
@@ -72,7 +78,7 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4],
                 let mut data = [0u8; 12];
                 data.clone_from_slice(ip_addr_slice);
                 data
-            }
+            },
         },
         ifra_broadaddr: int_sockaddr_in {
             sin_len: 0,
@@ -88,7 +94,7 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4],
                 let mut data = [0u8; 12];
                 data.clone_from_slice(ip_netmask_slice);
                 data
-            }
+            },
         },
         ifra_vhid: 0,
     };
@@ -102,16 +108,16 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4],
     // match given operation on IP address
     // see man 4 netintro
     match op {
-        Operation::Add => { 
+        Operation::Add => {
             // ioctl - set interface's IP address
             let res = unsafe { ioctl(fd, SIOCAIFADDR, &mut ifaddr) };
             if res < 0 {
                 return Err(io::Error::last_os_error());
             }
-        },
+        }
         Operation::Rem => {
             // ioctl - remove interface's IP address
-            let res = unsafe { ioctl(fd, SIOCDIFADDR,&mut ifaddr) };
+            let res = unsafe { ioctl(fd, SIOCDIFADDR, &mut ifaddr) };
             if res < 0 {
                 return Err(io::Error::last_os_error());
             }
@@ -119,4 +125,4 @@ pub fn set_ip_address(_fd: i32, ifname: &CString, ip: [u8; 4], netmask: [u8; 4],
     }
 
     Ok(())
-} 
+}
