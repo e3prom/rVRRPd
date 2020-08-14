@@ -7,19 +7,15 @@ use std::error::Error;
 use std::fmt;
 
 // clap
-extern crate clap;
 use clap::{App, Arg};
 
 // rand
-extern crate rand;
 use rand::prelude::Rng;
 
 // sha256
-extern crate sha2;
 use sha2::{Digest, Sha256};
 
 // scrypt
-extern crate scrypt;
 use scrypt::{scrypt_simple, ScryptParams};
 
 // MyError type
@@ -51,7 +47,7 @@ impl Error for MyError {
 // main() function
 fn main() {
     let matches = App::new("rVRRPd password utility")
-        .version("v0.1.0")
+        .version("v0.1.1")
         .author("Nicolas Chabbey <eprom@toor.si>")
         .about("Quick and easy password generation for rVRRPd")
         .arg(
@@ -80,9 +76,11 @@ fn main() {
                 .help("hashing algorithm (default: sha256)")
                 .index(3),
         )
-        .after_help("HASHING ALGS:\n\
+        .after_help(
+            "HASHING ALGS:\n\
         sha256\t\tSHA2 (256 bits)\n\
-        scrypt\t\tscrypt (interactive)\n")
+        scrypt\t\tscrypt (interactive)\n",
+        )
         .get_matches();
 
     let user = matches.value_of("user").unwrap();
@@ -136,7 +134,7 @@ fn gen_hashed_pw(user: &str, passwd: &str, alg: &str) -> Result<(), MyError> {
 
 /// gen_sha256_hash() function
 /// Generate a SHA256 hashed password with random salt
-fn gen_sha256_hash(passwd: &str, salt: &String) -> Option<String> {
+fn gen_sha256_hash(passwd: &str, salt: &str) -> Option<String> {
     // create new sha256 hasher
     let mut hasher = Sha256::new();
     // feed the hasher with the user supplied password
@@ -172,7 +170,7 @@ fn display_userpw_line(alg: &str, user: &str, salt: Option<String>, hash: String
         alg.to_uppercase(),
         user,
         level,
-        salt.unwrap_or("".to_string()),
+        salt.unwrap_or_else(|| "".to_string()),
         hash
     );
 }

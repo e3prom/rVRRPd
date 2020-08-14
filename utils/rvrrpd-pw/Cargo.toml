@@ -1,6 +1,6 @@
 [package]
 name = "rvrrpd-pw"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 
