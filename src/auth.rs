@@ -6,11 +6,9 @@ use hmac::digest::{ExtendableOutput, XofReader};
 use hmac::{digest::Input, Hmac, Mac};
 
 // sha2
-extern crate sha2;
 use sha2::Sha256;
 
 // sha3
-extern crate sha3;
 use sha3::Shake256;
 
 // type aliases

@@ -1,7 +1,6 @@
 //! # rVRRPd
 //!
 //! `rVRRPd` is aimed to be a fast, secure and multi-platform VRRPv2 implementation.
-extern crate rVRRPd;
 use rVRRPd::{constants, listen_ip_pkts, Config};
 
 // constants
@@ -13,9 +12,6 @@ use getopts::Options;
 // std
 use std::env;
 use std::error::Error;
-
-// ctrlc (linux signal handling)
-extern crate ctrlc;
 
 /// MyError Type
 #[derive(Debug)]

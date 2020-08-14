@@ -8,7 +8,6 @@ use futures::{future, Future, Stream};
 use gotham::handler::{HandlerFuture, IntoHandlerError};
 
 // regex
-extern crate regex;
 use regex::Regex;
 
 /// client() handler function

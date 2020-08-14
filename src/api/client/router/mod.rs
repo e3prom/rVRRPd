@@ -8,7 +8,6 @@ use std::net::ToSocketAddrs;
 use futures::future::Future;
 
 // gotham
-extern crate gotham;
 use gotham::bind_server;
 use gotham::helpers::http::response::{create_empty_response, create_response};
 use gotham::middleware::cookie::CookieParser;
@@ -20,7 +19,6 @@ use gotham::router::Router;
 use gotham::state::{FromState, State};
 
 // hyper
-extern crate hyper;
 use hyper::header::SET_COOKIE;
 use hyper::{Body, Response, StatusCode};
 
@@ -28,7 +26,6 @@ use hyper::{Body, Response, StatusCode};
 use failure::{err_msg, Error};
 
 // openssl
-extern crate openssl;
 use openssl::{
     pkey::PKey,
     ssl::{SslAcceptor, SslMethod},
@@ -39,14 +36,9 @@ use openssl::{
 use tokio::{net::TcpListener, runtime::Runtime};
 
 // tokio_openssl
-extern crate tokio_openssl;
 use tokio_openssl::SslAcceptorExt;
 
-// mime
-extern crate mime;
-
 // cookie
-extern crate cookie;
 use cookie::{Cookie, CookieJar, SameSite};
 
 // serde

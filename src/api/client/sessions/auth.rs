@@ -12,7 +12,6 @@ use token::SessionToken;
 use crate::config;
 
 // regex
-extern crate regex;
 use regex::Regex;
 
 // rand
@@ -22,7 +21,6 @@ use rand::Rng;
 use sha2::{Digest, Sha256};
 
 // scrypt
-extern crate scrypt;
 use scrypt::scrypt_check;
 
 /// auth_api_client() function

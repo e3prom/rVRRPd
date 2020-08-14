@@ -2,7 +2,6 @@
 #![allow(non_snake_case)]
 
 // libc
-extern crate libc;
 #[cfg(target_os = "linux")]
 use libc::{c_void, recvfrom, sockaddr, sockaddr_ll, socklen_t};
 
@@ -11,35 +10,21 @@ use libc::{c_void, recvfrom, sockaddr, sockaddr_ll, socklen_t};
 extern crate foreign_types;
 
 // itertools
-extern crate itertools;
 use itertools::Itertools;
 
 // serde
-extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
 
 // deamonize
-extern crate daemonize;
 use daemonize::Daemonize;
 
-// hmac
-extern crate hmac;
-
-// chrono
-extern crate chrono;
-
 // crossbeam
-extern crate crossbeam;
 use crossbeam::{Receiver, Sender};
 
 // gotham
 #[macro_use]
 extern crate gotham_derive;
-
-// rand
-extern crate rand;
 
 // lazy_static
 #[macro_use]
