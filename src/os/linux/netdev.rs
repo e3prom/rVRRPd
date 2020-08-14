@@ -12,6 +12,7 @@ use std::io;
 
 // operating system drivers
 use crate::os::drivers::Operation;
+use crate::os::linux::IntIpRoute;
 
 /// ioctl_flags Structure
 #[repr(C)]
@@ -180,12 +181,11 @@ pub fn set_ip_address(
         ifr_addr: {
             let mut ip_buf = [0u8; 14];
             ip_buf.clone_from_slice(ip_addr_slice);
-            let addr = int_sockaddr_pad {
+            int_sockaddr_pad {
                 sa_family: AF_INET as u16,
                 sa_void: 0,
                 sa_data: ip_buf,
-            };
-            addr
+            }
         },
     };
 
@@ -200,12 +200,11 @@ pub fn set_ip_address(
         ifr_netmask: {
             let mut netmask_buf = [0u8; 14];
             netmask_buf.clone_from_slice(ip_netmask_slice);
-            let netmask = int_sockaddr_pad {
+            int_sockaddr_pad {
                 sa_family: AF_INET as u16,
                 sa_void: 0,
                 sa_data: netmask_buf,
-            };
-            netmask
+            }
         },
     };
 
@@ -254,11 +253,10 @@ pub fn get_mac_addr(sockfd: i32, ifname: &CString, debug: &Verbose) -> io::Resul
         },
         ifr_hwaddr: {
             let mac_buf = [0u8; ETH_ALEN as usize];
-            let mac = int_sockaddr_ether {
+            int_sockaddr_ether {
                 sa_family: 0,
                 sa_data: mac_buf,
-            };
-            mac
+            }
         },
     };
 
@@ -325,11 +323,10 @@ pub fn set_mac_addr(
         ifr_hwaddr: {
             let mut mac_buf = [0u8; ETH_ALEN as usize];
             mac_buf.clone_from_slice(ether_mac_slice);
-            let mac = int_sockaddr_ether {
+            int_sockaddr_ether {
                 sa_family: ARPHRD_ETHER as u16,
                 sa_data: mac_buf,
-            };
-            mac
+            }
         },
     };
 
@@ -350,19 +347,9 @@ pub fn set_mac_addr(
 // set_ip_routes() function
 /// Set IP routes into the routing table
 /// if boolean 'set_flag' is true then add the route, otherwise remove
-pub fn set_ip_route(
-    sockfd: i32,
-    ifname: &String,
-    route: [u8; 4],
-    rtmask: [u8; 4],
-    gw: [u8; 4],
-    metric: i16,
-    mtu: u64,
-    op: &Operation,
-    debug: &Verbose,
-) -> io::Result<()> {
+pub fn set_ip_route(rt: &IntIpRoute) -> io::Result<()> {
     // convert interface name to CString type
-    let ifname = CString::new(ifname.as_bytes() as &[u8]).unwrap();
+    let ifname = CString::new(rt.ifname.as_bytes() as &[u8]).unwrap();
 
     // create a slice of mutable reference to array of 16 u8
     let ifname_slice = &mut [0u8; 16];
@@ -379,19 +366,19 @@ pub fn set_ip_route(
 
     // create route slice
     let route_slice = &mut [0u8; 14];
-    for (i, b) in route.iter().enumerate() {
+    for (i, b) in rt.route.iter().enumerate() {
         route_slice[i + 2] = *b;
     }
 
     // create rtmask slice
     let rtmask_slice = &mut [0u8; 14];
-    for (i, b) in rtmask.iter().enumerate() {
+    for (i, b) in rt.rtmask.iter().enumerate() {
         rtmask_slice[i + 2] = *b;
     }
 
     // create gateway slice
     let gateway_slice = &mut [0u8; 14];
-    for (i, b) in gw.iter().enumerate() {
+    for (i, b) in rt.gw.iter().enumerate() {
         gateway_slice[i + 2] = *b;
     }
 
@@ -444,9 +431,9 @@ pub fn set_ip_route(
         rt_tos: 0,
         rt_class: 0,
         rt_pad3: [0, 0, 0],
-        rt_metric: metric,         // set metric
+        rt_metric: rt.metric,      // set metric
         rt_dev: &dev as *const u8, // set dev
-        rt_mtu: mtu,
+        rt_mtu: rt.mtu,
         rt_window: 0,
         rt_irtt: 0,
     };
@@ -455,24 +442,24 @@ pub fn set_ip_route(
 
     // ioctl - set/delete route
     let res: i32;
-    match op {
+    match rt.op {
         Operation::Add => {
             print_debug(
-                debug,
+                rt.debug,
                 DEBUG_LEVEL_HIGH,
                 DEBUG_SRC_ROUTE,
                 format!("adding route {:?}", ifroute),
             );
-            res = unsafe { ioctl(sockfd, libc::SIOCADDRT, &mut ifroute) };
+            res = unsafe { ioctl(rt.sockfd, libc::SIOCADDRT, &mut ifroute) };
         }
         Operation::Rem => {
             print_debug(
-                debug,
+                rt.debug,
                 DEBUG_LEVEL_HIGH,
                 DEBUG_SRC_ROUTE,
                 format!("removing route {:?}", ifroute),
             );
-            res = unsafe { ioctl(sockfd, libc::SIOCDELRT, &mut ifroute) };
+            res = unsafe { ioctl(rt.sockfd, libc::SIOCDELRT, &mut ifroute) };
         }
     }
     // check result of ioctls

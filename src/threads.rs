@@ -25,9 +25,9 @@ pub struct ThreadPool {
 impl ThreadPool {
     // new() method
     // Create a new Thread Pool
-    pub fn new(vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) -> ThreadPool {
+    pub fn new(vrouters: &[Arc<RwLock<VirtualRouter>>], debug: &Verbose) -> ThreadPool {
         // verify the vector is not empty and doesn't exceed 1024 virtual routers
-        assert!(vrouters.len() > 0 && vrouters.len() < 1024);
+        assert!(!vrouters.is_empty() && vrouters.len() < 1024);
 
         // built a fixed-size vector of workers
         let mut workers = Vec::with_capacity(vrouters.len());
@@ -44,7 +44,7 @@ impl ThreadPool {
     }
     // startup() method
     // Send startup event to every worker threads
-    pub fn startup(&self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) {
+    pub fn startup(&self, vrouters: &[Arc<RwLock<VirtualRouter>>], debug: &Verbose) {
         for (id, vr) in vrouters.iter().enumerate() {
             // acquire read lock on vr
             let vr = vr.read().unwrap();
@@ -53,7 +53,7 @@ impl ThreadPool {
                 debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_THREAD,
-                format!("sending Startup event to worker threads"),
+                "sending Startup event to worker threads".to_string(),
             );
             match vr.parameters.notification() {
                 Some(tx) => tx.lock().unwrap().send(Event::Startup).unwrap(),
@@ -63,12 +63,12 @@ impl ThreadPool {
     }
     // drop() method
     // Custom destructor function for the Thread pool
-    pub fn drop(&mut self, vrouters: &Vec<Arc<RwLock<VirtualRouter>>>, debug: &Verbose) {
+    pub fn drop(&mut self, vrouters: &[Arc<RwLock<VirtualRouter>>], debug: &Verbose) {
         print_debug(
             debug,
             DEBUG_LEVEL_LOW,
             DEBUG_SRC_THREAD,
-            format!("signaling workers to shut down"),
+            "signaling workers to shut down".to_string(),
         );
         // send Shutdown/Terminate events to all workers
         for (id, vr) in vrouters.iter().enumerate() {
@@ -144,7 +144,7 @@ impl Worker {
         let worker_rx = Arc::clone(&receiver);
 
         // clone debug
-        let debug = debug.clone();
+        let debug = *debug;
 
         // create worker thread
         let worker_thread = thread::spawn(move || {

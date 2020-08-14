@@ -40,6 +40,7 @@ pub struct VirtualRouter {
 impl VirtualRouter {
     // new() method
     // create new VirtualRouter
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         vrid: u8,
         ifname: String,
@@ -115,7 +116,7 @@ impl VirtualRouter {
                         debug,
                         DEBUG_LEVEL_MEDIUM,
                         DEBUG_SRC_VR,
-                        format!("no authentication secret configured"),
+                        "no authentication secret configured".to_string(),
                     );
                 }
             }
@@ -163,11 +164,7 @@ impl VirtualRouter {
     // is_owner_vip() method
     // check is the VirtualRouter is the owner of the VIP
     pub fn is_owner_vip(&self, vip: &[u8; 4]) -> bool {
-        if self.parameters.ipaddrs().contains(vip) {
-            true
-        } else {
-            false
-        }
+        self.parameters.ipaddrs().contains(vip)
     }
     // states() getter
     pub fn get_states(&self) -> &fsm::States {
@@ -203,16 +200,16 @@ impl VirtualRouter {
 
         // set and push the VIP to the ipaddrs
         let vip = self.parameters.vip();
-        for i in 0..4 {
-            frame.push(vip[i]);
+        for o in &vip {
+            frame.push(*o);
         }
 
         // check if rfc3768 compatibility flag is true
         if !self.parameters.rfc3768() {
             // extend the frame with the variable-length list of local IP addresses
             for addr in self.parameters.ipaddrs() {
-                for i in 0..4 {
-                    frame.push(addr[i]);
+                for o in addr.iter().take(4) {
+                    frame.push(*o);
                 }
             }
         }
@@ -301,10 +298,9 @@ impl VirtualRouter {
 
         // sending raw ethernet frame
         let ifindex = self.parameters.ifindex();
-        let res = raw_sendto(fd, ifindex, &mut frame, &debug);
 
         // return above call result
-        return res;
+        raw_sendto(fd, ifindex, &mut frame, &debug)
     }
 
     // broadcast_gratuitious_arp() function
@@ -415,15 +411,12 @@ impl VirtualRouter {
         // if true, add vip and netmask to the respective vectors
         // make sure this is done last, so the VIP is on top of the addrs vector
         // otherwise it will never replace the current IP when using ioctls
-        match op {
-            Operation::Add => {
-                // add vip to the IP addresses vector
-                addrs.push(self.parameters.vip());
-                // add first address' netmask
-                netmasks.push(self.parameters.ipmasks()[0]);
-            }
-            _ => {}
-        }
+        if let Operation::Add = op {
+            // add vip to the IP addresses vector
+            addrs.push(self.parameters.vip());
+            // add first address' netmask
+            netmasks.push(self.parameters.ipmasks()[0]);
+        };
 
         // construct interface name
         let ifname = CString::new(self.parameters.interface().as_bytes() as &[u8]).unwrap();
@@ -563,34 +556,31 @@ impl VirtualRouter {
             // workaround compilation warning
             let _fd = fd;
             // delete virtual ip address according to the network driver in use
-            match self.parameters.netdrv() {
-                NetDrivers::libnl => {
-                    print_debug(
-                        debug,
-                        DEBUG_LEVEL_HIGH,
-                        DEBUG_SRC_IP,
-                        format!(
+            if let NetDrivers::libnl = self.parameters.netdrv() {
+                print_debug(
+                    debug,
+                    DEBUG_LEVEL_HIGH,
+                    DEBUG_SRC_IP,
+                    format!(
                         "removing IP address on interface {:?} (ifindex: {}) using netlink (libnl)",
                         &ifname,
                         self.parameters.ifindex()
                     ),
+                );
+                if let Err(e) = os::linux::libnl::set_ip_address(
+                    self.parameters.ifindex(),
+                    &ifname,
+                    self.parameters.vip(),
+                    netmasks[0],
+                    Operation::Rem,
+                    debug,
+                ) {
+                    eprintln!(
+                        "error(ip): error while removing IP address on interface {:?}: {}",
+                        &ifname, e
                     );
-                    if let Err(e) = os::linux::libnl::set_ip_address(
-                        self.parameters.ifindex(),
-                        &ifname,
-                        self.parameters.vip(),
-                        netmasks[0],
-                        Operation::Rem,
-                        debug,
-                    ) {
-                        eprintln!(
-                            "error(ip): error while removing IP address on interface {:?}: {}",
-                            &ifname, e
-                        );
-                    }
                 }
-                _ => {}
-            }
+            };
         }
         // END Linux specific interface type handling
 
@@ -654,10 +644,9 @@ impl VirtualRouter {
         #[cfg(target_os = "linux")]
         {
             // set mac address
-            match os::linux::netdev::set_mac_addr(fd, &ifname, mac, debug) {
-                Err(e) => eprintln!("error(mac): error while setting mac address: {}", e),
-                _ => {}
-            }
+            if let Err(e) = os::linux::netdev::set_mac_addr(fd, &ifname, mac, debug) {
+                eprintln!("error(mac): error while setting mac address: {}", e)
+            };
         }
         // END Linux specific interface type handling
     }
@@ -689,17 +678,16 @@ impl VirtualRouter {
         }
 
         // check if static protocol reference exists
-        match protocols.r#static.as_ref() {
-            Some(r) => {
-                // for every static routes
-                for st in r {
-                    // --- Linux specific interface tyoe handling
-                    #[cfg(target_os = "linux")]
-                    {
-                        // add route acccording to the network driver in use
-                        match self.parameters.netdrv() {
-                            NetDrivers::ioctl => {
-                                print_debug(
+        if let Some(r) = protocols.r#static.as_ref() {
+            // for every static routes
+            for st in r {
+                // --- Linux specific interface tyoe handling
+                #[cfg(target_os = "linux")]
+                {
+                    // add route acccording to the network driver in use
+                    match self.parameters.netdrv() {
+                        NetDrivers::ioctl => {
+                            print_debug(
                                 debug,
                                 DEBUG_LEVEL_HIGH,
                                 DEBUG_SRC_IP,
@@ -708,26 +696,28 @@ impl VirtualRouter {
                                 &ifname, self.parameters.ifindex()
                             ),
                             );
-                                if let Err(e) = os::linux::netdev::set_ip_route(
-                                    fd,
-                                    &self.parameters.interface(),
+                            // build public IntIpRoute structure
+                            let rt = os::linux::IntIpRoute {
+                                sockfd: fd,
+                                ifname: self.parameters.interface(),
+                                route: st.route(),
+                                rtmask: st.mask(),
+                                gw: st.nh(),
+                                metric: st.metric(),
+                                mtu: st.mtu(),
+                                op: &op,
+                                debug,
+                            };
+                            if let Err(e) = os::linux::netdev::set_ip_route(&rt) {
+                                eprintln!(
+                                    "error(route): cannot add or delete route {:?}: {}",
                                     st.route(),
-                                    st.mask(),
-                                    st.nh(),
-                                    st.metric(),
-                                    st.mtu(),
-                                    &op,
-                                    debug,
-                                ) {
-                                    eprintln!(
-                                        "error(route): cannot add or delete route {:?}: {}",
-                                        st.route(),
-                                        e
-                                    );
-                                }
+                                    e
+                                );
                             }
-                            NetDrivers::libnl => {
-                                print_debug(
+                        }
+                        NetDrivers::libnl => {
+                            print_debug(
                                 debug,
                                 DEBUG_LEVEL_HIGH,
                                 DEBUG_SRC_IP,
@@ -736,30 +726,30 @@ impl VirtualRouter {
                                 &ifname, self.parameters.ifindex()
                             ),
                             );
-                                if let Err(e) = os::linux::libnl::set_ip_route(
-                                    fd,
-                                    &self.parameters.interface(),
+                            // build public IntIpRoute structure
+                            let rt = os::linux::IntIpRoute {
+                                sockfd: fd,
+                                ifname: self.parameters.interface(),
+                                route: st.route(),
+                                rtmask: st.mask(),
+                                gw: st.nh(),
+                                metric: st.metric(),
+                                mtu: st.mtu(),
+                                op: &op,
+                                debug,
+                            };
+                            if let Err(e) = os::linux::libnl::set_ip_route(&rt) {
+                                eprintln!(
+                                    "error(route): cannot add or delete route {:?}: {}",
                                     st.route(),
-                                    st.mask(),
-                                    st.nh(),
-                                    st.metric(),
-                                    st.mtu(),
-                                    &op,
-                                    debug,
-                                ) {
-                                    eprintln!(
-                                        "error(route): cannot add or delete route {:?}: {}",
-                                        st.route(),
-                                        e
-                                    );
-                                }
+                                    e
+                                );
                             }
                         }
                     }
-                    // END Linux specific interface type handling
                 }
+                // END Linux specific interface type handling
             }
-            None => {}
         }
 
         // set rtset flag according to the completed operation
@@ -797,15 +787,11 @@ impl VirtualRouter {
                     Operation::Add => {
                         // find new macvlan ifindex
                         match os::linux::libc::c_ifnametoindex(&self.parameters.vifname()) {
-                            Ok(i) => {
-                                return Some((i as i32, self.parameters.vifname().clone()));
-                            }
-                            Err(_e) => return None,
+                            Ok(i) => Some((i as i32, self.parameters.vifname())),
+                            Err(_e) => None,
                         }
                     }
-                    Operation::Rem => {
-                        return None;
-                    }
+                    Operation::Rem => None,
                 }
             }
             // catched an error while setting up the macvlan interface
@@ -854,6 +840,7 @@ pub struct Parameters {
 /// Parameters Type Implementation
 impl Parameters {
     // new() method
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         vrid: u8,
         interface: String,
@@ -977,7 +964,7 @@ impl Parameters {
     // addrcount() method
     pub fn addrcount(&self) -> u8 {
         // calculate the number of addresses (or arrays) in ipaddrs vector
-        let num = *&self.ipaddrs.len() as u8;
+        let num = self.ipaddrs.len() as u8;
         // if rfc3768 compatibility flag is false, add one to account for the VIP
         if !self.rfc3768 {
             num + 1

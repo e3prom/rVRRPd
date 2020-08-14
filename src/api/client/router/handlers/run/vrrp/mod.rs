@@ -31,7 +31,7 @@ pub fn all(state: State) -> (State, Response<Body>) {
             _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
-    return (state, htbody);
+    (state, htbody)
 }
 
 // group() handler function
@@ -67,7 +67,7 @@ pub fn group(state: State) -> (State, Response<Body>) {
             _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
-    return (state, htbody);
+    (state, htbody)
 }
 
 /// group_interface() handler function
@@ -105,5 +105,5 @@ pub fn group_interface(state: State) -> (State, Response<Body>) {
             _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
-    return (state, htbody);
+    (state, htbody)
 }

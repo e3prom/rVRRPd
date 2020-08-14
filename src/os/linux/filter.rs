@@ -128,10 +128,9 @@ pub struct SockFprog {
 impl SockFprog {
     // build_fprog_vrrpv2_gid() method
     pub fn build_fprog_vrrpv2_gid(filter: &[SockFilter; 10]) -> SockFprog {
-        let fprog = SockFprog {
+        SockFprog {
             filter: filter.as_ptr() as *const c_void,
             len: filter.len() as u16,
-        };
-        fprog
+        }
     }
 }

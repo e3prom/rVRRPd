@@ -40,7 +40,7 @@ impl<'a> UpstreamAPI {
         &self,
         down_api: &DownstreamAPI,
         cfg: config::CConfig,
-        vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
+        vrs: &[Arc<RwLock<VirtualRouter>>],
     ) {
         // upstream transmit and receives channels
         let (utx, urx) = self.channels();
@@ -129,8 +129,7 @@ impl DownstreamAPI {
     // answer() method
     pub fn read(&self) -> ClientAPIResponse {
         let rrx = self.r_receiver.lock().unwrap();
-        let answer = rrx.recv().unwrap();
-        answer
+        rrx.recv().unwrap()
     }
 }
 
@@ -152,7 +151,7 @@ pub enum ClientAPIQuery {
 pub enum ClientAPIResponse {
     Unauthorized,
     AuthResponse(Option<SessionToken>),
-    CfgGlobalAll(config::CConfig),
+    CfgGlobalAll(Box<config::CConfig>),
     CfgVrrpAll(Vec<config::VRConfig>),
     CfgProtoAll(config::Protocols),
     RunGlobalAll(ResponseGlobalAttr),
@@ -246,7 +245,7 @@ pub fn capi_thread_loop(
             ClientAPIQuery::CfgGlobalAll(sess) => match sess.validate(&cfg) {
                 Some(_) => {
                     let r = capi_req_cfg_global_all(&cfg);
-                    resp = ClientAPIResponse::CfgGlobalAll(r);
+                    resp = ClientAPIResponse::CfgGlobalAll(Box::new(r));
                 }
                 None => {
                     resp = ClientAPIResponse::Unauthorized;
@@ -366,7 +365,7 @@ fn capi_req_cfg_proto_all(cfg: &config::CConfig) -> config::Protocols {
 // capi_req_run_global_all() function
 fn capi_req_run_global_all(cfg: &config::CConfig) -> ResponseGlobalAttr {
     // build response for effective global configuration
-    let attrs = ResponseGlobalAttr {
+    ResponseGlobalAttr {
         debug: cfg.debug(),
         timestamp: cfg.time_format(),
         timezone: cfg.time_zone(),
@@ -375,13 +374,11 @@ fn capi_req_run_global_all(cfg: &config::CConfig) -> ResponseGlobalAttr {
         working_dir: cfg.working_dir(),
         main_log: cfg.main_log(),
         error_log: cfg.error_log(),
-    };
-
-    attrs
+    }
 }
 
 // capi_req_run_vrrp_all() function
-fn capi_req_run_vrrp_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Vec<ResponseVRRPAttr> {
+fn capi_req_run_vrrp_all(vrs: &[Arc<RwLock<VirtualRouter>>]) -> Vec<ResponseVRRPAttr> {
     // initialize a vector of VRRP response
     let mut vattrs: Vec<ResponseVRRPAttr> = Vec::new();
     // iterate through all virtual routers
@@ -411,7 +408,7 @@ fn capi_req_run_vrrp_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Vec<ResponseV
 
 // capi_req_run_vrrp_grp() function
 fn capi_req_run_vrrp_grp(
-    vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
+    vrs: &[Arc<RwLock<VirtualRouter>>],
     gid: u8,
 ) -> Option<Vec<ResponseVRRPAttr>> {
     // initialize attributes vector
@@ -450,7 +447,7 @@ fn capi_req_run_vrrp_grp(
 
 // capi_req_run_vrrp_grp_intf() function
 fn capi_req_run_vrrp_grp_intf(
-    vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
+    vrs: &[Arc<RwLock<VirtualRouter>>],
     gid: u8,
     intf: String,
 ) -> Option<ResponseVRRPAttrExt> {
@@ -511,7 +508,7 @@ fn capi_req_run_vrrp_grp_intf(
 }
 
 // capi_req_run_proto_all() function
-fn capi_req_run_proto_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Option<ResponseProtoAttr> {
+fn capi_req_run_proto_all(vrs: &[Arc<RwLock<VirtualRouter>>]) -> Option<ResponseProtoAttr> {
     // get static attributes vector (if any)
     match capi_req_run_proto_static(vrs) {
         Some(v) => {
@@ -525,7 +522,7 @@ fn capi_req_run_proto_all(vrs: &Vec<Arc<RwLock<VirtualRouter>>>) -> Option<Respo
 
 // capi_req_run_proto_static() function
 fn capi_req_run_proto_static(
-    vrs: &Vec<Arc<RwLock<VirtualRouter>>>,
+    vrs: &[Arc<RwLock<VirtualRouter>>],
 ) -> Option<Vec<ResponseProtoStaticAttr>> {
     // create static attributes vector
     let mut pattrs: Vec<ResponseProtoStaticAttr> = Vec::new();
@@ -570,8 +567,8 @@ fn capi_req_run_proto_static(
                 pattrs.push(attrs);
             }
             // return the vector
-            return Some(pattrs);
+            Some(pattrs)
         }
-        None => return None,
+        None => None,
     }
 }

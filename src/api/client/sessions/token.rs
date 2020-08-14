@@ -139,7 +139,7 @@ impl SessionToken {
 type HmacSha3_256 = Hmac<Sha3_256>;
 
 // gen_hmac_string() function
-fn gen_hmac_string(input: &String, secret: String) -> String {
+fn gen_hmac_string(input: &str, secret: String) -> String {
     let mut mac = HmacSha3_256::new_varkey(secret.as_bytes()).expect("invalid key length");
     mac.input(input.as_bytes());
     let res = mac.result();

@@ -102,7 +102,7 @@ impl IfAddrsRef {
         }
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a> {
+    pub fn iter(&self) -> Iter {
         Iter(Some(self))
     }
 }
@@ -144,7 +144,7 @@ impl<'a> Iterator for Iter<'a> {
 // get_addrlist() function
 /// get list of IP address(es) and store them into vectors
 pub fn get_addrlist(
-    ifname: &String,
+    ifname: &str,
     v4addrs: &mut Vec<[u8; 4]>,
     v4masks: &mut Vec<[u8; 4]>,
 ) -> io::Result<()> {

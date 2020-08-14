@@ -23,14 +23,14 @@ pub fn gen_auth_data(autht: u8, secret: &Option<String>, msg: Option<&[u8]>) -> 
         AUTH_TYPE_SIMPLE => match secret {
             Some(s) => {
                 let data = format!("{:\0<8}", s);
-                return data.into_bytes();
+                data.into_bytes()
             }
             None => {
                 let mut data: Vec<u8> = Vec::new();
                 for _ in 0..8 {
                     data.push(0);
                 }
-                return data;
+                data
             }
         },
         // AUTH_TYPE_P0 (PROPRIETARY-TRUNCATED-8B-SHA256)
@@ -57,7 +57,7 @@ pub fn gen_auth_data(autht: u8, secret: &Option<String>, msg: Option<&[u8]>) -> 
             // truncat data to 8 bytes
             data.truncate(8);
             // return data
-            return data;
+            data
         }
         // AUTH_TYPE_P1 (PROPRIETARY-XOF-8B-SHAKE256)
         // This is an internal, proprietary type using the SHAKE256 XOF
@@ -65,7 +65,7 @@ pub fn gen_auth_data(autht: u8, secret: &Option<String>, msg: Option<&[u8]>) -> 
             // secret key
             let key = match secret {
                 Some(s) => s.as_bytes(),
-                None => "".as_bytes(),
+                None => b"",
             };
             // create SHAKE256 instance
             let mut hasher = Shake256::default();
@@ -81,7 +81,7 @@ pub fn gen_auth_data(autht: u8, secret: &Option<String>, msg: Option<&[u8]>) -> 
             let mut reader = hasher.xof_result();
             let mut data = [0u8; 8];
             reader.read(&mut data);
-            return data.to_vec();
+            data.to_vec()
         }
         // no authentication
         _ => {
@@ -89,7 +89,7 @@ pub fn gen_auth_data(autht: u8, secret: &Option<String>, msg: Option<&[u8]>) -> 
             for _ in 0..8 {
                 data.push(0);
             }
-            return data;
+            data
         }
     }
 }

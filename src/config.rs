@@ -223,10 +223,9 @@ impl VRConfig {
         // if os is Linux
         if cfg!(target_os = "linux") {
             // if macvlan is configured, return libnl
-            match self.iftype() {
-                IfTypes::macvlan => return NetDrivers::libnl,
-                _ => {}
-            }
+            if let IfTypes::macvlan = self.iftype() {
+                return NetDrivers::libnl;
+            };
             match &self.netdrv {
                 Some(s) => match &s[..] {
                     "ioctl" => NetDrivers::ioctl,
@@ -361,7 +360,7 @@ pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
                     std::process::exit(1);
                 }
             };
-            return config;
+            config
         }
         // JSON
         CfgType::Json => {
@@ -372,7 +371,7 @@ pub fn decode_config(filename: String, cfgtype: CfgType) -> CConfig {
                     std::process::exit(1);
                 }
             };
-            return config;
+            config
         }
     }
 }
@@ -396,12 +395,10 @@ impl API {
     }
     // secret() method
     pub fn secret(&self) -> String {
-        let secret = match &self.secret {
+        match &self.secret {
             Some(s) => s.clone(),
             None => gen_runtime_secret(),
-        };
-
-        secret
+        }
     }
     // host() method
     pub fn host(&self) -> String {

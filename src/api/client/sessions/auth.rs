@@ -32,7 +32,7 @@ pub fn auth_api_client(
     passwd: String,
 ) -> Option<SessionToken> {
     // authenticate the API user
-    let sess = match auth_user_from_cfg(cfg, user, passwd) {
+    match auth_user_from_cfg(cfg, user, passwd) {
         Some(usr) => {
             // if authentication is succesful, create a new SessionToken
             let mut token = SessionToken::new();
@@ -54,9 +54,7 @@ pub fn auth_api_client(
         }
         // if authentication failed
         None => None,
-    };
-
-    sess
+    }
 }
 
 /// auth_user_from_cfg() function
@@ -72,51 +70,47 @@ fn auth_user_from_cfg(cfg: &config::CConfig, user: String, passwd: String) -> Op
     // access configuation api users
     if let Some(a) = &cfg.api {
         for acc in a.users() {
-            match regex_captures_apiuser(&acc) {
-                Some(c) => {
-                    let alg = c.get(1).unwrap().as_str().to_string();
-                    let username = c.get(2).unwrap().as_str().to_string();
-                    let _access = c.get(3).unwrap().as_str().to_string();
-                    let salt = c.get(4).unwrap().as_str().to_string();
-                    let hash = c.get(5).unwrap().as_str().to_string();
-                    // if the username matches
-                    if username == user {
-                        // perform password hashing
-                        match &alg[..] {
-                            "SHA256" => {
-                                // create new SHA256 hasher
-                                let mut hasher = Sha256::new();
-                                // feed the hasher with the password
-                                hasher.input(&passwd);
-                                // feed the hasher with the salt
-                                hasher.input(&salt);
-                                // convert the result to an hex formatted String
-                                let h2 = format!("{:x}", hasher.result());
-                                // reduce likelihood of timing attacks by introducing a random delay
-                                // prior to the hashes comparison.
-                                let mut rng = rand::thread_rng();
-                                let rdelay = rng.gen::<u8>() as u64;
-                                let time = time::Duration::from_millis(rdelay);
-                                thread::sleep(time);
-                                // compare hashed values
-                                if hash == h2 {
-                                    return Some(username);
-                                }
+            if let Some(c) = regex_captures_apiuser(&acc) {
+                let alg = c.get(1).unwrap().as_str().to_string();
+                let username = c.get(2).unwrap().as_str().to_string();
+                let _access = c.get(3).unwrap().as_str().to_string();
+                let salt = c.get(4).unwrap().as_str().to_string();
+                let hash = c.get(5).unwrap().as_str().to_string();
+                // if the username matches
+                if username == user {
+                    // perform password hashing
+                    match &alg[..] {
+                        "SHA256" => {
+                            // create new SHA256 hasher
+                            let mut hasher = Sha256::new();
+                            // feed the hasher with the password
+                            hasher.input(&passwd);
+                            // feed the hasher with the salt
+                            hasher.input(&salt);
+                            // convert the result to an hex formatted String
+                            let h2 = format!("{:x}", hasher.result());
+                            // reduce likelihood of timing attacks by introducing a random delay
+                            // prior to the hashes comparison.
+                            let mut rng = rand::thread_rng();
+                            let rdelay = rng.gen::<u8>() as u64;
+                            let time = time::Duration::from_millis(rdelay);
+                            thread::sleep(time);
+                            // compare hashed values
+                            if hash == h2 {
+                                return Some(username);
                             }
-                            "SCRYPT" => {
-                                // check if password is matching the stored hash
-                                if scrypt_check(&passwd, &hash).is_ok() {
-                                    return Some(username);
-                                }
-                            }
-                            // if alg doesn't match, continue
-                            &_ => (),
                         }
+                        "SCRYPT" => {
+                            // check if password is matching the stored hash
+                            if scrypt_check(&passwd, &hash).is_ok() {
+                                return Some(username);
+                            }
+                        }
+                        // if alg doesn't match, continue
+                        &_ => (),
                     }
                 }
-                // if regex caputre failed, proceed to next account entry
-                None => (),
-            }
+            };
         }
     }
 
@@ -125,7 +119,7 @@ fn auth_user_from_cfg(cfg: &config::CConfig, user: String, passwd: String) -> Op
 }
 
 /// regex_captures_apiuser function
-fn regex_captures_apiuser(acc: &String) -> Option<regex::Captures> {
+fn regex_captures_apiuser(acc: &str) -> Option<regex::Captures> {
     // the API user account information is formatted as follow:
     // {{<hash-alg>}}<user-name>:<access-level>:<salt><password-hash>
     // 'user-name' must be alphanumeric between 1 and 256 characters

@@ -15,6 +15,7 @@ const INT_NLM_F_CREATE: i32 = 0x400; // include/linux/netlink.h
 
 // operating system drivers
 use crate::os::drivers::Operation;
+use crate::os::linux::IntIpRoute;
 
 // custom libnl types
 // nl_list_head type
@@ -300,8 +301,8 @@ pub fn set_ip_address(
 
     // set local IP address in rtnl_addr 'addr'
     let ipaddr = CString::new(ip_str).unwrap();
-    let mut laddr_ptr = &mut laddr;
-    let r = unsafe { nl_addr_parse(ipaddr.as_ptr(), AF_INET, &mut laddr_ptr) };
+    let laddr_ptr = &mut laddr;
+    let r = unsafe { nl_addr_parse(ipaddr.as_ptr(), AF_INET, &laddr_ptr) };
     if r < 0 {
         return Err(io::Error::last_os_error());
     }
@@ -380,17 +381,7 @@ pub fn set_ip_address(
 // set_ip_route() function
 //
 /// Add or delete a route using libnl-3 (netlink)
-pub fn set_ip_route(
-    _ifindex: i32,
-    _ifname: &String,
-    route: [u8; 4],
-    rtmask: [u8; 4],
-    gw: [u8; 4],
-    metric: i16,
-    mtu: u64,
-    op: &Operation,
-    debug: &Verbose,
-) -> io::Result<()> {
+pub fn set_ip_route(rt: &IntIpRoute) -> io::Result<()> {
     // call to external nlsock() function
     let nlsock = unsafe { nl_socket_alloc() };
     if nlsock.is_null() {
@@ -424,31 +415,31 @@ pub fn set_ip_route(
 
     // convert netmask to prefix length
     let mut prefixlen = 0;
-    for b in rtmask.iter() {
+    for b in rt.rtmask.iter() {
         prefixlen += b.count_ones();
     }
     // create route string
     let route_str = format!(
         "{}.{}.{}.{}/{}",
-        route[0], route[1], route[2], route[3], prefixlen
+        rt.route[0], rt.route[1], rt.route[2], rt.route[3], prefixlen
     );
     // convert route string to a Cstring type
     let route_cstr = CString::new(route_str).unwrap();
     // create pointer to 'nl_addr' rtdst
-    let mut rtdst_ptr = &mut rtdst;
+    let rtdst_ptr = &mut rtdst;
     // parse destination route
-    let r = unsafe { nl_addr_parse(route_cstr.as_ptr(), AF_INET, &mut rtdst_ptr) };
+    let r = unsafe { nl_addr_parse(route_cstr.as_ptr(), AF_INET, &rtdst_ptr) };
     if r < 0 {
         return Err(io::Error::last_os_error());
     }
     // debug information
     print_debug(
-        debug,
+        rt.debug,
         DEBUG_LEVEL_EXTENSIVE,
         DEBUG_SRC_IP,
         format!(
             "route_slice: {:?}, nl_addr {:?}, result: {}",
-            route, *rtdst_ptr, r
+            rt.route, *rtdst_ptr, r
         ),
     );
     // set destination route in 'nlroute'
@@ -467,25 +458,25 @@ pub fn set_ip_route(
         a_addr: [0; 4],
     };
     // create nexthop string
-    let nh_str = format!("{}.{}.{}.{}", gw[0], gw[1], gw[2], gw[3]);
+    let nh_str = format!("{}.{}.{}.{}", rt.gw[0], rt.gw[1], rt.gw[2], rt.gw[3]);
     // convert nh_str string to a CString
     let nh_cstr = CString::new(nh_str).unwrap();
     // create pointer to 'nl_addr' nhaddr
-    let mut nhaddr_ptr = &mut nhaddr;
+    let nhaddr_ptr = &mut nhaddr;
     // parse Cstring nexthop address in nhaddr
-    let r = unsafe { nl_addr_parse(nh_cstr.as_ptr(), AF_INET, &mut nhaddr_ptr) };
+    let r = unsafe { nl_addr_parse(nh_cstr.as_ptr(), AF_INET, &nhaddr_ptr) };
     // check for error(s)
     if r < 0 {
         return Err(io::Error::last_os_error());
     }
     // debug information
     print_debug(
-        debug,
+        rt.debug,
         DEBUG_LEVEL_EXTENSIVE,
         DEBUG_SRC_IP,
         format!(
             "gw_slice: {:?}, nl_addr {:?}, result: {}",
-            gw, *nhaddr_ptr, r
+            rt.gw, *nhaddr_ptr, r
         ),
     );
 
@@ -509,26 +500,26 @@ pub fn set_ip_route(
 
     // set route metric (possible issue with libl-3) and mtu
     // see 'include/uapi/linux/rtnetlink.h' for RTAX_* types
-    let _r = unsafe { rtnl_route_set_metric(nlroute, 32, metric as u32) };
-    let r = unsafe { rtnl_route_set_metric(nlroute, 2, mtu as u32) };
+    let _r = unsafe { rtnl_route_set_metric(nlroute, 32, rt.metric as u32) };
+    let r = unsafe { rtnl_route_set_metric(nlroute, 2, rt.mtu as u32) };
     if r < 0 {
         return Err(io::Error::last_os_error());
     }
 
     // add or remove routes
     let res: c_int;
-    match op {
+    match rt.op {
         Operation::Add => {
             // external call to rtnl_route_add()
             print_debug(
-                debug,
+                rt.debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_IP,
                 format!("calling rtnl_route_add() with nlsock ptr {:?}", nlsock),
             );
             res = unsafe { rtnl_route_add(nlsock, nlroute, 0) };
             print_debug(
-                debug,
+                rt.debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_IP,
                 format!("call to rtnl_route_add() returned {}", res),
@@ -537,14 +528,14 @@ pub fn set_ip_route(
         Operation::Rem => {
             // external call to rtnl_route_delete()
             print_debug(
-                debug,
+                rt.debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_IP,
                 format!("calling rtnl_route_delete() with nlsock ptr {:?}", nlsock),
             );
             res = unsafe { rtnl_route_delete(nlsock, nlroute, 0) };
             print_debug(
-                debug,
+                rt.debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_IP,
                 format!("call to rtnl_route_delete() returned {}", res),
@@ -599,7 +590,7 @@ pub fn setup_macvlan_link(vr: &VirtualRouter, mac: [u8; 6], op: &Operation) -> i
     let _r = unsafe {
         rtnl_link_macvlan_set_mode(
             link,
-            rtnl_link_macvlan_str2mode("bridge\0".as_bytes().as_ptr() as *const c_void),
+            rtnl_link_macvlan_str2mode(b"bridge\0".as_ptr() as *const c_void),
         )
     };
 

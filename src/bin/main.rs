@@ -2,7 +2,10 @@
 //!
 //! `rVRRPd` is aimed to be a fast, secure and multi-platform VRRPv2 implementation.
 extern crate rVRRPd;
-use rVRRPd::{listen_ip_pkts, Config};
+use rVRRPd::{constants, listen_ip_pkts, Config};
+
+// constants
+use constants::*;
 
 // getopts
 use getopts::Options;
@@ -27,14 +30,13 @@ impl Error for MyError {}
 
 // print_usage() function
 fn print_usage(program: &str, opts: Options) {
-    let modes = format!(
-        "\
+    let modes = "\
     Modes:
     0 = VRRPv2 Sniffer
     1 = VRRPv2 Virtual Router (foreground)
     2 = VRRPv2 Virtual Router (daemon)\
     "
-    );
+    .to_string();
     let usage = format!("Usage: {} -m0|1|2 [options]\n\n{}", program, modes);
     print!("{}", opts.usage(&usage));
 }
@@ -45,10 +47,11 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "display help information");
+    opts.optflag("v", "version", "print version information");
     opts.optopt(
         "i",
         "iface",
-        "ethernet interface to listen on (sniffer mode)",
+        "network interface to listen on (sniffer mode)",
         "INTERFACE",
     );
     opts.optopt(
@@ -78,13 +81,19 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(f) => return Result::Err(Box::new(MyError(f.to_string().into()))),
+        Err(f) => return Result::Err(Box::new(MyError(f.to_string()))),
     };
 
     // help command-line option
     if matches.opt_present("help") || args[1..].is_empty() {
         print_usage(&program, opts);
         std::process::exit(1);
+    }
+
+    // version information option
+    if matches.opt_present("version") {
+        print_version_info();
+        std::process::exit(0);
     }
 
     // mode command-line option
@@ -132,19 +141,22 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
     Ok(Config::new(iface, mode, conf, debug, cfg_format))
 }
 
+// print_version_info() function
+fn print_version_info() {
+    println!("{} v{} by {}", RVRRPD_NAME, RVRRPD_VERSION, RVRRPD_AUTHORS);
+}
+
 // run() function
 fn run(cfg: Config) -> Result<(), Box<dyn Error>> {
+    // display banner_
+    println!("{}", RVRRPD_BANNER.trim_start_matches('\n'));
     // print information
-    println!("Starting rVRRPd");
+    println!("Starting rVRRPd (v{})...\n", RVRRPD_VERSION);
 
     // Listen to IP packets
     match listen_ip_pkts(&cfg) {
         Ok(_) => Ok(()),
-        Err(e) => {
-            return Result::Err(Box::new(MyError(
-                format!("A runtime error occured: {}", e).into(),
-            )));
-        }
+        Err(e) => Result::Err(Box::new(MyError(format!("A runtime error occured: {}", e)))),
     }
 }
 

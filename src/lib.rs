@@ -47,7 +47,7 @@ extern crate lazy_static;
 
 // generic constants
 #[allow(dead_code)]
-mod constants;
+pub mod constants;
 use constants::*;
 
 // VRRP data structure
@@ -256,10 +256,10 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 let sockfd = open_raw_socket_fd()?;
 
                 // set interface in promiscuous mode
-                match os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set) {
-                    Err(e) => return Err(e),
-                    _ => {}
-                }
+                if let Err(e) = os::linux::netdev::set_if_promiscuous(sockfd, &iface, PflagOp::Set)
+                {
+                    return Err(e);
+                };
 
                 // initialize sockaddr and packet buffer
                 let mut sockaddr: sockaddr_ll = unsafe { mem::zeroed() };
@@ -406,7 +406,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                     .stderr(stderr);
                 // daemonize the process
                 match deamon.start() {
-                    Ok(_) => println!("rVRRPd (v{}) daemon started", RVRRPD_VERSION_STRING),
+                    Ok(_) => println!("rVRRPd (v{}) daemon started", RVRRPD_VERSION),
                     Err(e) => eprintln!("Error while starting rVRRPd daemon: {}", e),
                 }
             }
@@ -540,23 +540,21 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                         CString::new(vr.parameters.interface().as_bytes() as &[u8]).unwrap();
 
                     // set interface is promiscuous mode
-                    match os::linux::netdev::set_if_promiscuous(sock_fd, &iface, PflagOp::Set) {
-                        Err(e) => return Err(e),
-                        _ => {}
+                    if let Err(e) =
+                        os::linux::netdev::set_if_promiscuous(sock_fd, &iface, PflagOp::Set)
+                    {
+                        return Err(e);
                     }
 
                     // store raw socket file descriptor
                     vr.parameters.set_fd(sock_fd);
 
                     // if enabled, set downstream client API sender and receiver channels
-                    match capi {
-                        Some(c) => {
-                            let (s, r) = c.channels();
-                            vr.parameters.set_capi_tx(s);
-                            vr.parameters.set_capi_rx(r);
-                        }
-                        None => (),
-                    }
+                    if let Some(c) = capi {
+                        let (s, r) = c.channels();
+                        vr.parameters.set_capi_tx(s);
+                        vr.parameters.set_capi_rx(r);
+                    };
                 }
 
                 // print debugging information
@@ -599,24 +597,23 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                     let mut pkt_hdr = PktHdr::new();
                                     // set inbound interface's ifindex)
                                     pkt_hdr.in_ifidx = sockaddr.sll_ifindex;
-                                    match verify_vrrp_pkt(
-                                        sock_fd,
-                                        &pkt_hdr,
-                                        &pkt_buf[0..len],
-                                        &vrouters,
-                                        &debug,
-                                    ) {
-                                        Some((ifindex, vrid, ipsrc, advert_prio)) => {
-                                            handle_vrrp_advert(
-                                                &vrouters,
-                                                ifindex,
-                                                vrid,
-                                                ipsrc,
-                                                advert_prio,
-                                                &debug,
-                                            );
-                                        }
-                                        _ => (),
+                                    if let Some((ifindex, vrid, ipsrc, advert_prio)) =
+                                        verify_vrrp_pkt(
+                                            sock_fd,
+                                            &pkt_hdr,
+                                            &pkt_buf[0..len],
+                                            &vrouters,
+                                            &debug,
+                                        )
+                                    {
+                                        handle_vrrp_advert(
+                                            &vrouters,
+                                            ifindex,
+                                            vrid,
+                                            ipsrc,
+                                            advert_prio,
+                                            &debug,
+                                        );
                                     }
                                 }
                                 Err(_e) => (),
@@ -646,13 +643,12 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             // remove promiscuous mode off interface
                             let iface = CString::new(vr.parameters.interface().as_bytes() as &[u8])
                                 .unwrap();
-                            match os::linux::netdev::set_if_promiscuous(
+                            if let Err(e) = os::linux::netdev::set_if_promiscuous(
                                 sock_fd,
                                 &iface,
                                 PflagOp::Unset,
                             ) {
-                                Err(e) => return Err(e),
-                                _ => {}
+                                return Err(e);
                             }
                         }
 
@@ -841,7 +837,7 @@ fn verify_vrrp_pkt(
     _sockfd: i32,
     pkt_hdr: &PktHdr,
     packet: &[u8],
-    vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
+    vrouters: &[Arc<RwLock<VirtualRouter>>],
     debug: &Verbose,
 ) -> Option<(i32, u8, [u8; 4], u8)> {
     // ignore packets that are too short (plus one IP address and auth. data. field)
@@ -850,6 +846,7 @@ fn verify_vrrp_pkt(
     }
 
     // read the *possibly* VRRP packet
+    #[allow(clippy::cast_ptr_alignment)]
     let vrrp_pkt: VRRPpkt = unsafe { ptr::read(packet.as_ptr() as *const _) };
 
     // filter out all IP packets with IP protocol not matching VRRPv2
@@ -924,7 +921,7 @@ fn verify_vrrp_pkt(
                     debug,
                     DEBUG_LEVEL_MEDIUM,
                     DEBUG_SRC_MAIN,
-                    format!("received a VRRP message for an owned IP address"),
+                    "received a VRRP message for an owned IP address".to_string(),
                 );
                 return None;
             }
@@ -936,7 +933,7 @@ fn verify_vrrp_pkt(
                     debug,
                     DEBUG_LEVEL_MEDIUM,
                     DEBUG_SRC_MAIN,
-                    format!("received a VRRP message with a non-matching authentication type"),
+                    "received a VRRP message with a non-matching authentication type".to_string(),
                 );
                 return None;
             }
@@ -949,7 +946,7 @@ fn verify_vrrp_pkt(
                         debug,
                         DEBUG_LEVEL_EXTENSIVE,
                         DEBUG_SRC_AUTH,
-                        format!("performing VRRP simple (type-1) authentication"),
+                        "performing VRRP simple (type-1) authentication".to_string(),
                     );
                     let d = gen_auth_data(
                         AUTH_TYPE_SIMPLE,
@@ -961,7 +958,7 @@ fn verify_vrrp_pkt(
                             debug,
                             DEBUG_LEVEL_MEDIUM,
                             DEBUG_SRC_AUTH,
-                            format!("VRRP message authentication failed"),
+                            "VRRP message authentication failed".to_string(),
                         );
                         return None;
                     }
@@ -1003,7 +1000,7 @@ fn verify_vrrp_pkt(
                             debug,
                             DEBUG_LEVEL_MEDIUM,
                             DEBUG_SRC_AUTH,
-                            format!("VRRP message authentication failed"),
+                            "VRRP message authentication failed".to_string(),
                         );
                         return None;
                     }
@@ -1019,7 +1016,8 @@ fn verify_vrrp_pkt(
                     debug,
                     DEBUG_LEVEL_MEDIUM,
                     DEBUG_SRC_MAIN,
-                    format!("received a VRRP message with a non-matching advertisement interval"),
+                    "received a VRRP message with a non-matching advertisement interval"
+                        .to_string(),
                 );
                 return None;
             }
@@ -1038,9 +1036,9 @@ fn verify_vrrp_pkt(
                 debug,
                 DEBUG_LEVEL_MEDIUM,
                 DEBUG_SRC_MAIN,
-                format!("received a VRRP message for a non-existing virtual router"),
+                "received a VRRP message for a non-existing virtual router".to_string(),
             );
-            return None;
+            None
         }
     }
 }
@@ -1048,7 +1046,7 @@ fn verify_vrrp_pkt(
 // handle_vrrp_advert() function
 /// Handle VRRPv2 ADVERTISEMENT message
 fn handle_vrrp_advert(
-    vrouters: &Vec<Arc<RwLock<VirtualRouter>>>,
+    vrouters: &[Arc<RwLock<VirtualRouter>>],
     ifindex: i32,
     vrid: u8,
     ipsrc: [u8; 4],
@@ -1085,7 +1083,7 @@ fn handle_vrrp_advert(
                         debug,
                         DEBUG_LEVEL_EXTENSIVE,
                         DEBUG_SRC_MAIN,
-                        format!("sending Advert event notification"),
+                        "sending Advert event notification".to_string(),
                     );
                     // acquiring lock on sender channel
                     tx.lock()
@@ -1097,14 +1095,14 @@ fn handle_vrrp_advert(
                         debug,
                         DEBUG_LEVEL_EXTENSIVE,
                         DEBUG_SRC_MAIN,
-                        format!("Advert event notification sent"),
+                        "Advert event notification sent".to_string(),
                     );
                 }
                 None => print_debug(
                     debug,
                     DEBUG_LEVEL_LOW,
                     DEBUG_SRC_MAIN,
-                    format!("got ADVERTISEMENT message while notification channel not ready"),
+                    "got ADVERTISEMENT message while notification channel not ready".to_string(),
                 ),
             }
         }
@@ -1123,6 +1121,7 @@ fn filter_vrrp_pkt(fd: i32, _pkt_hdr: &PktHdr, packet: &[u8]) {
     }
 
     // read packet
+    #[allow(clippy::cast_ptr_alignment)]
     let vrrp_pkt: VRRPpkt = unsafe { ptr::read(packet.as_ptr() as *const _) };
 
     // filter VRRP packets (IP Proto 112)
@@ -1203,7 +1202,7 @@ fn show_vrrp_pkt(_fd: i32, vrrp_pkt: &VRRPpkt, ipaddrs: &[u8], _authdata: &[u8])
     println!(" Advertisement Interval: {}s", vrrp_pkt.adverint());
     println!(" VRRP Checksum: {:#X}", vrrp_pkt.checksum());
     println!(" IP Address(es):");
-    for (a, b, c, d) in ipaddrs.into_iter().tuple_windows() {
+    for (a, b, c, d) in ipaddrs.iter().tuple_windows() {
         println!("  - {}.{}.{}.{}\n", a, b, c, d)
     }
 }

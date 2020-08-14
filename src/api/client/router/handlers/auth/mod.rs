@@ -84,14 +84,14 @@ pub fn client(mut state: State) -> Box<HandlerFuture> {
                             // no token has been issued
                             None => {
                                 let resp = create_empty_response(&state, StatusCode::UNAUTHORIZED);
-                                return future::ok((state, resp));
+                                future::ok((state, resp))
                             }
                         }
                     }
                     // other response types are considered invalid
                     _ => {
                         let resp = create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR);
-                        return future::ok((state, resp));
+                        future::ok((state, resp))
                     }
                 }
             }
@@ -103,7 +103,7 @@ pub fn client(mut state: State) -> Box<HandlerFuture> {
 
 /// regex_captures_authav() function
 /// creates a globally accessible and static compiled regular expression
-fn regex_captures_authav(content: &String) -> Option<regex::Captures> {
+fn regex_captures_authav(content: &str) -> Option<regex::Captures> {
     // only allow alphanumeric user strings with at least one character, up to 64
     // allow passwords with less than 256 printable characters (is not reflected in Cookies)
     lazy_static! {

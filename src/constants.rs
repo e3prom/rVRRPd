@@ -2,6 +2,14 @@
 //! This module regroups all the program's and protocols constants.
 
 // Program Constants
+pub const RVRRPD_BANNER: &str = r"
+   __      _______  _____  _____    _ 
+   \ \    / /  __ \|  __ \|  __ \  | |
+ _ _\ \  / /| |__) | |__) | |__) |_| |
+| '__\ \/ / |  _  /|  _  /|  ___/ _` |
+| |   \  /  | | \ \| | \ \| |  | (_| |
+|_|    \/   |_|  \_\_|  \_\_|   \__,_|
+";
 pub const RVRRPD_DFLT_CFG_FILE: &str = "/etc/rvrrpd/rvrrpd.conf";
 pub const RVRRPD_DFLT_PIDFILE: &str = "/var/run/rvrrpd.pid";
 pub const RVRRPD_DFLT_WORKDIR: &str = "/tmp";
@@ -10,7 +18,11 @@ pub const RVRRPD_DFLT_ELOGFILE: &str = "/var/log/rvrrpd-error.log";
 pub const RVRRPD_DFLT_DATE_FORMAT: &str = "%b %e %Y %T";
 pub const RVRRPD_DFLT_MACVLAN_NAME: &str = "standby";
 pub const RVRRPD_DFLT_CLIENT_API: &str = "disabled";
-pub const RVRRPD_VERSION_STRING: &str = "0.1.3";
+pub const RVRRPD_NAME: &str = env!("CARGO_PKG_NAME");
+pub const RVRRPD_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const RVRRPD_AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
+pub const RVRRPD_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
+pub const RVRRPD_REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 
 // Config Constants
 pub const RVRRPD_CFG_DFLT_TLSKEY: &str = "/etc/rvrrpd/ssl/key.pem";

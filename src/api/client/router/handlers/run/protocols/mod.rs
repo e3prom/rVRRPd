@@ -31,7 +31,7 @@ pub fn all(state: State) -> (State, Response<Body>) {
             _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
-    return (state, htbody);
+    (state, htbody)
 }
 
 // pstatic() handler function
@@ -66,5 +66,5 @@ pub fn pstatic(state: State) -> (State, Response<Body>) {
             _ => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
         }
     };
-    return (state, htbody);
+    (state, htbody)
 }

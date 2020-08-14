@@ -73,9 +73,9 @@ pub fn recv_ip_pkts(sockfd: i32, sockaddr: &mut sockaddr_ll, buf: &mut [u8]) -> 
 
 // c_ifnametoindex() function
 /// see 'man 3 if_nametoindex'
-pub fn c_ifnametoindex(ifname: &String) -> io::Result<u32> {
+pub fn c_ifnametoindex(ifname: &str) -> io::Result<u32> {
     unsafe {
-        let c_ifname = CString::new(ifname.clone()).unwrap();
+        let c_ifname = CString::new(ifname).unwrap();
         let r = libc::if_nametoindex(c_ifname.as_ptr());
         if r == 0 {
             Err(io::Error::last_os_error())

@@ -51,22 +51,19 @@ pub fn one_complement_sum(data: &[u8], pos: Option<usize>) -> u16 {
     let mut idx = 0;
 
     while idx < data.len() {
-        match pos {
+        if let Some(p) = pos {
             // if a position is given:
-            Some(p) => {
-                if idx == p {
-                    idx = p + 2; // skip 2 bytes
-                }
-                // if we reach the end of slice, we are done
-                if idx == data.len() {
-                    break;
-                }
+            if idx == p {
+                idx = p + 2; // skip 2 bytes
             }
-            None => (),
-        }
+            // if we reach the end of slice, we are done
+            if idx == data.len() {
+                break;
+            }
+        };
         let word = (data[idx] as u32) << 8 | data[idx + 1] as u32;
-        sum = sum + word;
-        idx = idx + 2;
+        sum += word;
+        idx += 2;
     }
 
     while sum >> 16 != 0 {

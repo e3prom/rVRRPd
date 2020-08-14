@@ -35,7 +35,7 @@ pub fn start_timers(
     let vr0 = vr0.read().unwrap();
 
     // clone debug
-    let debug = debug.clone();
+    let debug = *debug;
 
     // set duration from vr's timer
     let master_down = Duration::from_secs(vr0.timers.master_down() as u64);
@@ -62,7 +62,7 @@ pub fn start_timers(
                 &debug,
                 DEBUG_LEVEL_HIGH,
                 DEBUG_SRC_TIMER,
-                format!("master_down interval has expired"),
+                "master_down interval has expired".to_string(),
             );
 
             // first acquire read lock on vr
@@ -74,15 +74,13 @@ pub fn start_timers(
                     &debug,
                     DEBUG_LEVEL_EXTENSIVE,
                     DEBUG_SRC_TIMER,
-                    format!("signaling Master down"),
+                    "signaling Master down".to_string(),
                 );
                 // acquire transmit channel lock
                 let tx1 = tx1.lock().unwrap();
                 // send MasterDown Event down the channel
-                match tx1.send(Event::MasterDown) {
-                    Ok(_) => (),
-                    Err(_) => (), // ignore errors from now
-                }
+                // ignoring possible errors
+                if tx1.send(Event::MasterDown).is_ok() {};
                 // return Ok(())
                 Ok(())
             }
@@ -92,7 +90,7 @@ pub fn start_timers(
                     &debug,
                     DEBUG_LEVEL_EXTENSIVE,
                     DEBUG_SRC_TIMER,
-                    format!("signaling master_down timer expiry"),
+                    "signaling master_down timer expiry".to_string(),
                 );
                 // acquire transmit channel lock
                 let tx1 = tx1.lock().unwrap();
@@ -123,7 +121,7 @@ pub fn start_timers(
                 &debug,
                 DEBUG_LEVEL_HIGH,
                 DEBUG_SRC_TIMER,
-                format!("advertisement interval has expired"),
+                "advertisement interval has expired".to_string(),
             );
             // acquire lock on transmit channel
             let tx2 = tx2.lock().unwrap();
@@ -132,7 +130,7 @@ pub fn start_timers(
                 &debug,
                 DEBUG_LEVEL_EXTENSIVE,
                 DEBUG_SRC_TIMER,
-                format!("signaling advertisement interval expiry"),
+                "signaling advertisement interval expiry".to_string(),
             );
             // send GenAdvert event to worker thread
             tx2.send(Event::GenAdvert).unwrap();
@@ -161,7 +159,7 @@ fn is_master_down_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> 
             debug,
             DEBUG_LEVEL_MEDIUM,
             DEBUG_SRC_TIMER,
-            format!("master_down timer is disabled"),
+            "master_down timer is disabled".to_string(),
         );
         false
     }
@@ -174,16 +172,13 @@ fn is_advert_disabled(vr: &Arc<RwLock<VirtualRouter>>, debug: &Verbose) -> bool 
     let vr = vr.read().unwrap();
     if vr.timers.advert() > 0 {
         true
-    } else if vr.timers.advert() == 255 {
-        // special non-zero value to disable timer
-        true
     } else {
         // print debugging information
         print_debug(
             debug,
             DEBUG_LEVEL_MEDIUM,
             DEBUG_SRC_TIMER,
-            format!("the advertisement timer is disabled"),
+            "the advertisement timer is disabled".to_string(),
         );
         false
     }

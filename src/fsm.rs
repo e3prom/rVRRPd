@@ -187,20 +187,17 @@ pub fn fsm_run(
         );
 
         // handle terminate event first and foremost
-        match event {
+        if let Event::Terminate = event {
             // got Termination event
-            Event::Terminate => {
-                // print debugging information
-                print_debug(
-                    debug,
-                    DEBUG_LEVEL_HIGH,
-                    DEBUG_SRC_WORKER,
-                    format!("worker thread {} exited", id),
-                );
-                // break current loop
-                break;
-            }
-            _ => {}
+            // print debugging information
+            print_debug(
+                debug,
+                DEBUG_LEVEL_HIGH,
+                DEBUG_SRC_WORKER,
+                format!("worker thread {} exited", id),
+            );
+            // break current loop
+            break;
         }
 
         // clone tx channel and vr for timer thread(s)
@@ -258,7 +255,7 @@ pub fn fsm_run(
 
                         // starting timer thread(s)
                         // and clone debug structure of type Verbose
-                        let d = debug.clone();
+                        let d = *debug;
                         let _timer_thread = thread::spawn(move || {
                             timers::start_timers(timer_tx, timer_vr, &d);
                         });
@@ -279,22 +276,20 @@ pub fn fsm_run(
                                 match vr.parameters.iftype() {
                                     // if vr's interface is of type macvlan
                                     IfTypes::macvlan => {
-                                        // create macvlan interface
-                                        match vr.setup_macvlan_link(vmac, Operation::Add, debug) {
-                                            Some((vif_idx, vif_name)) => {
-                                                // store the virtual interface's index
-                                                vr.parameters.set_vifidx(vif_idx);
-                                                // save master interface to vif_name
-                                                let vif = vr.parameters.interface();
-                                                vr.parameters.set_vifname(vif);
-                                                // change current vr's interface to the virtual interface
-                                                vr.parameters.set_interface(vif_name);
-                                                // save vif interface mac
-                                                let ifmac = vr.get_mac_addresses(fd, debug);
-                                                vr.parameters.set_ifmac(ifmac);
-                                            }
-                                            // if it failed for some reasons, do not change vr's interface
-                                            None => (),
+                                        // create macvlan interface if successful
+                                        if let Some((vif_idx, vif_name)) =
+                                            vr.setup_macvlan_link(vmac, Operation::Add, debug)
+                                        {
+                                            // store the virtual interface's index
+                                            vr.parameters.set_vifidx(vif_idx);
+                                            // save master interface to vif_name
+                                            let vif = vr.parameters.interface();
+                                            vr.parameters.set_vifname(vif);
+                                            // change current vr's interface to the virtual interface
+                                            vr.parameters.set_interface(vif_name);
+                                            // save vif interface mac
+                                            let ifmac = vr.get_mac_addresses(fd, debug);
+                                            vr.parameters.set_ifmac(ifmac);
                                         };
                                     }
                                     _ => {
@@ -384,7 +379,7 @@ pub fn fsm_run(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             DEBUG_SRC_FSM,
-                            format!("unexpected event catched in Init state"),
+                            "unexpected event catched in Init state".to_string(),
                         );
                         continue;
                     }
@@ -400,7 +395,7 @@ pub fn fsm_run(
                             vr.timers.master_down = vr.parameters.skewtime();
                         } else {
                             // if priority is greater than or equal to the local priority OR preempt is false
-                            if vr.parameters.preempt() == false || prio >= vr.parameters.prio() {
+                            if !vr.parameters.preempt() || prio >= vr.parameters.prio() {
                                 // clear down flag (signal master is alive)
                                 vr.flags.clear_down_flag();
                                 // print debugging information
@@ -408,7 +403,7 @@ pub fn fsm_run(
                                     debug,
                                     DEBUG_LEVEL_HIGH,
                                     DEBUG_SRC_FSM,
-                                    format!("down flag cleared in Backup state"),
+                                    "down flag cleared in Backup state".to_string(),
                                 );
                             }
                         }
@@ -455,22 +450,20 @@ pub fn fsm_run(
                         match vr.parameters.iftype() {
                             // if vr's interface is of type macvlan
                             IfTypes::macvlan => {
-                                // create macvlan interface
-                                match vr.setup_macvlan_link(vmac, Operation::Add, debug) {
-                                    Some((vif_idx, vif_name)) => {
-                                        // store the virtual interface's index
-                                        vr.parameters.set_vifidx(vif_idx);
-                                        // save master interface to vif_name
-                                        let phys = vr.parameters.interface();
-                                        vr.parameters.set_vifname(phys);
-                                        // change current vr's interface to the virtual interface
-                                        vr.parameters.set_interface(vif_name);
-                                        // save vif interface mac
-                                        let ifmac = vr.get_mac_addresses(fd, debug);
-                                        vr.parameters.set_ifmac(ifmac);
-                                    }
-                                    // if it failed for some reasons, do not change vr's interface
-                                    None => (),
+                                // create macvlan interface if successful
+                                if let Some((vif_idx, vif_name)) =
+                                    vr.setup_macvlan_link(vmac, Operation::Add, debug)
+                                {
+                                    // store the virtual interface's index
+                                    vr.parameters.set_vifidx(vif_idx);
+                                    // save master interface to vif_name
+                                    let phys = vr.parameters.interface();
+                                    vr.parameters.set_vifname(phys);
+                                    // change current vr's interface to the virtual interface
+                                    vr.parameters.set_interface(vif_name);
+                                    // save vif interface mac
+                                    let ifmac = vr.get_mac_addresses(fd, debug);
+                                    vr.parameters.set_ifmac(ifmac);
                                 };
                             }
                             _ => {
@@ -522,14 +515,14 @@ pub fn fsm_run(
                         // END FreeBSD specific interface tyoe handling
 
                         // if the master_down and advert timers have been canceled, restart them.
-                        if (vr.timers.master_down <= 0.0) && (vr.timers.advert <= 0) {
+                        if (vr.timers.master_down <= 0.0) && (vr.timers.advert == 0) {
                             // re-init timers
                             vr.timers.master_down = vr.parameters.master_down();
                             vr.timers.advert = vr.parameters.adverint();
 
                             // starting timer thread(s)
                             // and clone debug structure of type Verbose
-                            let d = debug.clone();
+                            let d = *debug;
                             let _timer_thread = thread::spawn(move || {
                                 timers::start_timers(timer_tx, timer_vr, &d);
                             });
@@ -628,7 +621,7 @@ pub fn fsm_run(
 
                                     // starting timer thread(s)
                                     // and clone debug structure of type Verbose
-                                    let d = debug.clone();
+                                    let d = *debug;
                                     let _timer_thread = thread::spawn(move || {
                                         timers::start_timers(timer_tx, timer_vr, &d);
                                     });
@@ -640,7 +633,7 @@ pub fn fsm_run(
                                     debug,
                                     DEBUG_LEVEL_HIGH,
                                     DEBUG_SRC_FSM,
-                                    format!("down flag cleared in Master state"),
+                                    "down flag cleared in Master state".to_string(),
                                 );
 
                                 // --- Linux specific interface tyoe handling
@@ -711,7 +704,7 @@ pub fn fsm_run(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             DEBUG_SRC_FSM,
-                            format!("received MasterDown event in Master State"),
+                            "received MasterDown event in Master State".to_string(),
                         );
                         continue;
                     }

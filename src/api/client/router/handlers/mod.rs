@@ -35,5 +35,5 @@ pub fn index(state: State) -> (State, Response<Body>) {
     "#;
     //  HTTP body
     let htbody = { create_response(&state, StatusCode::OK, mime::TEXT_HTML, body) };
-    return (state, htbody);
+    (state, htbody)
 }
