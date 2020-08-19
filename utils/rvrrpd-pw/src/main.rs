@@ -47,7 +47,7 @@ impl Error for MyError {
 // main() function
 fn main() {
     let matches = App::new("rVRRPd password utility")
-        .version("v0.1.1")
+        .version("v0.1.4")
         .author("Nicolas Chabbey <eprom@toor.si>")
         .about("Quick and easy password generation for rVRRPd")
         .arg(
@@ -138,11 +138,11 @@ fn gen_sha256_hash(passwd: &str, salt: &str) -> Option<String> {
     // create new sha256 hasher
     let mut hasher = Sha256::new();
     // feed the hasher with the user supplied password
-    hasher.input(&passwd);
+    hasher.update(&passwd);
     // feed the hasher with the supplied salt
-    hasher.input(salt);
+    hasher.update(salt);
     // get the result
-    let h = hasher.result();
+    let h = hasher.finalize();
     // format the result in a hexadecimal string
     let hash = format!("{:x}", h);
     // return the hash

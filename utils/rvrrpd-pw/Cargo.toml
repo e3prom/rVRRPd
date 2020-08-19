@@ -1,11 +1,11 @@
 [package]
 name = "rvrrpd-pw"
-version = "0.1.1"
+version = "0.1.4"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 
 [dependencies]
 clap = "2.33"
 rand = "0.7"
-sha2 = "0.8"
-scrypt = "0.2"
+sha2 = "0.9"
+scrypt = "0.4"
