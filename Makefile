@@ -18,11 +18,10 @@ clean: rvrrpd-pw-clean
 	@cargo clean
 
 install: rvrrpd-pw-install
-	cp $(TARGET)/${BINARY} $(PREFIX)/sbin/rvrrpd
-	chmod 755 $(PREFIX)/sbin/rvrrpd
-	if [ ! -d "/etc/rvrrpd" ]; then \
-		mkdir /etc/rvrrpd; \
-	fi
+	[ ! -d "$(DESTDIR)$(PREFIX)/sbin" ] && mkdir -p "$(DESTDIR)$(PREFIX)/sbin"
+	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/sbin/rvrrpd
+	chmod 755 $(DESTDIR)$(PREFIX)/sbin/rvrrpd
+	[ ! -d "$(DESTDIR)/etc/rvrrpd" ] && mkdir -p "$(DESTDIR)/etc/rvrrpd"
 
 rvrrpd-pw:
 	cd utils/rvrrpd-pw && $(MAKE)
