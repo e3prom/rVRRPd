@@ -104,7 +104,7 @@ paths by using the ``make install`` command (requires root privileges):
 .. code-block:: console
 
     $ sudo make install
-    cd utils/rvrrpd-pw && make install
+    make -C utils/rvrrpd-pw install
     make[1]: Entering directory 'utils/rvrrpd-pw'
     if [ ! -d /usr/bin ]; then \
         mkdir -p /usr/bin; \
