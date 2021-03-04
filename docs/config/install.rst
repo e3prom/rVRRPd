@@ -106,7 +106,7 @@ paths by using the ``make install`` command (requires root privileges):
     $ sudo make install
     cp target/release/rvrrpd /usr/bin/rvrrpd
     chmod 755 /usr/bin/rvrrpd
-    if [ ! -d "/etc/rvrrpd" ]; then \
+    if [ ! -d /etc/rvrrpd ]; then \
         mkdir /etc/rvrrpd; \
     fi
 
