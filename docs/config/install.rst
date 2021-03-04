@@ -106,14 +106,20 @@ paths by using the ``make install`` command (requires root privileges):
     $ sudo make install
     cd utils/rvrrpd-pw && make install
     make[1]: Entering directory 'utils/rvrrpd-pw'
-    [ ! -d /usr/bin ] && mkdir -p /usr/bin
+    if [ ! -d /usr/bin ]; then \
+        mkdir -p /usr/bin; \
+    fi
     cp target/release/rvrrpd-pw /usr/bin/rvrrpd-pw
     chmod 755 /usr/bin/rvrrpd-pw
     make[1]: Leaving directory 'utils/rvrrpd-pw'
-    [ ! -d /usr/sbin ] && mkdir -p /usr/sbin
+    if [ ! -d /usr/sbin ]; then \
+        mkdir -p /usr/sbin; \
+    fi
     cp target/release/rvrrpd /usr/sbin/rvrrpd
     chmod 755 /usr/sbin/rvrrpd
-    [ ! -d /etc/rvrrpd ] && mkdir -p /etc/rvrrpd
+    if [ ! -d /etc/rvrrpd ]; then \
+        mkdir -p /etc/rvrrpd; \
+    fi
 
 Configuring
 ^^^^^^^^^^^

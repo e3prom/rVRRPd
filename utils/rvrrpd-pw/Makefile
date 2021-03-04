@@ -15,7 +15,9 @@ clean:
 	@cargo clean
 
 install:
-	[ ! -d $(DESTDIR)$(PREFIX)/bin ] && mkdir -p $(DESTDIR)$(PREFIX)/bin
+	if [ ! -d $(DESTDIR)$(PREFIX)/bin ]; then \
+		 mkdir -p $(DESTDIR)$(PREFIX)/bin; \
+	fi
 	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/bin/${BINARY}
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/${BINARY}
 
