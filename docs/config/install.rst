@@ -104,11 +104,16 @@ paths by using the ``make install`` command (requires root privileges):
 .. code-block:: console
 
     $ sudo make install
-    cp target/release/rvrrpd /usr/bin/rvrrpd
-    chmod 755 /usr/bin/rvrrpd
-    if [ ! -d /etc/rvrrpd ]; then \
-        mkdir /etc/rvrrpd; \
-    fi
+    cd utils/rvrrpd-pw && make install
+    make[1]: Entering directory 'utils/rvrrpd-pw'
+    [ ! -d /usr/bin ] && mkdir -p /usr/bin
+    cp target/release/rvrrpd-pw /usr/bin/rvrrpd-pw
+    chmod 755 /usr/bin/rvrrpd-pw
+    make[1]: Leaving directory 'utils/rvrrpd-pw'
+    [ ! -d /usr/sbin ] && mkdir -p /usr/sbin
+    cp target/release/rvrrpd /usr/sbin/rvrrpd
+    chmod 755 /usr/sbin/rvrrpd
+    [ ! -d /etc/rvrrpd ] && mkdir -p /etc/rvrrpd
 
 Configuring
 ^^^^^^^^^^^
