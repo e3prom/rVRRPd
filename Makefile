@@ -24,12 +24,12 @@ install: rvrrpd-pw-install
 	[ ! -d $(DESTDIR)/etc/rvrrpd ] && mkdir -p $(DESTDIR)/etc/rvrrpd
 
 rvrrpd-pw:
-	cd utils/rvrrpd-pw && $(MAKE)
+	$(MAKE) -C utils/rvrrpd-pw
 
 rvrrpd-pw-install:
-	cd utils/rvrrpd-pw && $(MAKE) install
+	$(MAKE) -C utils/rvrrpd-pw install
 
 rvrrpd-pw-clean:
-	cd utils/rvrrpd-pw && $(MAKE) clean
+	$(MAKE) -C utils/rvrrpd-pw clean
 
 .PHONY: main test docs check clean install
