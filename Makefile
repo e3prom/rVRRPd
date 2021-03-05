@@ -1,5 +1,5 @@
 TARGET = target/release
-BINARY = main
+BINARY = rvrrpd
 PREFIX = /usr
 
 main: rvrrpd-pw
@@ -18,18 +18,22 @@ clean: rvrrpd-pw-clean
 	@cargo clean
 
 install: rvrrpd-pw-install
-	[ ! -d "$(DESTDIR)$(PREFIX)/sbin" ] && mkdir -p "$(DESTDIR)$(PREFIX)/sbin"
-	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/sbin/rvrrpd
-	chmod 755 $(DESTDIR)$(PREFIX)/sbin/rvrrpd
-	[ ! -d "$(DESTDIR)/etc/rvrrpd" ] && mkdir -p "$(DESTDIR)/etc/rvrrpd"
+	if [ ! -d $(DESTDIR)$(PREFIX)/sbin ]; then \
+		mkdir -p $(DESTDIR)$(PREFIX)/sbin; \
+	fi
+	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/sbin/${BINARY}
+	chmod 755 $(DESTDIR)$(PREFIX)/sbin/${BINARY}
+	if [ ! -d $(DESTDIR)/etc/rvrrpd ]; then \
+		mkdir -p $(DESTDIR)/etc/rvrrpd; \
+	fi
 
 rvrrpd-pw:
-	cd utils/rvrrpd-pw && $(MAKE)
+	$(MAKE) -C utils/rvrrpd-pw
 
 rvrrpd-pw-install:
-	cd utils/rvrrpd-pw && $(MAKE) install
+	$(MAKE) -C utils/rvrrpd-pw install
 
 rvrrpd-pw-clean:
-	cd utils/rvrrpd-pw && $(MAKE) clean
+	$(MAKE) -C utils/rvrrpd-pw clean
 
 .PHONY: main test docs check clean install
