@@ -92,7 +92,7 @@ such as ``rvrrpd-pw``:
 
 
 Once the build process is completed, you can find the daemon executable
-in ``target/release/main``. The latter can be executed as-is or can be
+in ``target/release/rvrrpd``. The latter can be executed as-is or can be
 installed system-wide (recommended).
 
 Installing System-wide
@@ -104,10 +104,21 @@ paths by using the ``make install`` command (requires root privileges):
 .. code-block:: console
 
     $ sudo make install
-    cp target/release/main /usr/bin/rvrrpd
-    chmod 755 /usr/bin/rvrrpd
-    if [ ! -d "/etc/rvrrpd" ]; then \
-        mkdir /etc/rvrrpd; \
+    make -C utils/rvrrpd-pw install
+    make[1]: Entering directory 'utils/rvrrpd-pw'
+    if [ ! -d /usr/bin ]; then \
+        mkdir -p /usr/bin; \
+    fi
+    cp target/release/rvrrpd-pw /usr/bin/rvrrpd-pw
+    chmod 755 /usr/bin/rvrrpd-pw
+    make[1]: Leaving directory 'utils/rvrrpd-pw'
+    if [ ! -d /usr/sbin ]; then \
+        mkdir -p /usr/sbin; \
+    fi
+    cp target/release/rvrrpd /usr/sbin/rvrrpd
+    chmod 755 /usr/sbin/rvrrpd
+    if [ ! -d /etc/rvrrpd ]; then \
+        mkdir -p /etc/rvrrpd; \
     fi
 
 Configuring
