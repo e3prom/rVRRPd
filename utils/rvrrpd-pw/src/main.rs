@@ -7,7 +7,7 @@ use std::error::Error;
 use std::fmt;
 
 // clap
-use clap::{App, Arg};
+use clap::{App, Arg, crate_version};
 
 // rand
 use rand::prelude::Rng;
@@ -46,8 +46,16 @@ impl Error for MyError {
 
 // main() function
 fn main() {
-    let matches = App::new("rVRRPd password utility")
-        .version("v0.1.4")
+    let matches = App::new("rvrrpd-pw")
+        .version(crate_version!())
+        .long_version(concat!(crate_version!(), "
+
+Copyright (C) 2019-2021  Nicolas Chabbey.
+License GPLv3+: GNU GPL Version 3 or any later version <https://www.gnu.org/licenses/gpl-3.0.txt>.
+This program comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under certain conditions.
+
+Written by Nicolas Chabbey <eprom@toor.si>."))
         .author("Nicolas Chabbey <eprom@toor.si>")
         .about("Quick and easy password generation for rVRRPd")
         .arg(
