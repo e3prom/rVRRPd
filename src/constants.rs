@@ -10,6 +10,12 @@ pub const RVRRPD_BANNER: &str = r"
 | |   \  /  | | \ \| | \ \| |  | (_| |
 |_|    \/   |_|  \_\_|  \_\_|   \__,_|
 ";
+pub const RVRRPD_COPYRIGHT_BLOCK: &str = r"
+Copyright (C) 2019-2021 Nicolas Chabbey.
+License GPLv3+: GNU GPL Version 3 or any later version <https://www.gnu.org/licenses/gpl-3.0.txt>.
+This program comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under certain conditions.
+";
 pub const RVRRPD_DFLT_CFG_FILE: &str = "/etc/rvrrpd/rvrrpd.conf";
 pub const RVRRPD_DFLT_PIDFILE: &str = "/var/run/rvrrpd.pid";
 pub const RVRRPD_DFLT_WORKDIR: &str = "/tmp";

@@ -139,14 +139,15 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
 
 // print_version_info() function
 fn print_version_info() {
-    println!("{} {}
+    println!(
+        "{} {} {}
 
-Copyright (C) 2019-2021  Nicolas Chabbey.
-License GPLv3+: GNU GPL Version 3 or any later version <https://www.gnu.org/licenses/gpl-3.0.txt>.
-This program comes with ABSOLUTELY NO WARRANTY. This is free software,
-and you are welcome to redistribute it under certain conditions.
-
-Written by {}.", RVRRPD_NAME.to_lowercase(), RVRRPD_VERSION, RVRRPD_AUTHORS);
+Written by {}.",
+        RVRRPD_NAME.to_lowercase(),
+        RVRRPD_VERSION,
+        RVRRPD_COPYRIGHT_BLOCK,
+        RVRRPD_AUTHORS
+    );
 }
 
 // run() function
