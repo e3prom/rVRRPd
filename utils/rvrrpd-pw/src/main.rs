@@ -49,7 +49,6 @@ fn main() {
     let matches = App::new("rvrrpd-pw")
         .version(crate_version!())
         .long_version(concat!(crate_version!(), "
-
 Copyright (C) 2019-2021 Nicolas Chabbey.
 License GPLv3+: GNU GPL Version 3 or any later version <https://www.gnu.org/licenses/gpl-3.0.txt>.
 This program comes with ABSOLUTELY NO WARRANTY. This is free software,
