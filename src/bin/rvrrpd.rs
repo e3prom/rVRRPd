@@ -139,7 +139,15 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
 
 // print_version_info() function
 fn print_version_info() {
-    println!("{} v{} by {}", RVRRPD_NAME, RVRRPD_VERSION, RVRRPD_AUTHORS);
+    println!(
+        "{} {} {}
+
+Written by {}.",
+        RVRRPD_NAME.to_lowercase(),
+        RVRRPD_VERSION,
+        RVRRPD_COPYRIGHT_BLOCK,
+        RVRRPD_AUTHORS
+    );
 }
 
 // run() function
