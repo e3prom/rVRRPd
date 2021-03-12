@@ -29,7 +29,11 @@ install: rvrrpd-pw-install
 	fi
 	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/sbin/${BINARY}
 	chmod 755 $(DESTDIR)$(PREFIX)/sbin/${BINARY}
+	if [ ! -d $(DESTDIR)$(PREFIX)/share/man/man8 ]; then \
+		mkdir -p $(DESTDIR)$(PREFIX)/share/man/man8; \
+	fi
 	cp ${BINARY}.8.gz $(DESTDIR)$(PREFIX)/share/man/man8/${BINARY}.8.gz
+	chmod 644 $(DESTDIR)$(PREFIX)/share/man/man8/${BINARY}.8.gz
 	if [ ! -d $(DESTDIR)/etc/rvrrpd ]; then \
 		mkdir -p $(DESTDIR)/etc/rvrrpd; \
 	fi

@@ -26,6 +26,10 @@ install:
 	fi
 	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/bin/${BINARY}
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/${BINARY}
+	if [ ! -d $(DESTDIR)$(PREFIX)/share/man/man1 ]; then \
+		mkdir -p $(DESTDIR)$(PREFIX)/share/man/man1; \
+	fi
 	cp ${BINARY}.1.gz $(DESTDIR)$(PREFIX)/share/man/man1/${BINARY}.1.gz
+	chmod 644 $(DESTDIR)$(PREFIX)/share/man/man1/${BINARY}.1.gz
 
 .PHONY: main test check clean install
