@@ -22,7 +22,7 @@ clean:
 
 install:
 	if [ ! -d $(DESTDIR)$(PREFIX)/bin ]; then \
-		 mkdir -p $(DESTDIR)$(PREFIX)/bin; \
+		mkdir -p $(DESTDIR)$(PREFIX)/bin; \
 	fi
 	cp $(TARGET)/${BINARY} $(DESTDIR)$(PREFIX)/bin/${BINARY}
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/${BINARY}

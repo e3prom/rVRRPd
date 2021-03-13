@@ -42,12 +42,13 @@ To build **rVRRPd** from source you must have several programs and libraries ins
    to build the project and its related dependencies (crates).
  * The `OpenSSL <https://www.openssl.org/>`_ development headers
  * The `Netlink Protocol Library Suite <https://www.infradead.org/~tgr/libnl/>`_ development headers *(Linux)*
+ * The `help2man <https://www.gnu.org/software/help2man/>`_ utility, to generate manual pages.
 
 On `Debian <https://www.debian.org>`_ and derivatives, all three libraries' headers files can be installed with the below command:
 
 .. code-block:: console
 
-    $ sudo apt-get install libnl-3-dev libnl-route-3-dev libssl-dev
+    $ sudo apt-get install libnl-3-dev libnl-route-3-dev libssl-dev help2man
 
 Cloning Source Repository
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -111,12 +112,22 @@ paths by using the ``make install`` command (requires root privileges):
     fi
     cp target/release/rvrrpd-pw /usr/bin/rvrrpd-pw
     chmod 755 /usr/bin/rvrrpd-pw
+    if [ ! -d /usr/share/man/man1 ]; then \
+        mkdir -p /usr/share/man/man1; \
+    fi
+    cp rvrrpd-pw.1.gz /usr/share/man/man1/rvrrpd-pw.1.gz
+    chmod 644 /usr/share/man/man1/rvrrpd-pw.1.gz
     make[1]: Leaving directory 'utils/rvrrpd-pw'
     if [ ! -d /usr/sbin ]; then \
         mkdir -p /usr/sbin; \
     fi
     cp target/release/rvrrpd /usr/sbin/rvrrpd
     chmod 755 /usr/sbin/rvrrpd
+    if [ ! -d /usr/share/man/man8 ]; then \
+        mkdir -p /usr/share/man/man8; \
+    fi
+    cp rvrrpd.8.gz /usr/share/man/man8/rvrrpd.8.gz
+    chmod 644 /usr/share/man/man8/rvrrpd.8.gz
     if [ ! -d /etc/rvrrpd ]; then \
         mkdir -p /etc/rvrrpd; \
     fi
