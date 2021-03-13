@@ -548,7 +548,7 @@ pub fn set_ip_route(rt: &IntIpRoute) -> io::Result<()> {
         -6 => (),  // route already exists
         -12 => (), // route not found
         r if r < 0 => return Err(io::Error::last_os_error()),
-        _ => (), // no error occured
+        _ => (), // no error occurred
     }
 
     // free nlroute

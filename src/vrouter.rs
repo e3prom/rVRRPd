@@ -794,7 +794,7 @@ impl VirtualRouter {
                     Operation::Rem => None,
                 }
             }
-            // catched an error while setting up the macvlan interface
+            // caught an error while setting up the macvlan interface
             Err(e) => {
                 eprintln!(
                 "error(macvlan): cannot perform operation {:?} on macvlan interface (master if: {:?}): {}",
