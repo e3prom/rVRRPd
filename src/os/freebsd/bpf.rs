@@ -86,7 +86,7 @@ pub fn bpf_open_device(debug: &Verbose) -> io::Result<(i32)> {
         let res = unsafe { libc::open(&buf as *const i8, libc::O_RDWR) };
 
         // check returned value
-        // if negative, an error occured, continue
+        // if negative, an error occurred, continue
         // if positive, return the file descriptor
         if res >= 0 {
             return Ok(res);

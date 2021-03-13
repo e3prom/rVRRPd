@@ -379,7 +379,7 @@ pub fn fsm_run(
                             debug,
                             DEBUG_LEVEL_EXTENSIVE,
                             DEBUG_SRC_FSM,
-                            "unexpected event catched in Init state".to_string(),
+                            "unexpected event caught in Init state".to_string(),
                         );
                         continue;
                     }
