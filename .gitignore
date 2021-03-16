@@ -17,3 +17,6 @@ Cargo.lock
 
 # documentation
 docs/_build
+
+# auto-generated manpage
+rvrrpd.8.gz

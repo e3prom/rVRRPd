@@ -11,3 +11,6 @@ Cargo.lock
 
 # local configuration files
 *.local.conf
+
+# auto-generated manpage
+rvrrpd-pw.1.gz
