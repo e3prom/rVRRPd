@@ -134,9 +134,6 @@ fn parse_cli_opts(args: &[String]) -> Result<Config, Box<dyn Error>> {
 
 // run() function
 fn run(cfg: Config) -> Result<(), Box<dyn Error>> {
-    // print information
-    println!("Starting rVRRPd");
-
     // Listen to IP packets
     match listen_ip_pkts(&cfg) {
         Ok(_) => Ok(()),
