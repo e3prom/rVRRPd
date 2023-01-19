@@ -16,8 +16,9 @@ use itertools::Itertools;
 #[macro_use]
 extern crate serde_derive;
 
-// deamonize
-use daemonize::Daemonize;
+// daemonizr
+use daemonizr::{Daemonizr, DaemonizrError, Group, Stderr, Stdout, User};
+use std::{path::PathBuf, process::exit, thread::sleep, time::Duration};
 
 // crossbeam
 use crossbeam::{Receiver, Sender};
@@ -379,21 +380,43 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                 // create log files
                 let stdout = File::create(config.main_log()).unwrap();
                 let stderr = File::create(config.error_log()).unwrap();
-                // initialize the daemon
-                let deamon = Daemonize::new()
-                    .pid_file(config.pid())
-                    .chown_pid_file(true)
-                    .working_directory(config.working_dir())
-                    .user("root")
-                    .group("root")
+
+                // initialize the daemon using Daemonizr
+                match Daemonizr::new()
+                    .work_dir(PathBuf::from(config.working_dir()))
+                    .expect("invalid working directory")
+                    .as_user(User::by_name("root").expect("invalid user"))
+                    .as_group(Group::by_name("daemon").expect("invalid group"))
+                    .pidfile(PathBuf::from(config.pid()))
+                    .stdout(Stdout::Redirect(PathBuf::from(config.main_log())))
+                    .stderr(Stderr::Redirect(PathBuf::from(config.error_log())))
                     .umask(0o027)
-                    .stdout(stdout)
-                    .stderr(stderr);
-                // daemonize the process
-                match deamon.start() {
-                    Ok(_) => println!("rVRRPd (v{}) daemon started", RVRRPD_VERSION),
-                    Err(e) => eprintln!("Error while starting rVRRPd daemon: {}", e),
-                }
+                    .expect("invalid umask")
+                    .spawn()
+                {
+                    Err(DaemonizrError::AlreadyRunning) => {
+                        // search for the daemon's PID  //
+                        match Daemonizr::new()
+                            .work_dir(PathBuf::from(config.working_dir()))
+                            .unwrap()
+                            .pidfile(PathBuf::from(config.pid()))
+                            .search()
+                        {
+                            Err(x) => eprintln!("Error while starting rVRRPd: {}", x),
+                            Ok(pid) => {
+                                eprintln!(
+                                    "another vRRPd instance with pid {} is already running",
+                                    pid
+                                );
+                                exit(1);
+                            }
+                        };
+                    }
+                    Err(e) => eprintln!("Error while starting rVRRPd: {}", e),
+                    Ok(()) => {
+                        println!("rVRRPd (v{}) daemon has started", RVRRPD_VERSION)
+                    }
+                };
             }
 
             // setup signal handler for the possibly forked process

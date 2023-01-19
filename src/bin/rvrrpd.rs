@@ -160,7 +160,10 @@ fn run(cfg: Config) -> Result<(), Box<dyn Error>> {
     // Listen to IP packets
     match listen_ip_pkts(&cfg) {
         Ok(_) => Ok(()),
-        Err(e) => Result::Err(Box::new(MyError(format!("A runtime error occurred: {}", e)))),
+        Err(e) => Result::Err(Box::new(MyError(format!(
+            "A runtime error occurred: {}",
+            e
+        )))),
     }
 }
 
