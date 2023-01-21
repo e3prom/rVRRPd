@@ -18,7 +18,7 @@ extern crate serde_derive;
 
 // daemonizr
 use daemonizr::{Daemonizr, DaemonizrError, Group, Stderr, Stdout, User};
-use std::{path::PathBuf, process::exit, thread::sleep, time::Duration};
+use std::{path::PathBuf, process::exit};
 
 // crossbeam
 use crossbeam::{Receiver, Sender};
@@ -378,8 +378,8 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
             // if the mode is 2, then daemonize:
             if cfg.mode == 2 {
                 // create log files
-                let stdout = File::create(config.main_log()).unwrap();
-                let stderr = File::create(config.error_log()).unwrap();
+                let _stdout = File::create(config.main_log()).unwrap();
+                let _stderr = File::create(config.error_log()).unwrap();
 
                 // initialize the daemon using Daemonizr
                 match Daemonizr::new()
@@ -738,19 +738,19 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                                 // warning: hard-coded buffer size
                                 Ok(len) if len > 0 => {
                                     // acquire read lock
-                                    print_debug(
-                                        &debug,
-                                        DEBUG_LEVEL_EXTENSIVE,
-                                        DEBUG_SRC_THREAD,
-                                        format!("acquiring vr read lock on listener thread"),
-                                    );
+                                    // print_debug(
+                                    //     &debug,
+                                    //     DEBUG_LEVEL_EXTENSIVE,
+                                    //     DEBUG_SRC_THREAD,
+                                    //     format!("acquiring vr read lock on listener thread"),
+                                    // );
                                     let vr = vr.read().unwrap();
-                                    print_debug(
-                                        &debug,
-                                        DEBUG_LEVEL_EXTENSIVE,
-                                        DEBUG_SRC_THREAD,
-                                        format!("acquired vr read lock on listener thread"),
-                                    );
+                                    // print_debug(
+                                    //     &debug,
+                                    //     DEBUG_LEVEL_EXTENSIVE,
+                                    //     DEBUG_SRC_THREAD,
+                                    //     format!("acquired vr read lock on listener thread"),
+                                    // );
 
                                     // create and initialize pkt_hdr
                                     let pkt_hdr = PktHdr::new();

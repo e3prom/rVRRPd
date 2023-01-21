@@ -41,7 +41,7 @@ pub struct bpf_xhdr {
 // bpf_open_device() function
 //
 /// Open a BPF device and return the file descriptor if successful
-pub fn bpf_open_device(debug: &Verbose) -> io::Result<(i32)> {
+pub fn bpf_open_device(debug: &Verbose) -> io::Result<i32> {
     // try /dev/bpf
     let bpf_dev = CString::new("/dev/bpf").unwrap();
     let bpf_dev_slice = &mut [0i8; 10];
@@ -142,7 +142,7 @@ pub fn bpf_bind_device(bpf_fd: i32, interface: &CString, debug: &Verbose) -> io:
 //
 /// Setup BPF device buffer and features
 /// Return size of BPF buffer after setup
-pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8], debug: &Verbose) -> io::Result<(usize)> {
+pub fn bpf_setup_buf(bpf_fd: i32, pkt_buf: &mut [u8], debug: &Verbose) -> io::Result<usize> {
     // initialize local buf_len with current buffer size
     let buf_len = pkt_buf.len();
 
