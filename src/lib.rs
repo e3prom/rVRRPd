@@ -405,7 +405,7 @@ pub fn listen_ip_pkts(cfg: &Config) -> io::Result<()> {
                             Err(x) => eprintln!("Error while starting rVRRPd: {}", x),
                             Ok(pid) => {
                                 eprintln!(
-                                    "another vRRPd instance with pid {} is already running",
+                                    "another rVRRPd instance with pid {} is already running",
                                     pid
                                 );
                                 exit(1);
