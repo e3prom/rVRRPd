@@ -1,5 +1,5 @@
-Lightweight, fast, and highly secure VRRP daemon
-Copyright (C) 2019-2021 Nicolas Chabbey
+A standalone, multi-platform, fast and secure VRRPv2 daemon.
+Copyright (C) 2019-2023 Nicolas Chabbey
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

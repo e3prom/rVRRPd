@@ -11,7 +11,7 @@ pub const RVRRPD_BANNER: &str = r"
 |_|    \/   |_|  \_\_|  \_\_|   \__,_|
 ";
 pub const RVRRPD_COPYRIGHT_BLOCK: &str = r"
-Copyright (C) 2019-2021 Nicolas Chabbey.
+Copyright (C) 2019-2023 Nicolas Chabbey.
 License GPLv3+: GNU GPL Version 3 or any later version <https://www.gnu.org/licenses/gpl-3.0.txt>.
 This program comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under certain conditions.";

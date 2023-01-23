@@ -1,8 +1,8 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/e3prom/rVRRPd/blob/master/LICENSE)
-![GitHub top language](https://img.shields.io/github/languages/top/e3prom/rvrrpd.svg)
-![GitHub issues](https://img.shields.io/github/issues/e3prom/rvrrpd.svg)
-![GitHub last commit](https://img.shields.io/github/last-commit/e3prom/rvrrpd.svg)
-![Github build status](https://github.com/e3prom/rVRRPd/workflows/Build/badge.svg)
+[![GitHub top language](https://img.shields.io/github/languages/top/e3prom/rvrrpd.svg)](https://www.rust-lang.org)
+[![GitHub issues](https://img.shields.io/github/issues/e3prom/rvrrpd.svg)](https://github.com/e3prom/rVRRPd/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/e3prom/rvrrpd.svg)](https://github.com/e3prom/rVRRPd/commits/)
+[![Github build status](https://github.com/e3prom/rVRRPd/workflows/Build/badge.svg)](https://github.com/e3prom/rVRRPd/commits/)
 [![Documentation Status](https://readthedocs.org/projects/rvrrpd/badge/?version=latest)](https://rvrrpd.readthedocs.io/en/latest/?badge=latest)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TWE8MESRMWRG8)
 
@@ -31,7 +31,7 @@
    * Runs plain-text HTTP or HTTPS (SSL/TLS)
 
 # Development
-This project is still in **_active development_**, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as P0 or P1 authentication).
+This project is still in **_development_**, and at this time, only supports the Linux and FreeBSD operating systems. There is no stable API, configuration or even documentation yet. [`rVRRPd`](https://github.com/e3prom/rVRRPd) may not be interoperable with standard-compliant network equipments when using proprietary features (such as P0 or P1 authentication).
 
 The development roadmap for the upcoming `0.2.0` release can be found [here](https://github.com/e3prom/rVRRPd/projects/2).
 
