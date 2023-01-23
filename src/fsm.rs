@@ -333,7 +333,7 @@ pub fn fsm_run(
                             // set advertisement interval
                             vr.timers.advert = vr.parameters.adverint();
                             // cancel master_down timer
-                            vr.timers.master_down = -1.0;
+                            vr.timers.master_down = VRRP_V2_TIMER_MCANCELLED;
                             // print debugging information
                             print_debug(
                                 &debug,
@@ -515,7 +515,9 @@ pub fn fsm_run(
                         // END FreeBSD specific interface tyoe handling
 
                         // if the master_down and advert timers have been canceled, restart them.
-                        if (vr.timers.master_down <= 0.0) && (vr.timers.advert == 0) {
+                        if (vr.timers.master_down <= VRRP_V2_TIMER_MCANCELLED)
+                            && (vr.timers.advert == VRRP_V2_TIMER_ACANCELLED)
+                        {
                             // re-init timers
                             vr.timers.master_down = vr.parameters.master_down();
                             vr.timers.advert = vr.parameters.adverint();
@@ -559,9 +561,9 @@ pub fn fsm_run(
                             vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
                         // cancel advertisement timer
-                        vr.timers.advert = 0;
+                        vr.timers.advert = VRRP_V2_TIMER_ACANCELLED;
                         // cancel master_down timer
-                        vr.timers.master_down = -1.0;
+                        vr.timers.master_down = VRRP_V2_TIMER_MCANCELLED;
                         // transition to Down state
                         States::Down
                     }
@@ -615,7 +617,7 @@ pub fn fsm_run(
                                 // cancel advertisement timer
                                 vr.timers.advert = 255;
                                 // if the master_down has been canceled, init and restart it.
-                                if vr.timers.master_down <= 0.0 {
+                                if vr.timers.master_down <= VRRP_V2_TIMER_MCANCELLED {
                                     // re-init timers
                                     vr.timers.master_down = vr.parameters.master_down();
 
@@ -717,9 +719,9 @@ pub fn fsm_run(
                             vip[0], vip[1], vip[2], vip[3], vr.parameters.vrid(), vr.parameters.interface()
                         ));
                         // cancel the 'advert' timer
-                        vr.timers.advert = 0;
+                        vr.timers.advert = VRRP_V2_TIMER_ACANCELLED;
                         // cancel master_down timer
-                        vr.timers.master_down = -1.0;
+                        vr.timers.master_down = VRRP_V2_TIMER_MCANCELLED;
                         // send ADVERTISEMENT with priority equal 0
                         vr.parameters.set_prio(0);
                         match vr.send_advertisement(fd, &debug) {

@@ -85,6 +85,8 @@ pub const VRRP_V2_VER_TYPE_AUTHMSG: u8 = 0x21;
 pub const VRRP_V2_IP_MCAST_DST: [u8; 4] = [224, 0, 0, 18];
 pub const VRRP_V2_ADVERT_VERSION_TYPE: u8 = 0x21;
 pub const VRRP_V2_DEFAULT_PRIORITY: u8 = 100;
+pub const VRRP_V2_TIMER_MCANCELLED: f32 = 65535.0;
+pub const VRRP_V2_TIMER_ACANCELLED: u8 = 255;
 
 // Authentication Constants
 pub const AUTH_TYPE_SIMPLE: u8 = 1;
