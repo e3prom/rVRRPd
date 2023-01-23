@@ -1,12 +1,12 @@
 [package]
 name = "rVRRPd"
-version = "0.1.4"
+version = "0.2.0"
 authors = ["Nicolas Chabbey <eprom@toor.si>"]
 edition = "2018"
 repository = "httsp://github.com/e3prom/rvrrpd"
 homepage = "https://github.com/e3prom/rVRRPd"
 readme = "README.md"
-description = "A fast, multi-platform and highly secure VRRP daemon."
+description = "A standalone, multi-platform, fast and secure VRRPv2 daemon"
 license = "GPL-3.0"
 publish = false
 

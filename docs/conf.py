@@ -20,7 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 project = u'rVRRPd'
-copyright = u'2020, Nicolas Chabbey'
+copyright = u'2020-2023, Nicolas Chabbey'
 author = u'Nicolas Chabbey'
 
 # The short X.Y version
